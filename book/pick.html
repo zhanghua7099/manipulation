@@ -56,102 +56,99 @@ href="https://www.youtube.com/channel/UChfUOAhz7ynELF-s_1LPpWg">Lecture videos a
 <script type="text/javascript">document.write(notebook_header('pick'))
 </script>
 <!-- EVERYTHING ABOVE THIS LINE IS OVERWRITTEN BY THE INSTALL SCRIPT -->
-<chapter style="counter-reset: chapter 2"><h1>Basic Pick and Place</h1>
+<chapter style="counter-reset: chapter 2"><h1>基础抓取与放置</h1>
 
   <figure>
     <img src="figures/pick.png" style="width:70%"/>
-    <figcaption>Your challenge: command the robot to pick up the brick and place
-    it in a desired position/orientation.</figcaption>
-    <todo>Update this image once we get a better schunk model.</todo>
+    <figcaption>你的挑战：控制机器人抓起积木，并将其放置到目标位置/姿态。</figcaption>
+    <todo>等我们获得更好的 Schunk 模型后，更新这张图片。</todo>
   </figure>
 
-  <p>The stage is set.  You have your robot.  I have a little red foam brick.
-  I'm going to put it on the table in front of your robot, and your goal is to
-  move it to a desired position/orientation on the table.  I want to defer the
-  <i>perception</i> problem for one more chapter, and will let you assume that
-  you have access to a perfect measurement of the current position/orientation
-  of the brick.  Even without perception, completing this task requires us to
-  build up a basic toolkit for geometry and kinematics; it's a natural place to
-  start.</p>
+  <p>舞台已经搭建完成。你拥有了自己的机器人，而我这里有一块红色泡沫砖。
+  我会把它放在机器人前方的桌子上，而你的目标是将它移动到桌面上的指定位置/姿态。
+  我想再推迟一个章节再讨论<i>感知（perception）</i>问题，因此这里你可以假设自己能够获得关于积木当前位置/姿态的完美测量值。
+  即使不考虑感知，完成这项任务仍然需要我们建立关于几何学和运动学的一套基础工具；这也是一个非常自然的起点。</p>
 
-  <p>First, we will establish some terminology and notation for kinematics. This
-  is one area where careful notation can yield dividends, and sloppy notation
-  will inevitably lead to confusion and bugs.  The Drake developers have gone to
-  great length to establish and document a consistent <a
-  href="https://drake.mit.edu/doxygen_cxx/group__multibody__notation.html">
-  multibody notation</a>, which we call "Monogram Notation".  The documentation
-  even includes some of the motivation/philosophy behind that notation. I'll use
-  the monogram notation throughout this text.</p>
+  <p>首先，我们将为运动学建立一些术语和符号表示。
+  在这一领域，严谨的符号体系会带来巨大的收益，而随意混乱的符号则几乎必然导致困惑和程序错误。
+  Drake 的开发者们花费了大量精力来建立并记录一套一致的
+  <a href="https://drake.mit.edu/doxygen_cxx/group__multibody__notation.html">
+  多体系统符号体系</a>，
+  我们称之为“Monogram Notation（字母标记法）”。
+  相关文档甚至还包含了这套符号背后的动机与设计理念。
+  在本书中，我都会统一使用这种 monogram notation。</p>
   
-  <p>If you'd like a more extensive background on kinematics than what I provide
-  here, my favorite reference is still <elib>Craig05</elib>.  For free online
-  resources, Chapters 2 and 3 of the 1994 book by Murray et al. (now free
-  online)<elib>Murray94</elib> are also excellent, as are the first seven
-  chapters of <a
-  href="http://hades.mech.northwestern.edu/index.php/Modern_Robotics">Modern
-  Robotics</a> by Lynch and Park<elib>Lynch17</elib> (they also have excellent
-  accompanying videos).  Unfortunately, with three different references you'll
-  get three (slightly) different notations; ours is most similar to
-  <elib>Craig05</elib>. The monogram notation is developed in some detail in
-  <elib>Mitiguy17</elib>.</p>
+  <p>如果你希望获得比这里更系统、更深入的运动学背景知识，
+  我最喜欢的参考书仍然是 <elib>Craig05</elib>。
+  至于免费的在线资源，Murray 等人在 1994 年出版（现已免费开放在线阅读）的书籍中的第 2、3 章
+  <elib>Murray94</elib> 也非常优秀；
+  此外，Lynch 与 Park 所著
+  <a href="http://hades.mech.northwestern.edu/index.php/Modern_Robotics">Modern Robotics</a>
+  的前七章同样值得推荐<elib>Lynch17</elib>（他们还配有非常优秀的视频课程）。
+  不过需要注意的是，三份参考资料会使用三种（略有不同的）符号体系；
+  我们这里使用的体系与 <elib>Craig05</elib> 最为接近。
+  Monogram notation 的详细构建过程可以参考 <elib>Mitiguy17</elib>。</p>
     
-  <p>Please don't get overwhelmed by how much background material there is to
-  know!  I am personally of the opinion that a clear understanding of just a few
-  basic ideas should make you very effective here.  The details will come
-  later, if you need them.</p>    
+  <p>请不要被如此庞大的背景知识吓倒！
+  我个人认为，只要真正理解少数几个基本概念，就足以让你在这一领域中非常高效。
+  更多细节会在之后需要的时候再逐步展开。</p>
 
-  <section id="monogram"><h1>Monogram Notation</h1>
+<section id="monogram"><h1>Monogram Notation（字母标记法）</h1>
 
-    <p><i>The following concepts are disarmingly subtle. I've seen incredibly
-    smart people assume they knew them and then perpetually stumble over
-    notation.  I did it for years myself.  Take a minute to read this
-    carefully!</i></p>
+    <p><i>下面这些概念微妙得令人意外。我见过许多极其聪明的人自认为已经理解它们，
+    结果却长期在符号表示上不断犯错。我自己也曾如此多年。
+    请花一点时间认真阅读！</i></p>
 
-    <p>Perhaps the most fundamental concept in geometry is the concept of a
-    point.  Points occupy a position in space, and they can have names, e.g.
-    point $A$, $C$, or more descriptive names like $B_{cm}$ for the center of
-    mass of body $B$. We'll denote the position of the point by using a position
-    vector $p^A$; that's $p$ for position, and not for point, because other
-    geometric quantities can also have a position.</p>
+    <p>也许几何学中最基础的概念就是“点（point）”。
+    点占据空间中的某个位置，并且它们可以拥有名字，例如点 $A$、$C$，
+    或者更具描述性的名字，比如表示刚体 $B$ 质心的 $B_{cm}$。
+    我们使用位置向量 $p^A$ 来表示该点的位置；
+    这里的 $p$ 表示 position（位置），而不是 point（点），
+    因为其他几何量同样也可能具有位置。</p>
 
-    <p>But let's be more careful.  Position is actually a relative quantity.
-    Really, we should only ever write the position of two points relative to
-    each other. We'll use e.g. $^Ap^C$ to denote the position of $C$ measured
-    from $A$.  The left superscript looks mighty strange, but we'll see that it
-    pays off once we start transforming points.</p>
+    <p>但让我们更严谨一些。位置实际上是一个相对量。
+    严格来说，我们只应该描述两个点之间的相对位置。
+    例如，我们用 $^Ap^C$ 表示“从点 $A$ 测量到点 $C$ 的位置”。
+    左上角的上标看起来确实有些奇怪，
+    但当我们开始进行点的坐标变换时，你会发现这种写法非常有用。</p>
     
-    <p>Every time we describe the (relative) position as a vector of numbers,
-    we need to be explicit about the frame we are using, specifically the
-    "expressed-in" frame. All of our frames are defined by orthogonal unit
-    vectors that follow the "right-hand rule". We'll give a frame a name, too,
-    like $F$.  If I want to write the position of point $C$ measured from point
-    $A$, expressed in frame $F$, I will write $^Ap^C_F$. If I ever want to get
-    just a single component of that vector, e.g. the $x$ component, then I'll
-    use $^Ap^C_{F_x}$. In some sense, the "expressed-in" frame is an
-    implementation detail; it is only required once we want to represent the
-    multibody quantity as a vector (e.g. in the computer).</p>
+    <p>每当我们使用一个数字向量来描述（相对）位置时，
+    都必须明确说明所使用的参考坐标系，特别是“表达于（expressed-in）”哪个坐标系。
+    我们所有的坐标系都由满足“右手定则”的正交单位向量定义。
+    我们也会给坐标系命名，例如 $F$。
+    如果我要表示“点 $C$ 相对于点 $A$ 的位置，并且该向量用坐标系 $F$ 表达”，
+    我会写成 $^Ap^C_F$。
+    如果我只想取这个向量中的某一个分量，例如 $x$ 分量，
+    那么我会写成 $^Ap^C_{F_x}$。
+    从某种意义上说，“expressed-in” 坐标系更像是一种实现细节；
+    只有当我们需要把多体系统中的物理量表示成一个向量（例如在计算机中）时，
+    它才是必须明确指定的。</p>
     
-    <p>That is seriously heavy notation.  I don't love it myself, but it's
-    the most durable I've got, and we'll have shorthand for when the context is
-    clear.</p>
+    <p>这套符号确实相当沉重。
+    我自己其实也不算特别喜欢它，
+    但这是目前我所知道最稳健、最不容易出错的表示方法；
+    当上下文足够清晰时，我们之后也会使用一些简写形式。</p>
 
     <p><img style="height:90px;float:left;margin-right:10px"
-    src="figures/frames.png"/> There are a few very special frames. We use $W$
-    to denote the <i>world frame</i>.  We think about the world frame in Drake
-    using vehicle coordinates (positive $x$ to the front, positive $y$ to the
-    <i>left</i>, and positive $z$ is up).  The other particularly special
-    frames are the <i>body frames</i>: every body in the multibody physics
-    engine has a unique frame attached to it.  We'll typically use $B_i$ to
-    denote the frame for body $i$.</p>
+    src="figures/frames.png"/> 有几个非常特殊的坐标系。
+    我们使用 $W$ 表示<i>世界坐标系（world frame）</i>。
+    在 Drake 中，我们采用车辆坐标系的约定来理解世界坐标系：
+    正 $x$ 指向前方，正 $y$ 指向<i>左侧</i>，正 $z$ 指向上方。
+    另外一类特别重要的坐标系是<i>刚体坐标系（body frames）</i>：
+    多体物理引擎中的每一个刚体都会绑定一个唯一的坐标系。
+    我们通常使用 $B_i$ 来表示第 $i$ 个刚体对应的坐标系。</p>
 
-    <p>Frames have a position, too -- it coincides with the frame origin.  So it
-    is perfectly valid to write $^Wp^A_W$ to denote the position of point $A$
-    measured from the origin of the world frame, expressed in the world frame.
-    Here is where the shorthand comes in.  If the position of a quantity is
-    measured from a frame, and expressed in the same frame, then we can safely
-    omit the subscript.  $^Fp^A \equiv {^Fp^A_F}$. Furthermore,
-    if the "measured from" field is omitted, then we assume that the point is
-    measured from $W$, so $p^A \equiv {}^Wp^A_W$.</p>
+    <p>坐标系本身也具有位置——这个位置对应于坐标系原点。
+    因此，写出 $^Wp^A_W$ 来表示“点 $A$ 相对于世界坐标系原点的位置，
+    并且使用世界坐标系表达”是完全合理的。
+    这里就要引入简写规则了。
+    如果某个量的位置是“相对于某个坐标系测量”，
+    并且同时“也用该坐标系表达”，
+    那么我们可以安全地省略下标。
+    即：$^Fp^A \equiv {^Fp^A_F}$。
+    此外，如果“相对于谁测量（measured from）”这一部分被省略，
+    那么默认认为是相对于世界坐标系 $W$ 测量，
+    因此 $p^A \equiv {}^Wp^A_W$。</p>
 
     <figure>
       <img style="width:60%" src="figures/notation.svg"></img>
@@ -159,475 +156,552 @@ href="https://www.youtube.com/channel/UChfUOAhz7ynELF-s_1LPpWg">Lecture videos a
       then converted with pdf2svg. -->
     </figure>
 
-    <p>Frames also have an orientation.  We'll use $R$ to denote a
-    <i>rotation</i>, and follow the same notation, writing $^BR^A$ to denote
-    the orientation of frame $A$ measured from frame $B$.  Unlike vectors, pure
-    rotations do not have an additional "expressed in" frame.</p>
+    <p>坐标系也具有姿态方向。我们将使用 $R$ 表示一个<i>旋转（rotation）</i>，
+    并沿用相同的符号规则，写作 $^BR^A$，表示“坐标系 $A$ 相对于坐标系 $B$ 的方向”。
+    与向量不同，纯旋转并不额外具有一个“表达于（expressed in）”的坐标系。</p>
 
-    <p>A frame $F$ can be specified completely by a position and rotation
-    measured from another frame.  Taken together, we call the position and
-    orientation a <a
-    href="https://drake.mit.edu/doxygen_cxx/group__multibody__spatial__pose.html">
-    <i>spatial pose</i></a>, or just <i>pose</i>.  A <i>spatial transform</i>,
-    or just <i>transform</i>, is the "verb form" of pose.  In Drake we use <a
-    href="https://drake.mit.edu/doxygen_cxx/classdrake_1_1math_1_1_rigid_transform.html"><code>RigidTransform</code></a>
-    to represent a pose/transform, and denote it with the letter $X$. $^BX^A$
-    is the pose of frame $A$ measured from frame $B$.  When we talk about the
-    pose of an object $O$, without mentioning a reference frame explicitly, we
-    mean $^WX^O$ where $O$ is the body frame of the object.  We do not use the
-    "expressed in" frame subscript for pose; we always want the pose expressed
-    in the reference frame.</p>
+    <p>一个坐标系 $F$ 可以通过相对于另一个坐标系测得的位置和旋转被完整指定。
+    将位置和方向合在一起，我们称之为
+    <a href="https://drake.mit.edu/doxygen_cxx/group__multibody__spatial__pose.html">
+    <i>空间位姿（spatial pose）</i></a>，简称<i>位姿（pose）</i>。
+    <i>空间变换（spatial transform）</i>，简称<i>变换（transform）</i>，
+    可以理解为 pose 的“动词形式”。
+    在 Drake 中，我们使用
+    <a href="https://drake.mit.edu/doxygen_cxx/classdrake_1_1math_1_1_rigid_transform.html"><code>RigidTransform</code></a>
+    来表示位姿/变换，并用字母 $X$ 表示它。
+    $^BX^A$ 表示“坐标系 $A$ 相对于坐标系 $B$ 的位姿”。
+    当我们谈论某个物体 $O$ 的位姿，而没有显式提到参考坐标系时，
+    我们指的是 $^WX^O$，其中 $O$ 是该物体的刚体坐标系。
+    对于位姿，我们不使用“表达于”坐标系的下标；
+    我们始终希望位姿用参考坐标系来表达。</p>
     
-    <p>The Drake <a
-    href="https://drake.mit.edu/doxygen_cxx/group__multibody__notation.html">
-    documentation</a> also discusses how to use this notation in code. In
-    short, $^Bp^A_C$ is written <code>p_BA_C</code>, ${}^BR^A$ as
-    <code>R_BA</code>, and ${}^BX^A$ as <code>X_BA</code>. It works, I
-    promise.</p>
+    <p>Drake 的
+    <a href="https://drake.mit.edu/doxygen_cxx/group__multibody__notation.html">
+    文档</a>也讨论了如何在代码中使用这种符号。
+    简而言之，$^Bp^A_C$ 写作 <code>p_BA_C</code>，
+    ${}^BR^A$ 写作 <code>R_BA</code>，
+    而 ${}^BX^A$ 写作 <code>X_BA</code>。
+    这套规则确实可行，我保证。</p>
 
   </section>
 
-  <section><h1>Pick and place via spatial transforms</h1>
+  <section><h1>通过空间变换实现抓取与放置</h1>
   
-    <p>Now that we have the notation, we can formulate our approach to the basic
-    pick and place problem.  Let us call our object, $O$, and our gripper, $G$.
-    Our idealized perception sensor tells us $^WX^O$.  Let's create a frame
-    $O_d$ to describe the "desired" pose of the object, $^WX^{O_d}$.
-    So pick and place manipulation is simply trying to make $X^O = X^{O_d}$.</p>
+    <p>现在我们已经有了符号体系，就可以表述处理基础抓取与放置问题的方法了。
+    我们将物体称为 $O$，将夹爪称为 $G$。
+    理想化的感知传感器会告诉我们 $^WX^O$。
+    让我们创建一个坐标系 $O_d$，用于描述物体的“期望”位姿，即 $^WX^{O_d}$。
+    因此，抓取与放置操作本质上就是试图使 $X^O = X^{O_d}$。</p>
     
-    <todo>Add a figure here (after Terry's PR lands).</todo>
+    <todo>在这里添加一张图（等 Terry 的 PR 合并之后）。</todo>
 
-    <div>To accomplish this, we will assume that the object doesn't move
-    relative to the world ($^WX^O$ is constant) when the gripper is open, and
-    the object doesn't move relative to the gripper ($^GX^O$ is constant) when
-    the gripper is closed.  Then we can:
-      <ul style="margin:0"><li>move the gripper in the world, $X^G$, to an
-      appropriate pose measured from the object: $^OX^{G_{grasp}}$.</li>
-      <li>close the gripper.</li>
-      <li>move the gripper+object to the desired pose, $X^O = X^{O_d}$.</li>
-      <li>open the gripper, and retract the hand.</li>
+    <div>为了实现这一点，我们将假设：当夹爪张开时，物体相对于世界坐标系不运动
+    （$^WX^O$ 保持不变）；当夹爪闭合时，物体相对于夹爪不运动
+    （$^GX^O$ 保持不变）。于是我们可以：
+      <ul style="margin:0"><li>将世界坐标系中的夹爪 $X^G$ 移动到一个相对于物体测得的合适位姿：
+      $^OX^{G_{grasp}}$。</li>
+      <li>闭合夹爪。</li>
+      <li>将夹爪+物体移动到期望位姿，即 $X^O = X^{O_d}$。</li>
+      <li>张开夹爪，并将机械手撤回。</li>
       </ul>
-    There is just one more important detail: to approach the object without
-    colliding with it, we will insert a "pregrasp pose", $^OX^{G_{pregrasp}}$,
-    above the object as an intermediate step.  We'll use the same transform to
-    retract away from the object when we set it down.
+    还有一个重要细节：为了在接近物体时避免与它发生碰撞，
+    我们会在物体上方插入一个“预抓取位姿（pregrasp pose）”，
+    即 $^OX^{G_{pregrasp}}$，作为中间步骤。
+    当我们放下物体后撤离时，也会使用同一个变换。
     </div>
 
-    <p>Clearly, programming this strategy requires good tools for working with
-    these transforms, and for relating the pose of the gripper to the joint
-    angles of the robot.</p>
+    <p>显然，要编写实现这一策略的程序，我们需要一套好用的工具来处理这些变换，
+    并将夹爪的位姿与机器人的关节角联系起来。</p>
   </section>
 
-  <section id="spatial_algebra"><h1>Spatial Algebra</h1>
+  <section id="spatial_algebra"><h1>空间代数</h1>
   
-    <p>Here is where we start to see the pay-off from our heavy notation, as we
-    define the rules of converting positions, rotations, poses, etc. between
-    different frames.  Without the notation, this invariably involves
-    me with my right hand in the air making the "right-hand rule", and my head
-    twisting around in space.  With the notation, it's a simple matter of lining
-    up the symbols properly, and we're more likely to get the right answer!</p>
+    <p>这里我们开始看到前面那套繁重符号体系带来的回报：
+    我们将定义在不同坐标系之间转换位置、旋转、位姿等量的规则。
+    如果没有这套符号，这件事总会变成我把右手举在空中比划“右手定则”，
+    同时脑袋在空间里跟着扭来扭去。
+    有了这套符号，它就变成了把各个符号正确对齐的简单问题，
+    而我们也更有可能得到正确答案！</p>
   
     <div>
-    Here are the basic rules of algebra for our spatial quantities:  
+    下面是这些空间量的基本代数规则：  
     <ul>
-      <li>Positions expressed in the same frame can be added when their
-      reference and target symbols match: \begin{equation}{}^Ap^B_F + {}^Bp^C_F
-      = {}^Ap^C_F.\end{equation} Addition is commutative, and the additive
-      inverse is well defined: \begin{equation}{}^Ap^B_F = -
-      {}^Bp^A_F.\end{equation} Those should be pretty intuitive; make sure you
-      confirm them for yourself.</li>
-      <li>Multiplication by a rotation can be used to change the "expressed in"
-      frame: \begin{equation}{}^Ap^B_G = {}^GR^F {}^Ap^B_F.\end{equation}  You
-      might be surprised that a rotation alone is enough to change the
-      expressed-in frame, but it's true. The position of the expressed-in frame
-      does <i>not</i> affect the relative position between two points.</li>
-      <li>Rotations can be multiplied when their reference and target symbols
-      match: \begin{equation}{}^AR^B \: {}^BR^C = {}^AR^C.\end{equation}  The
-      inverse operation is also simply defined:
-      \begin{equation}\left[{}^AR^B\right]^{-1} = {}^BR^A.\end{equation} When
-      the rotation is represented as a rotation matrix, this is literally the
-      matrix inverse, and since rotation matrices are orthonormal, we also have
-      $R^{-1}=R^T.$</li>
-      <li>Transforms bundle this up into a single, convenient notation when
-      positions are measured from a frame (and the same frame they are expressed
-      in): \begin{equation}{}^Gp^A = {}^GX^F {}^Fp^A = {}^Gp^F + {}^Fp^A_G
+      <li>当位置向量用同一个坐标系表达，并且它们的参考符号与目标符号相匹配时，
+      可以相加：\begin{equation}{}^Ap^B_F + {}^Bp^C_F
+      = {}^Ap^C_F.\end{equation} 加法满足交换律，并且加法逆元也有明确定义：
+      \begin{equation}{}^Ap^B_F = -
+      {}^Bp^A_F.\end{equation} 这些规则应该相当直观；
+      请务必自己验证一下。</li>
+      <li>乘以一个旋转可以用来改变“表达于”的坐标系：
+      \begin{equation}{}^Ap^B_G = {}^GR^F {}^Ap^B_F.\end{equation}
+      你可能会惊讶：仅靠一个旋转就足以改变 expressed-in 坐标系，
+      但事实确实如此。expressed-in 坐标系的位置
+      <i>不会</i>影响两个点之间的相对位置。</li>
+      <li>当旋转的参考符号和目标符号相匹配时，旋转可以相乘：
+      \begin{equation}{}^AR^B \: {}^BR^C = {}^AR^C.\end{equation}
+      其逆运算也可以简单定义为：
+      \begin{equation}\left[{}^AR^B\right]^{-1} = {}^BR^A.\end{equation}
+      当旋转被表示为旋转矩阵时，这实际上就是矩阵逆；
+      又因为旋转矩阵是正交归一的，所以我们还有 $R^{-1}=R^T.$</li>
+      <li>当位置是相对于某个坐标系测量的（并且也用同一个坐标系表达）时，
+      变换会把这些内容打包成一种统一且方便的符号：
+      \begin{equation}{}^Gp^A = {}^GX^F {}^Fp^A = {}^Gp^F + {}^Fp^A_G
       = {}^Gp^F + {}^GR^F {}^Fp^A.\end{equation}</li>
-      <li>Transforms compose: \begin{equation}{}^AX^B {}^BX^C =
-      {}^AX^C,\end{equation}  and have an inverse
-      \begin{equation}\left[{}^AX^B\right]^{-1} = {}^BX^A.\end{equation}  Please
-      note that for transforms, we generally do
-      <i>not</i> have that $X^{-1}$ is $X^T,$ though it still has a simple form.
+      <li>变换可以复合：
+      \begin{equation}{}^AX^B {}^BX^C =
+      {}^AX^C,\end{equation}
+      并且具有逆：
+      \begin{equation}\left[{}^AX^B\right]^{-1} = {}^BX^A.\end{equation}
+      请注意，对于变换而言，我们通常
+      <i>不能</i>认为 $X^{-1}$ 等于 $X^T$，尽管它仍然具有一个简单形式。
     </li>
     </ul></div>
 
-    <p>In practice, transforms are implemented using <a
-    href="https://drake.mit.edu/doxygen_cxx/group__multibody__spatial__pose.html">homogenous
-    coordinates</a>, but for now I'm happy to leave that as an implementation
-    detail.</p>
+    <p>在实际实现中，变换通常使用
+    <a href="https://drake.mit.edu/doxygen_cxx/group__multibody__spatial__pose.html">齐次坐标（homogenous
+    coordinates）</a>来表示，不过目前我愿意把这部分当作一种实现细节。</p>
 
-    <example><h1>From camera frame to world frame</h1>
+    <example><h1>从相机坐标系到世界坐标系</h1>
       
-      <todo>Add a figure here.</todo>
+      <todo>在这里添加一张图。</todo>
 
-      <p>Imagine that I have a depth camera mounted in a fixed pose in my
-      workspace.  Let's call the camera frame $C$ and denote its pose in the
-      world with ${}^WX^C$.</p>
+      <p>假设我在工作空间中固定安装了一台深度相机。
+      我们将相机坐标系称为 $C$，并用 ${}^WX^C$ 表示它在世界坐标系中的位姿。</p>
 
-      <p>A depth camera returns points in the camera frame.  Therefore,
-      we'll write this position of point $P_i$ with ${}^Cp^{P_i}$.  If we want
-      to convert the point into the world frame, we simply have $$p^{P_i}
+      <p>深度相机会返回位于相机坐标系中的点。
+      因此，我们将点 $P_i$ 的位置写作 ${}^Cp^{P_i}$。
+      如果我们想把这个点转换到世界坐标系中，
+      只需执行：
+      $$p^{P_i}
       = X^C {}^Cp^{P_i}.$$</p>
 
-      <p>This is a work-horse operation for us.  We often aim to merge points
-      from multiple cameras (typically in the world frame), and always need to
-      somehow relate the frames of the camera with the frames of the robot. The
-      inverse transform, ${}^CX^W$, which projects world coordinates into the
-      camera frame, is often called the camera "extrinsics".</p>
+      <p>这是我们最核心、最常用的操作之一。
+      我们经常需要将来自多个相机的点融合在一起（通常是在世界坐标系中），
+      并且总是需要以某种方式把相机坐标系与机器人坐标系联系起来。
+      反向变换 ${}^CX^W$（即把世界坐标投影到相机坐标系中）
+      通常被称为相机的“外参（extrinsics）”。</p>
     
     </example>
 
-    <subsection id="3D_rotation"><h1>Representations for 3D rotation</h1>
+    <subsection id="3D_rotation"><h1>三维旋转的表示方法</h1>
     
-      <p>In the spatial algebra above, I've written the rules for rotations
-      using an abstract notion of rotation.  But in order to implement this
-      algebra in code, we need to decide how we are going to represent those
-      representations with a small number of real values.  There are <a
-      href="https://en.wikipedia.org/wiki/Rotation_formalisms_in_three_dimensions">many
-      possible representations of 3D rotations</a>, they are each good for
-      different operations, and unfortunately, there is no one representation
-      to rule them all. (This is one of the many reasons why everything is
-      better in 2D!) Common representations include <ul><li><a
+      <p>在前面的空间代数中，我使用的是一种抽象意义上的“旋转”来书写相关规则。
+      但为了在代码中实现这些代数运算，
+      我们需要决定如何使用少量实数来表示这些旋转。
+      <a href="https://en.wikipedia.org/wiki/Rotation_formalisms_in_three_dimensions">三维旋转存在许多不同的表示方式</a>，
+      它们分别适用于不同类型的运算，
+      不幸的是，并不存在一种能够完美适用于所有场景的统一表示。
+      （这也是为什么二维问题总是更简单的众多原因之一！）
+      常见的表示方式包括：
+      <ul><li><a
       href="https://drake.mit.edu/doxygen_cxx/classdrake_1_1math_1_1_rotation_matrix.html">3$\times$3
-      rotation matrices</a>,</li>
+      旋转矩阵</a>，</li>
       <li><a
-      href="https://drake.mit.edu/doxygen_cxx/classdrake_1_1math_1_1_roll_pitch_yaw.html">Euler
-      angles (e.g. roll-pitch-yaw)</a>,</li><li><a
-      href="https://devdocs.io/eigen3/classeigen_1_1angleaxis">axis
-      angle</a> (aka "exponential coordinates"), and </li><li><a
-      href="https://devdocs.io/eigen3/classeigen_1_1quaternion">unit
-      quaternions</a>.</li></ul> In Drake, we provide all of these
-      representations, and make it easy to convert back and forth between
-      them.</p>
+      href="https://drake.mit.edu/doxygen_cxx/classdrake_1_1math_1_1_roll_pitch_yaw.html">欧拉角（例如 roll-pitch-yaw）</a>，</li>
+      <li><a
+      href="https://devdocs.io/eigen3/classeigen_1_1angleaxis">轴角表示（axis-angle）</a>
+      （也称为“指数坐标”），以及</li>
+      <li><a
+      href="https://devdocs.io/eigen3/classeigen_1_1quaternion">单位四元数（unit quaternions）</a>。</li></ul>
+      在 Drake 中，我们提供了所有这些表示方式，
+      并且可以方便地在它们之间互相转换。</p>
       
-      <p>A 3$\times$3 <a
-      href="https://drake.mit.edu/doxygen_cxx/group__multibody__spatial__pose.html#orientation_discussion">rotation
-      matrix</a> is an orthonormal matrix with columns formed by the $x-$,
-      $y-$, and $z-$axes. Specifically, the first column of the transform
-      ${}^GR^F$ has the $x-$axis of frame $F$ expressed in $G$ in the first
-      column, etc.</p>
+      <p>一个 3$\times$3 的
+      <a href="https://drake.mit.edu/doxygen_cxx/group__multibody__spatial__pose.html#orientation_discussion">旋转矩阵</a>
+      是一个正交归一矩阵，
+      它的列向量由 $x-$、$y-$、$z-$ 轴构成。
+      更具体地说，在变换 ${}^GR^F$ 中，
+      第一列表示坐标系 $F$ 的 $x$ 轴在坐标系 $G$ 中的表达，
+      其余列依此类推。</p>
 
-      <p><a href="https://en.wikipedia.org/wiki/Euler_angles">Euler angles</a>
-      specify a 3D rotation by a series of rotations around the $x$, $y$, and
-      $z$ axes. The order of these rotations matters; and many combinations can be used to describe any 3D rotation. This is why we use
-      <code>RollPitchYaw</code> in the code (preferring it over the more
-      general term "Euler angle") and <a
-      href="https://drake.mit.edu/doxygen_cxx/classdrake_1_1math_1_1_roll_pitch_yaw.html">document
-      it carefully</a>. Roll is a rotation around the $x$-axis, pitch is a
-      rotation around the $y$-axis, and yaw is a rotation around the $z$-axis;
-      this is also known as "extrinsic X-Y-Z" Euler angles.</p>
+      <p><a href="https://en.wikipedia.org/wiki/Euler_angles">欧拉角（Euler angles）</a>
+      通过绕 $x$、$y$、$z$ 轴的一系列旋转来描述一个三维旋转。
+      这些旋转的顺序非常重要；
+      并且存在许多不同的组合方式来描述任意三维旋转。
+      这也是为什么我们在代码中使用
+      <code>RollPitchYaw</code>
+      （而不是更泛化的“Euler angle”术语），并且对它进行了
+      <a href="https://drake.mit.edu/doxygen_cxx/classdrake_1_1math_1_1_roll_pitch_yaw.html">详细文档说明</a>。
+      Roll 表示绕 $x$ 轴旋转，
+      pitch 表示绕 $y$ 轴旋转，
+      yaw 表示绕 $z$ 轴旋转；
+      这种形式也被称为“外旋 X-Y-Z（extrinsic X-Y-Z）欧拉角”。</p>
       
-      <p>Axis angles describe a 3D rotation by a scalar rotation around an
-      arbitrary vector axis using three numbers: the direction of the vector is
-      the axis, and the magnitude of the vector is the angle. You can think of
-      unit quaternions as a form of axis angles that have been carefully
-      normalized to be unit length and have magical properties. My favorite
-      careful description of quaternions is probably chapter 1 of
-      <elib>Stillwell08</elib>.</p>
+      <p>轴角表示（axis-angle）使用一个任意方向的旋转轴以及绕该轴旋转的角度来描述三维旋转，
+      总共使用三个数：
+      向量的方向表示旋转轴，
+      向量的模长表示旋转角度。
+      你可以把单位四元数理解为一种经过精心归一化后的轴角表示，
+      它被约束为单位长度，并具有许多神奇的数学性质。
+      关于四元数，我最喜欢的一份严谨介绍大概是
+      <elib>Stillwell08</elib> 的第一章。</p>
 
-      <p>Why all of the representations? Shouldn't "roll-pitch-yaw" be enough?
-      Unfortunately, no. The limitation is perhaps most easily seen by looking
-      at the coordinate changes from roll-pitch-yaw to/from a rotation matrix.
-      Any roll-pitch-yaw can be converted to a rotation matrix, but the inverse
-      map has a singularity. In particular, when the pitch angle is
-      $\frac{\pi}{2}$, then roll and yaw are now indistinguishable. This is
-      described very nicely, along with its physical manifestation in "gimbal
-      lock" in <a
-      href="https://robotacademy.net.au/lesson/singularity-in-3d-rotation-angle-sequences/">this
-      video</a>. Similarly, the direction of the vector in the axis-angle
-      representation is not uniquely defined when the rotation angle is zero.
-      These singularities become problematic when we start taking derivatives
-      of rotations, for instance when we write the equations of motion. It is
-      now well understood <elib>Stillwell08</elib> that it requires at least
-      four numbers to properly represent the group of 3D rotations; the unit
-      quaternion is the most common four-element representation.
+      <p>为什么会需要这么多种表示方式？“roll-pitch-yaw” 难道还不够吗？
+      不幸的是，并不够。这个限制最容易通过观察
+      roll-pitch-yaw 与旋转矩阵之间的坐标变换来理解。
+      任意的 roll-pitch-yaw 都可以转换成旋转矩阵，
+      但反向映射却存在奇异性（singularity）。
+      特别地，当 pitch 角等于 $\frac{\pi}{2}$ 时，
+      roll 与 yaw 将变得无法区分。
+      关于这一点，以及它在物理上的体现——“万向节死锁（gimbal lock）”，
+      在<a
+      href="https://robotacademy.net.au/lesson/singularity-in-3d-rotation-angle-sequences/">这个视频</a>中有非常精彩的解释。
+      类似地，在轴角表示（axis-angle）中，
+      当旋转角度为零时，向量方向并不是唯一确定的。
+      当我们开始对旋转求导时（例如在推导运动方程时），
+      这些奇异性就会变得非常棘手。
+      现在人们已经充分认识到 <elib>Stillwell08</elib>：
+      要正确表示三维旋转群，至少需要四个数；
+      单位四元数则是最常见的四维表示方法。
       </p>
     
     </subsection>
 
   </section>
 
-  <section id="kinematics"><h1>Forward kinematics</h1>
+  <section id="kinematics"><h1>正向运动学</h1>
   
-    <p>The spatial algebra gets us pretty close to what we need for our pick and
-    place algorithm.  But remember that the interface we have with the robot
-    reports measured joint positions, and expects commands in the form of joint
-    positions.  So our remaining task is to convert between joint angles and
-    cartesian frames.  We'll do this in steps, the first step is to go from
-    joint positions to cartesian frames: this is known as <i>forward
-    kinematics</i>.
+    <p>空间代数已经让我们距离实现抓取与放置算法非常接近了。
+    但请记住，我们与机器人的接口所返回的是测量得到的关节位置，
+    而机器人所接收的命令也同样是关节位置。
+    因此，我们剩下的任务就是在关节角与笛卡尔坐标系之间进行转换。
+    我们会分步骤完成这件事，
+    第一步是从关节位置推导出笛卡尔坐标系；
+    这被称为<i>正向运动学（forward kinematics）</i>。</p>
 
-    <p>Throughout this text, we will refer to the joint positions of the robot
-    (also known as "configuration" of the robot) using a vector $q$.  If the
-    configuration of the scene includes objects in the environment as well as
-    the robot, we would use $q$ for the entire configuration vector, and use
-    e.g. $q_{robot}$ for the subset of the vector corresponding to the robot's
-    joint positions. Therefore, the goal of forward kinematics is to produce a
-    map: \begin{equation}X^G = f_{kin}^G(q).\end{equation}  Moreover, we'd like
-    to have forward kinematics available for any frame we have defined in the
-    scene.  Our spatial notation and spatial algebra makes this computation
-    relatively straight-forward.</p>
+    <p>在本书中，我们将使用向量 $q$ 来表示机器人的关节位置
+    （也称为机器人的“构型 configuration”）。
+    如果场景中的构型不仅包含机器人，还包含环境中的物体，
+    那么我们会使用 $q$ 表示整个场景的构型向量，
+    并使用例如 $q_{robot}$ 来表示其中对应机器人关节位置的子向量。
+    因此，正向运动学的目标是构建如下映射：
+    \begin{equation}X^G = f_{kin}^G(q).\end{equation}
+    此外，我们希望能够对场景中定义的任意坐标系都进行正向运动学计算。
+    我们之前建立的空间符号体系与空间代数，
+    使得这一计算过程变得相对直接清晰。</p>
 
-    <subsection id="kinematic_tree"><h1>The kinematic tree</h1>
+    <subsection id="kinematic_tree"><h1>运动学树</h1>
 
-      <p>In order to facilitate kinematics and related multibody computations,
-      the <code>MultibodyPlant</code> organizes all of the bodies in the world
-      into a tree topology.  Every body (except the world body) has a parent,
-      which it is connected to via either a <code>Joint</code> or a "floating
-      base".</p>
+      <p>为了便于进行运动学以及相关的多体系统计算，
+      <code>MultibodyPlant</code> 会将世界中的所有刚体组织成一种树形拓扑结构。
+      每个刚体（除了世界刚体 world body）都有一个父节点，
+      它通过一个 <code>Joint</code>（关节）或一个“浮动基座（floating base）”
+      与父节点相连接。</p>
 
-      <example><h1>Inspecting the kinematic tree</h1>
+      <example><h1>检查运动学树</h1>
 
-        <p>Drake provides some visualization support for inspecting the
-        kinematic tree data structure.  The kinematic tree for an iiwa is more
-        of a vine than a tree (it's a serial manipulator), but the tree for the
-        dexterous hands are more interesting.  I've added our brick to the
-        example, too, so that you can see that a "free" body is just another
-        branch off the world root node.</p>
+        <p>Drake 提供了一些可视化支持，用于检查运动学树这一数据结构。
+        iiwa 的运动学树与其说是一棵树，不如说更像一根藤蔓（因为它是一个串联机械臂）；
+        不过，灵巧手的树结构就更有意思一些。
+        我还把我们的砖块也加入到了这个示例中，
+        这样你就可以看到，一个“自由”刚体其实只是从世界根节点分出的另一条分支。</p>
 
         <script>document.write(notebook_link('pick', notebook="kinematic_tree"))</script>
     
-        <todo>Insert topology visualization here (once it is better)</todo>
+        <todo>在这里插入拓扑结构可视化图（等它做得更好之后）</todo>
       </example>
 
-      <p>Every <code>Joint</code> and "floating base" has some number of
-      position variables associated with it -- a subset of the configuration
-      vector $q$ -- and knows how to compute the configuration dependent
-      transform across the joint from the child joint frame $J_C$ to the parent
-      joint frame $J_P$: ${}^{J_P}X^{J_C}(q)$.  Additionally, the kinematic tree
-      defines the (fixed) transforms from the joint frame to the child body
-      frame, ${}^CX^{J_C}$, and from the joint frame to the parent frame,
-      ${}^PX^{J_P}$. Altogether, we can compute the configuration transform
-      between any one body and its parent, $${}^PX^C(q) = {}^PX^{J_P}
+      <p>每个 <code>Joint</code> 和“浮动基座（floating base）”都关联着若干个位置变量——
+      也就是构型向量 $q$ 的一个子集——并且知道如何计算跨越该关节、依赖于构型的变换：
+      从子关节坐标系 $J_C$ 到父关节坐标系 $J_P$ 的变换
+      ${}^{J_P}X^{J_C}(q)$。
+      此外，运动学树还定义了从关节坐标系到子刚体坐标系的（固定）变换
+      ${}^CX^{J_C}$，
+      以及从关节坐标系到父坐标系的（固定）变换
+      ${}^PX^{J_P}$。
+      将这些组合起来，我们就可以计算任意一个刚体与其父刚体之间的构型变换：
+      $${}^PX^C(q) = {}^PX^{J_P}
       {}^{J_P}X^{J_C}(q) {}^{J_C}X^C.$$</p>
 
       <todo>
-        Examples or links to specifying the kinematic tree in URDF, SDF, etc...
+        添加一些示例或链接，说明如何在 URDF、SDF 等格式中指定运动学树……
       </todo>
 
-      <p>You might be tempted to think that every time you add a joint to the
-      <code>MultibodyPlant</code>, you are adding a degree of freedom.  But it
-      actually works the other way around.  Every time you add a <i>body</i>
-      to the plant, you are adding many degrees of freedom.  But you can then
-      add joints to <i>remove</i> those degrees of freedom; joints are
-      constraints.  "Welding" the robot's base to the world frame removes all of
-      the floating degrees of freedom of the base.  Adding a rotational joint
-      between a child body and a parent body removes all but one degree of
-      freedom, etc.</p>
+      <p>你可能会倾向于认为，每当你向
+      <code>MultibodyPlant</code> 添加一个关节时，你就是在增加一个自由度。
+      但实际上情况正好相反。
+      每当你向 plant 中添加一个<i>刚体</i>时，你都会增加许多自由度。
+      随后你可以再添加关节来<i>移除</i>这些自由度；关节本质上是约束。
+      将机器人的基座“焊接（welding）”到世界坐标系上，
+      会移除基座的所有浮动自由度。
+      在子刚体与父刚体之间添加一个转动关节，
+      则会移除除一个自由度之外的所有自由度，依此类推。</p>
 
     </subsection>
 
-    <subsection><h1>Forward kinematics for pick and place</h1>
+    <subsection><h1>用于抓取与放置的正向运动学</h1>
     
-      <p>In order to compute the pose of the gripper in the world, $X^G$, we
-      simply query the parent of the gripper frame in the kinematic tree, and
-      recursively compose the transforms until we get to the world frame.</p>
+      <p>为了计算夹爪在世界坐标系中的位姿 $X^G$，
+      我们只需查询运动学树中夹爪坐标系的父节点，
+      并递归地复合各个变换，直到到达世界坐标系。</p>
 
       <figure id="kinematic_frames">
         <img style="width:40%;margin-right:40px"
         src="figures/kinematic_frames_iiwa.png"/><img style="width:40%"
         src="figures/kinematic_frames_gripper.png"/>
-        <figcaption>Kinematic frames on the iiwa (left) and the WSG gripper (right). For
-        each frame, the <span style="color:red">positive $x$ axis is in red</span>, the
-        <span style="color:green">positive $y$ axis is in green</span>, and the <span
-        style="color:blue">positive $z$ axis is in blue</span>.  It's (hopefully) easy
-        to remember: XYZ $\Leftrightarrow$ RGB.</figcaption>
+        <figcaption>iiwa（左）和 WSG 夹爪（右）上的运动学坐标系。
+        对于每个坐标系，<span style="color:red">正 $x$ 轴为红色</span>，
+        <span style="color:green">正 $y$ 轴为绿色</span>，
+        <span style="color:blue">正 $z$ 轴为蓝色</span>。
+        这（希望）很容易记住：XYZ $\Leftrightarrow$ RGB。</figcaption>
       </figure>
 
-      <example><h1>Forward kinematics for the gripper frame</h1>
+      <example><h1>夹爪坐标系的正向运动学</h1>
       
-        <p>Let's evaluate the pose of the gripper in the world frame: $X^G$.
-        We know that it will be a function of configuration of the robot, which
-        is just a part of the total state of the <code>MultibodyPlant</code>
-        (and so is stored in the <code>Context</code>).  The following example
-        shows you how it works.</p>
+        <p>让我们计算夹爪在世界坐标系中的位姿：$X^G$。
+        我们知道它会是机器人构型的一个函数，
+        而机器人构型只是 <code>MultibodyPlant</code> 总状态的一部分
+        （因此它存储在 <code>Context</code> 中）。
+        下面的示例展示了它是如何工作的。</p>
 
         <script>document.write(notebook_link('pick', notebook="forward_kinematics"))</script>
 
-        <p>The key lines are 
+        <p>关键代码行是：
           <code class="language-python"><pre>
 gripper = plant.GetBodyByName("body", wsg)
 pose = plant.EvalBodyPoseInWorld(context, gripper)</pre></code>
-        Behind the scenes, the <code>MultibodyPlant</code> is doing all of the
-        spatial algebra we described above to return the pose (and also some
-        clever caching because you can reuse much of the computation when you
-        want to evaluate the pose of another frame on the same robot).  
+        在幕后，<code>MultibodyPlant</code> 正在执行我们前面描述过的全部空间代数运算，
+        从而返回该位姿（同时还会做一些巧妙的缓存，
+        因为当你想计算同一机器人上另一个坐标系的位姿时，
+        很多计算都可以被复用）。
         </p>
 
       </example>
 
-      <example id="floating-base"><h1>Forward kinematics of "floating-base" objects</h1>
+      <example id="floating-base"><h1>“浮动基座”物体的正向运动学</h1>
       
-        <p>Consider the special case of having a <code>MultibodyPlant</code>
-        with exactly one body added, and no joints.  The kinematic tree is
-        simply the world frame, the body frame, and they are connected by the
-        "floating base".  What does the forward kinematics function: $$X^B =
-        f_{kin}^B(q),$$ look like in that case?  If $q$ is already representing
-        the floating-base configuration, is $f^B_{kin}$ just the identity
-        function?</p>
+        <p>考虑一个特殊情况：某个 <code>MultibodyPlant</code>
+        中只添加了一个刚体，并且没有任何关节。
+        此时运动学树只是由世界坐标系、刚体坐标系组成，
+        它们之间通过“浮动基座（floating base）”连接。
+        那么在这种情况下，正向运动学函数
+        $$X^B =
+        f_{kin}^B(q),$$
+        会是什么样子？
+        如果 $q$ 已经表示了浮动基座的构型，
+        那么 $f^B_{kin}$ 是否只是恒等函数呢？</p>
 
-        <p>This gets into the subtle points of how we represent transforms, and
-        <a href="#3D_rotation">how we represent 3D rotations</a> in particular.
-        Although we use rotation matrices in our <code>RigidTransform</code>
-        class, in order to make the spatial algebra efficient, we actually use
-        unit quaternions in the configuration vector $q,$ and in the
-        <code>Context</code> in order to have a compact representation.</p>
+        <p>这会涉及我们如何表示变换的一些微妙问题，
+        尤其是<a href="#3D_rotation">我们如何表示三维旋转</a>。
+        尽管在 <code>RigidTransform</code> 类中，为了让空间代数运算高效，
+        我们使用的是旋转矩阵；
+        但在构型向量 $q$ 和 <code>Context</code> 中，
+        为了获得紧凑表示，我们实际上使用的是单位四元数。</p>
 
-        <p>As a result, for this example, the software implementation of the
-        function $f_{kin}^B$ is precisely the function that converts the
-        position $\times$ unit quaternion representation into the pose
-        (position $\times$ rotation matrix) representation.</p>
+        <p>因此，在这个例子中，函数 $f_{kin}^B$ 的软件实现，
+        正是将“位置 $\times$ 单位四元数”表示
+        转换为“位姿（位置 $\times$ 旋转矩阵）”表示的函数。</p>
       </example>
 
     </subsection>
 
   </section>
 
-  <section id="jacobian"><h1>Differential kinematics (Jacobians)</h1>
+  <section id="jacobian"><h1>微分运动学（雅可比矩阵）</h1>
 
-    <p>The forward kinematics machinery gives us the ability to compute the pose
-    of the gripper and the pose of the object, both in the world frame.  But
-    if our goal is to <i>move</i> the gripper to the object, then we should
-    understand how changes in the joint angles relate to changes in the gripper
-    pose.  This is traditionally referred to as "differential kinematics".</p>
+    <p>正向运动学机制使我们能够计算夹爪的位姿以及物体的位姿，
+    并且二者都位于世界坐标系中。
+    但如果我们的目标是<i>移动</i>夹爪使其到达物体位置，
+    那么我们就需要理解：关节角的变化是如何影响夹爪位姿变化的。
+    这通常被称为“微分运动学（differential kinematics）”。</p>
 
-    <p>At first blush, this is straightforward.  The change in pose is related
-    to a change in joint positions by the (partial) derivative of the forward
-    kinematics:  \begin{equation}dX^B = \pd{f_{kin}^B(q)}{q} dq = J^B(q)dq.
-    \label{eq:jacobian}\end{equation} Partial derivatives of a function are
-    referred to as "Jacobians" in many fields; in robotics it's rare to refer to
-    derivatives of the kinematics as anything else.</p>
+    <p>乍一看，这似乎很直接。
+    位姿变化与关节位置变化之间的关系，
+    可以通过正向运动学的（偏）导数来描述：
+    \begin{equation}dX^B = \pd{f_{kin}^B(q)}{q} dq = J^B(q)dq.
+    \label{eq:jacobian}\end{equation}
+    在许多领域中，函数的偏导数被称为“Jacobian（雅可比矩阵）”；
+    而在机器人学中，人们几乎不会用别的名字来称呼运动学导数。</p>
 
-    <div>All of the subtlety, again, comes in because of the multiple
-    representations that we have for 3D rotations (rotation matrix, unit
-    quaternions, ...).  While there is no one best representation for 3D
-    rotations, it <i>is</i> possible to have one canonical representation for
-    <i>differential</i> rotations.  Without any concern for singularities nor
-    loss of generality, we can represent the rate of change in pose using a
-    six-component vector for <a
-    href="https://drake.mit.edu/doxygen_cxx/group__multibody__spatial__vectors.html"><i>spatial
-    velocity</i></a>: \begin{equation}{}^AV^B_C = \begin{bmatrix}
-    {}^A\omega^B_C \\ {}^A\text{v}^B_C \end{bmatrix}.\end{equation} ${}^AV^B_C$
-    is the spatial velocity (also known as a "twist") of frame $B$ measured in
-    frame $A$ expressed in frame $C$, ${}^A\omega^B_C \in \Re^3$ is the
-    <i>angular velocity</i> (of frame $B$ measured in $A$ expressed in frame
-    $C$), and ${}^A\text{v}^B_C \in \Re^3$ is the <i>translational velocity</i>
-    (along with the same shorthands as for positions).  The angular velocity is a 3D
-    vector (with $w_x$, $w_y$, $w_z$ components); the magnitude of this vector
-    represents the angular speed and the direction represents the (instantaneous) axis
-    of rotation. It's tempting to think of it as the time derivatives of roll, pitch,
-    and yaw, but that's not true; it can easily be converted to (or from) that
-    representation through a <a
-    href="https://github.com/RobotLocomotion/drake/blob/d1a1d14b323c8a4a481a8d11fc8e9c527d63bf20/multibody/tree/rpy_ball_mobilizer.cc#L223">linear
-    map</a>. It is also not the time-derivative of the axis-angle representation; that
-    conversion can be found e.g. <a
-    href="https://math.stackexchange.com/questions/4534687/axis-angle-representation-of-angular-velocity">here</a>.</p>
-  
-    <p>Spatial velocities fit nicely into our spatial algebra:
+    <div>所有微妙之处，再一次地，来自于三维旋转存在多种表示方式
+    （旋转矩阵、单位四元数等等）。
+    尽管不存在一种对所有场景都最优的三维旋转表示，
+    但对于<i>微分</i>旋转，却<i>确实</i>存在一种规范化表示。
+    在无需担心奇异性、也不会损失一般性的情况下，
+    我们可以使用一个六维向量来表示位姿变化率，
+    即<a
+    href="https://drake.mit.edu/doxygen_cxx/group__multibody__spatial__vectors.html"><i>空间速度（spatial
+    velocity）</i></a>：
+    \begin{equation}{}^AV^B_C = \begin{bmatrix}
+    {}^A\omega^B_C \\ {}^A\text{v}^B_C \end{bmatrix}.\end{equation}
+    ${}^AV^B_C$
+    表示坐标系 $B$ 相对于坐标系 $A$ 的空间速度（也称为 “twist”），
+    并且使用坐标系 $C$ 表达；
+    其中 ${}^A\omega^B_C \in \Re^3$
+    是<i>角速度（angular velocity）</i>
+    （即坐标系 $B$ 相对于 $A$ 的角速度，并在坐标系 $C$ 中表达），
+    而 ${}^A\text{v}^B_C \in \Re^3$
+    是<i>平移速度（translational velocity）</i>
+    （其简写规则与位置向量相同）。
+    角速度是一个三维向量（包含 $w_x$、$w_y$、$w_z$ 分量）；
+    该向量的模长表示角速度大小，
+    向量方向则表示（瞬时）旋转轴方向。
+    人们很容易误以为它是 roll、pitch、yaw 的时间导数，
+    但实际上并不是；
+    它们之间可以通过一个<a
+    href="https://github.com/RobotLocomotion/drake/blob/d1a1d14b323c8a4a481a8d11fc8e9c527d63bf20/multibody/tree/rpy_ball_mobilizer.cc#L223">线性映射</a>
+    方便地互相转换。
+    它也并不是轴角表示（axis-angle）的时间导数；
+    关于这一转换，可参考例如<a
+    href="https://math.stackexchange.com/questions/4534687/axis-angle-representation-of-angular-velocity">这里</a>。</p>
+
+    <p>空间速度（spatial velocity）能够很好地融入我们的空间代数体系：
     <ul>
-      <li>Rotations can be used to change between the "expressed-in"
-      frames: \begin{equation} {}^A\text{v}^B_G = {}^GR^F {}^A\text{v}^B_F,
+      <li>旋转可以用于在不同“expressed-in”坐标系之间进行转换：
+      \begin{equation} {}^A\text{v}^B_G = {}^GR^F {}^A\text{v}^B_F,
       \qquad {}^A\omega^B_G = {}^GR^F {}^A\omega^B_F.\end{equation}</li>
-      <li>Angular velocities add when they are expressed in the same frame:
-      \begin{gather} {}^A\omega^B_F + {}^B\omega^C_F = {}^A\omega^C_F,\end{gather} (this
-      <a href="#angular_velocity_addition">deserves to be verified</a>) and have the
-      additive inverse, ${}^A\omega^C_F = - {}^C\omega^A_F,$.</li>
-      <li>Composition of translational velocities is a bit more complicated:
+
+      <li>当角速度使用同一个坐标系表达时，它们可以直接相加：
+      \begin{gather} {}^A\omega^B_F + {}^B\omega^C_F = {}^A\omega^C_F,\end{gather}
+      （这一点<a href="#angular_velocity_addition">值得亲自验证</a>）
+      并且其加法逆元满足
+      ${}^A\omega^C_F = - {}^C\omega^A_F,$。</li>
+
+      <li>平移速度的复合则稍微复杂一些：
       \begin{equation}{}^A\text{v}^C_F = {}^A\text{v}^B_F + {}^B\text{v}^C_F +
       {}^A\omega^B_F \times {}^Bp^C_F.\end{equation} 
-      <details><summary>This can be derived in a few steps (click the triangle to
-      expand)</summary><p>Differentiating $${}^Ap^C = {}^AX^B {}^Bp^C = {}^Ap^B +
-      {}^AR^B {}^Bp^C,$$ yields \begin{align} {}^A\text{v}^C =& {}^A\text{v}^B +
-      {}^A\dot{R}^B {}^Bp^C + {}^AR^B {}^B\text{v}^C \nonumber \\ =& {}^A\text{v}^B_A +
-      {}^A\dot{R}^B {}^BR^A {}^Bp^C_A + {}^B\text{v}^C_A.\end{align} Allow me to write
-      $\dot{R}R^T = \dot{R}R^{-1}$ for ${}^A\dot{R}^B {}^BR^A$ (dropping the frames for
-      a moment). It turns out that $\dot{R}R^T$, is always a skew-symmetric matrix. To
-      see this, differentiate $RR^T = I$ to get $$\dot{R}R^T + R\dot{R}^T = 0
-      \Rightarrow \dot{R}R^T = - R\dot{R}^T \Rightarrow \dot{R} R^T = - (\dot{R}
-      R^T)^T,$$ which is the definition of a skew-symmetric matrix. Any 3$\times$3
-      skew-symmetric matrix can be parameterized by three numbers (for ${}^A\dot{R}^B
-      {}^BR^A$ in particular, this is exactly our angular velocity vector, ${}^A
-      \omega^B$), and can be written as a cross product, so ${}^A\dot{R}^B {}^BR^A
-      {}^Bp^C_A = {}^A \omega^B_A \times {}^B p^C_A.$</p>  <p>Multiply the right and
-      left sides by ${}^FR^A$ to change the expressed-in frame, and we have our
-      result.</p></details></li>
-      <li>This reveals that additive inverse for translational velocities is
-      not obtained by switching the reference and measured-in frames; it is
-      slightly more complicated: \begin{equation}-{}^A\text{v}^B_F =
-      {}^B\text{v}^A_F + {}^A\omega^B_F \times {}^Bp^A_F.\end{equation} .</li>
+      <details><summary>这个式子可以通过几个步骤推导得到（点击三角展开）</summary>
+
+      <p>对
+      $${}^Ap^C = {}^AX^B {}^Bp^C = {}^Ap^B +
+      {}^AR^B {}^Bp^C,$$
+      求导，可得
+      \begin{align}
+      {}^A\text{v}^C
+      =& {}^A\text{v}^B +
+      {}^A\dot{R}^B {}^Bp^C +
+      {}^AR^B {}^B\text{v}^C
+      \nonumber \\
+      =& {}^A\text{v}^B_A +
+      {}^A\dot{R}^B {}^BR^A {}^Bp^C_A +
+      {}^B\text{v}^C_A.
+      \end{align}
+
+      允许我暂时省略坐标系标记，
+      用 $\dot{R}R^T = \dot{R}R^{-1}$ 来表示
+      ${}^A\dot{R}^B {}^BR^A$。
+      事实证明，$\dot{R}R^T$ 总是一个斜对称矩阵（skew-symmetric matrix）。
+      为了证明这一点，对
+      $RR^T = I$
+      求导，得到
+      $$\dot{R}R^T + R\dot{R}^T = 0
+      \Rightarrow \dot{R}R^T = - R\dot{R}^T
+      \Rightarrow \dot{R} R^T = - (\dot{R} R^T)^T,$$
+      这正是斜对称矩阵的定义。
+
+      任意一个 3$\times$3 的斜对称矩阵都可以用三个数来参数化
+      （对于 ${}^A\dot{R}^B {}^BR^A$ 而言，
+      这三个数恰好就是我们的角速度向量 ${}^A \omega^B$），
+      并且它可以写成叉积形式，
+      因此：
+      $${}^A\dot{R}^B {}^BR^A
+      {}^Bp^C_A
+      =
+      {}^A \omega^B_A \times {}^B p^C_A.$$
+
+      </p>
+
+      <p>随后，对等式左右两边同时乘以 ${}^FR^A$，
+      即可改变 expressed-in 坐标系，
+      从而得到最终结果。</p>
+
+      </details></li>
+
+      <li>这也揭示了：平移速度的加法逆元
+      并不能简单地通过交换 reference frame 与 measured-in frame 得到；
+      它会稍微复杂一些：
+      \begin{equation}
+      -{}^A\text{v}^B_F =
+      {}^B\text{v}^A_F +
+      {}^A\omega^B_F \times {}^Bp^A_F.
+      \end{equation} .</li>
     </ul>
     </div>
 
-    <details><summary>If you're familiar with "screw theory" (as used in, e.g.
-      <elib>Murray94</elib> and <elib>Lynch17</elib>), click the triangle to
-      see how those conventions are related.</summary>
-    <ul><p>Screw theory (as used in, e.g.
-    <elib>Murray94</elib> and <elib>Lynch17</elib>) often uses a particular
-    form of our spatial velocity referred to as "spatial velocity in the space
-    frame" / "spatial twists" that can be useful in a number of computations.
-    This quantity is ${}^AV^{B_A}$, where $B_A$ is the frame rigidly attached
-    on body $B$ (so ${}^BV^{B_A} = 0$) that is instantaneously in the same pose
-    as $A$ (so ${}^Ap^{B_A} = 0$, ${}^AR^{B_A} = I$) <elib
-    part="3.3.2">Lynch17</elib>. These conditions reduce to
-    \begin{equation}{}^AV^{B_A} = \begin{bmatrix} {}^A\omega^{B_A} \\
-    {}^A\text{v}^{B_A} \end{bmatrix} = \begin{bmatrix} {}^A\omega^{B_A} +
-    {}^{B_A}\omega^B_{A} \\ {}^A\text{v}^B + {}^B\text{v}^{B_A}_A +
-    {}^A\omega^B \times {}^Bp^{B_A}_A \end{bmatrix} = \begin{bmatrix} {}^A
-    \omega^{B} \\ {}^A\text{v}^B - {}^A\omega^B \times {}^Ap^{B}
-    \end{bmatrix}.\end{equation}
+    <details><summary>如果你熟悉“螺旋理论（screw theory）”
+      （例如 <elib>Murray94</elib> 与 <elib>Lynch17</elib> 中所使用的形式），
+      点击三角可以查看这些约定之间的关系。</summary>
+
+    <ul><p>螺旋理论（例如
+    <elib>Murray94</elib> 与 <elib>Lynch17</elib> 中的形式）
+    经常使用我们空间速度的一种特殊形式，
+    被称为“空间坐标系中的空间速度（spatial velocity in the space frame）”
+    或 “spatial twists”，
+    在许多计算中都非常有用。
+
+    这个量写作 ${}^AV^{B_A}$，
+    其中 $B_A$ 是一个刚性附着在刚体 $B$ 上的坐标系
+    （因此 ${}^BV^{B_A} = 0$），
+    并且它在当前时刻与坐标系 $A$ 拥有相同位姿
+    （因此 ${}^Ap^{B_A} = 0$，${}^AR^{B_A} = I$）
+    <elib part="3.3.2">Lynch17</elib>。
+
+    在这些条件下，有：
+    \begin{equation}
+    {}^AV^{B_A}
+    =
+    \begin{bmatrix}
+    {}^A\omega^{B_A} \\
+    {}^A\text{v}^{B_A}
+    \end{bmatrix}
+    =
+    \begin{bmatrix}
+    {}^A\omega^{B_A} +
+    {}^{B_A}\omega^B_{A} \\
+    {}^A\text{v}^B +
+    {}^B\text{v}^{B_A}_A +
+    {}^A\omega^B \times {}^Bp^{B_A}_A
+    \end{bmatrix}
+    =
+    \begin{bmatrix}
+    {}^A \omega^{B} \\
+    {}^A\text{v}^B -
+    {}^A\omega^B \times {}^Ap^{B}
+    \end{bmatrix}.
+    \end{equation}
     </p></ul> </details>
 
-    <p>Why is it that we can get away with just three components for angular
-    velocity, but not for rotations?  Using the magnitude of an axis-angle
-    representation to denote an angle is degenerate because our representation
-    of angles should be periodic in $2\pi$, but using the magnitude of the
-    angular velocity is ok because angular velocities take values from
-    $(-\infty, \infty)$ without wrapping.</p>
+    <p>为什么我们只用三个分量就能表示角速度，
+    却不能只用三个分量表示旋转本身？
+    使用轴角表示（axis-angle）中的向量模长来表示旋转角度会出现退化问题，
+    因为角度本身应当以 $2\pi$ 为周期循环；
+    但对于角速度来说，使用向量模长则没有问题，
+    因为角速度的取值范围是
+    $(-\infty, \infty)$，
+    不会发生周期回绕（wrapping）。</p>
 
-    <p>There is one more velocity to be aware of: I'll use $v$ to denote the
-    generalized velocity vector of the plant, which is closely related to the
-    time-derivative of $q$ (see below).  While a spatial velocity $^AV^B$ is
-    six components, a translational or angular velocity, $^B\text{v}^C$ or
-    $^B\omega^C$, is three components, the generalized velocity vector is
-    whatever size it needs to be to encode the time derivatives of the
-    configuration variables, $q$.  For the iiwa welded to the world frame, that
-    means it has seven components.  I've tried to be careful to typeset each of
-    these v's differently throughout the notes. Almost always the distinction
-    is also clear from the context.</p>
+    <p>还需要注意另一种速度：我将使用 $v$ 表示 plant 的广义速度向量，
+    它与 $q$ 的时间导数密切相关（见下文）。
+    空间速度 $^AV^B$ 有六个分量；
+    平移速度或角速度，即 $^B\text{v}^C$ 或
+    $^B\omega^C$，有三个分量；
+    而广义速度向量的维度则取决于它需要用多少个量来编码构型变量 $q$ 的时间导数。
+    对于焊接到世界坐标系上的 iiwa 来说，这意味着它有七个分量。
+    在这些笔记中，我已经尽量小心地用不同排版方式区分这些不同的 v。
+    几乎在所有情况下，这种区别也可以从上下文中看出来。</p>
 
-    <example id="qdot_vs_v"><h1>Don't assume $\dot{q} \equiv v$</h1>
+    <example id="qdot_vs_v"><h1>不要假设 $\dot{q} \equiv v$</h1>
     
-      <p>The unit quaternion representation is four components, but these must
-      form a "unit vector" of length 1.  Rotation matrices are 9 components,
-      but they must form an orthonormal matrix with $\det(R)=1$.  It's pretty
-      great that for the time derivative of rotation, we can use an
-      <i>unconstrained</i> three component vector, what we've called the
-      angular velocity vector, $\omega$.  And you really should use it; getting
-      rid of that constraint makes both the math and the numerics better.</p>
+      <p>单位四元数表示有四个分量，但这些分量必须构成一个长度为 1 的“单位向量”。
+      旋转矩阵有 9 个分量，但它们必须构成一个满足 $\det(R)=1$ 的正交归一矩阵。
+      对于旋转的时间导数，我们能够使用一个<i>无约束</i>的三维向量，
+      也就是我们称为角速度向量 $\omega$ 的量，这非常棒。
+      而且你真的应该使用它；
+      去掉这些约束会让数学推导和数值计算都变得更好。</p>
 
-      <p>But there is one minor nuisance that this causes.  We tend to want to
-      think of the generalized velocity as the time derivative of the
-      generalized positions.  This works when we have only our iiwa in the
-      model, and it is welded to the world frame, because all of the joints are
-      revolute joints with a single degree of freedom each.  But we cannot
-      assume this in general; when floating-base rotations are part of the
-      generalized position. As evidence, here is a simple example that loads
-      exactly one rigid body into the
-      <code>MultibodyPlant</code>, and then prints its
-      <code>Context</code>.</p>
+      <p>但这会带来一个小麻烦。
+      我们通常倾向于把广义速度理解为广义位置的时间导数。
+      当模型中只有 iiwa，并且它被焊接到世界坐标系时，这样理解是可行的，
+      因为所有关节都是每个只有一个自由度的转动关节。
+      但一般情况下我们不能这样假设；
+      尤其是当浮动基座旋转属于广义位置的一部分时。
+      作为证据，下面这个简单示例只向
+      <code>MultibodyPlant</code> 中加载了一个刚体，
+      然后打印它的 <code>Context</code>。</p>
 
       <script>document.write(notebook_link('pick', notebook="qdot_vs_v"))</script>
 
-      <p>The output looks like this:
+      <p>输出看起来如下：
       <code><pre>Context
 --------
 Time: 0
@@ -642,41 +716,48 @@ plant.num_velocities() = 6
 Position names: ['$world_base_link_qw', '$world_base_link_qx', '$world_base_link_qy', '$world_base_link_qz', '$world_base_link_x', '$world_base_link_y', '$world_base_link_z']
 Velocity names: ['$world_base_link_wx', '$world_base_link_wy', '$world_base_link_wz', '$world_base_link_vx', '$world_base_link_vy', '$world_base_link_vz']</pre></code></p>
 
-      <p>You can see that this system has 13 total state variables.  7 of them
-      are positions, $q$, because we use unit quaternions in the position
-      vector.  But we have just 6 velocities, $v$; we use angular velocities in
-      the velocity vector.  Clearly, if the length of the vectors don't even
-      match, we do <i>not</i> have $\dot{q} = v$.</p>
+      <p>你可以看到，这个系统总共有 13 个状态变量。
+      其中 7 个是位置变量 $q$，
+      因为我们在位置向量中使用单位四元数。
+      但我们只有 6 个速度变量 $v$；
+      在速度向量中，我们使用角速度。
+      显然，如果两个向量的长度甚至都不一致，
+      那么我们就<i>不可能</i>有 $\dot{q} = v$。</p>
 
-      <p>It is not difficult to deal with this representational detail; Drake
-      provides the <code>MultibodyPlant</code> methods
-      <code>MapQDotToVelocity</code> and <code>MapVelocityToQDot</code> to go
-      back and forth between them.  But you have to remember to use them!</p>
+      <p>处理这一表示细节并不困难；
+      Drake 提供了 <code>MultibodyPlant</code> 方法
+      <code>MapQDotToVelocity</code> 和 <code>MapVelocityToQDot</code>，
+      用于在二者之间来回转换。
+      但你必须记得使用它们！</p>
 
     </example>
 
-    <p>Due to the multiple possible representations of 3D rotation, and the
-    potential difference between $\dot{q}$ and $v$, there are actually
-    <b>many</b> different kinematic Jacobians possible.  You may hear the terms
-    "analytic Jacobian", which refers to the explicit partial derivative of the
-    forward kinematics (as written in \eqref{eq:jacobian}), and "geometric
-    Jacobian" which replaces 3D rotations on the left-hand side with spatial
-    velocities.  In Drake's <code>MultibodyPlant</code>, we currently offer the
-    geometric Jacobian versions via
+    <p>由于三维旋转存在多种可能的表示方式，
+    并且 $\dot{q}$ 与 $v$ 之间也可能存在差异，
+    实际上存在<b>许多种</b>不同的运动学雅可比矩阵。
+    你可能会听到“解析雅可比矩阵（analytic Jacobian）”这一术语，
+    它指的是正向运动学的显式偏导数
+    （也就是 \eqref{eq:jacobian} 中所写的形式）；
+    也可能会听到“几何雅可比矩阵（geometric Jacobian）”，
+    它会将左侧的三维旋转替换为空间速度。
+    在 Drake 的 <code>MultibodyPlant</code> 中，
+    我们目前通过以下接口提供几何雅可比矩阵版本：
     <ul>
-      <li> <code>CalcJacobianAngularVelocity</code>,</li>
-      <li><code>CalcJacobianTranslationalVelocity</code>, and</li>
-      <li><code>CalcJacobianSpatialVelocity</code>,</li>
-    </ul> with each taking an argument to specify whether you'd like the
-    Jacobian with respect to $\dot{q}$ or $v$. If you really like the
-    analytical Jacobian, you could get it (much less efficiently) using Drake's
-    support for automatic differentiation.</p>
+      <li><code>CalcJacobianAngularVelocity</code>，</li>
+      <li><code>CalcJacobianTranslationalVelocity</code>，以及</li>
+      <li><code>CalcJacobianSpatialVelocity</code>，</li>
+    </ul>
+    这些接口都会接收一个参数，用来指定你想要的是相对于
+    $\dot{q}$ 还是相对于 $v$ 的雅可比矩阵。
+    如果你确实更喜欢解析雅可比矩阵，
+    也可以借助 Drake 对自动微分的支持来得到它
+    （只是效率会低得多）。</p>
 
-    <example><h1>Kinematic Jacobians for pick and place</h1>
+    <example><h1>用于抓取与放置的运动学雅可比矩阵</h1>
     
-      <p>Let's repeat the setup from above, but we'll print out the Jacobian of
-      the gripper frame, measured from the world frame, expressed in the world
-      frame.</p>
+      <p>让我们重复上面的设置，
+      但这一次我们会打印出夹爪坐标系的雅可比矩阵：
+      它是相对于世界坐标系测量的，并且在世界坐标系中表达。</p>
 
       <script>document.write(notebook_link('pick', notebook="jacobian"))</script>
 
@@ -684,50 +765,56 @@ Velocity names: ['$world_base_link_wx', '$world_base_link_wy', '$world_base_link
 
   </section>
 
-  <section><h1>Differential inverse kinematics</h1>
+  <section><h1>微分逆运动学</h1>
     
-    <p>The geometric Jacobian provides a linear relationship between
-    generalized velocity and spatial velocity: \begin{equation}V^G =
-    J^G(q)v.\end{equation} Can this give us what we need to produce changes in
-    gripper frame $G$? If I have a desired gripper frame velocity $V^{G_d}$,
-    then how about commanding a joint velocity $v = \left[J^G(q)\right]^{-1}
-    V^{G_d}$?</p>
+    <p>几何雅可比矩阵给出了广义速度与空间速度之间的线性关系：
+    \begin{equation}V^G =
+    J^G(q)v.\end{equation}
+    这能否给我们提供所需的信息，用来产生夹爪坐标系 $G$ 的变化？
+    如果我有一个期望的夹爪坐标系速度 $V^{G_d}$，
+    那么是否可以直接命令关节速度
+    $v = \left[J^G(q)\right]^{-1}
+    V^{G_d}$ 呢？</p>
 
-    <subsection><h1>The Jacobian pseudo-inverse</h1>
+    <subsection><h1>雅可比矩阵的伪逆</h1>
 
-      <p>Any time you write a matrix inverse, it's important to check that the
-      matrix is actually invertible.  As a first sanity check: what are the
-      dimensions of $J^G(q)$?  We know the spatial velocity has six components.
-      Our gripper frame is welded directly on the last link of the iiwa, and
-      the iiwa has seven positions, so we have $J^G(q_{iiwa}) \in \Re^{6 \times
-      7}.$  The matrix is not square, so does not have an inverse.  But having
-      <i>more</i> degrees of freedom than the desired spatial velocity requires
-      (more columns than rows) is actually the good case, in the sense that we
-      might have many solutions for $v$ that can achieve a desired spatial
-      velocity. To choose one of them (the minimum-norm solution), we can
-      consider using the <a
-      href="https://en.wikipedia.org/wiki/Moore%E2%80%93Penrose_inverse">Moore-Penrose
-      pseudo-inverse</a>, $J^+$, instead: \begin{equation}v =
+      <p>每当你写下一个矩阵逆时，都很重要的一点是先检查该矩阵是否真的可逆。
+      作为最基本的合理性检查：$J^G(q)$ 的维度是多少？
+      我们知道空间速度有六个分量。
+      夹爪坐标系直接焊接在 iiwa 的最后一个连杆上，
+      而 iiwa 有七个位置变量，
+      因此有 $J^G(q_{iiwa}) \in \Re^{6 \times
+      7}.$
+      这个矩阵不是方阵，所以没有普通意义下的逆。
+      但所需自由度<i>多于</i>期望空间速度所要求的自由度
+      （列数多于行数）其实是好情况，
+      因为这意味着可能存在许多个 $v$ 都能实现同一个期望空间速度。
+      为了从中选择一个解（最小范数解），
+      我们可以考虑使用
+      <a href="https://en.wikipedia.org/wiki/Moore%E2%80%93Penrose_inverse">Moore-Penrose
+      伪逆</a> $J^+$ 来代替普通逆：
+      \begin{equation}v =
       [J^G(q)]^+V^{G_d}.\end{equation}</p>
 
-      <p>The pseudo-inverse is a beautiful mathematical concept.  When the $J$
-      is square and full-rank, the pseudo-inverse returns the true inverse of
-      the system. When there are many solutions (here many joint velocities that
-      accomplish the same end-effector spatial velocity), then it returns the
-      minimum-norm solution (the joint velocities that produce the desired
-      spatial velocity which are closest to zero in the least-squares sense).
-      When there is no exact solution, it returns the joint velocities that
-      produce a spatial velocity which is as close to the desired end-effector
-      velocity as possible, again in the least-squares sense.  So good!</p>
+      <p>伪逆是一个非常优美的数学概念。
+      当 $J$ 是方阵且满秩时，伪逆会返回该系统真正的逆。
+      当存在多个解时
+      （在这里，即多个关节速度都能实现同一个末端执行器空间速度），
+      它会返回最小范数解
+      （也就是在最小二乘意义下，最接近零、同时能够产生期望空间速度的关节速度）。
+      当不存在精确解时，
+      它会返回一组关节速度，使得所产生的空间速度尽可能接近期望的末端执行器速度，
+      同样是在最小二乘意义下。
+      真是太棒了！</p>
 
-      <example><h1>Our first end-effector "controller"</h1>
+      <example><h1>我们的第一个末端执行器“控制器”</h1>
       
-        <p>Let's write a simple controller using the pseudo-inverse of the
-        Jacobian.  First, we'll write a new <code>LeafSystem</code> that defines
-        one input port (for the iiwa measured position), and one output port
-        (for the iiwa joint velocity command).  Inside that system, we'll ask
-        MultibodyPlant for the gripper Jacobian, and compute the joint
-        velocities that will implement a desired gripper spatial velocity.</p>
+        <p>让我们使用雅可比矩阵的伪逆来编写一个简单控制器。
+        首先，我们会编写一个新的 <code>LeafSystem</code>，
+        它定义一个输入端口（用于 iiwa 的测量位置），
+        以及一个输出端口（用于 iiwa 的关节速度命令）。
+        在该系统内部，我们会向 MultibodyPlant 请求夹爪的雅可比矩阵，
+        并计算出能够实现期望夹爪空间速度的关节速度。</p>
 
         <div>
           <script type="text/javascript">
@@ -739,292 +826,350 @@ Velocity names: ['$world_base_link_wx', '$world_base_link_wy', '$world_base_link
           </script>
         </div>
 
-        <p>To keep things simple for this first example, we'll just command a
-        constant gripper spatial velocity, and only run the simulation for a few
-        seconds.</p>
+        <p>为了让第一个示例保持简单，
+        我们只会命令一个恒定的夹爪空间速度，
+        并且只运行几秒钟仿真。</p>
 
-        <p>Note that we do have to add one additional system into the diagram.
-        The output of our controller is a desired joint velocity, but the input
-        that the iiwa controller is expecting is a desired joint position.  So
-        we will insert an integrator in between.</p>
+        <p>请注意，我们确实需要在图中再添加一个额外的系统。
+        我们控制器的输出是期望关节速度，
+        但 iiwa 控制器所期望的输入是期望关节位置。
+        因此，我们会在二者之间插入一个积分器。</p>
 
-        <p>I don't expect you to understand every line in this example, but it's
-        worth finding the important lines and making sure you can change them
-        and see what happens!</p>
+        <p>我并不期望你理解这个示例中的每一行代码，
+        但找到其中的重要代码行，并确保你能够修改它们、观察会发生什么，
+        是很值得的！</p>
 
         <script>document.write(notebook_link('pick', notebook="pseudoinverse"))</script>
   
-        <p>Congratulations!  Things are really moving now.</p>
+        <p>恭喜！现在系统真的开始动起来了。</p>
 
       </example>
 
     </subsection>
 
-    <subsection><h1>Invertibility of the Jacobian</h1>
+    <subsection><h1>雅可比矩阵的可逆性</h1>
 
-      <p>There is a simple check to understand when the pseudo-inverse can give
-      an exact solution for any spatial velocity (achieving exactly the desired
-      spatial velocity): the <i>rank</i> of the Jacobian must be equal to the
-      number of rows (sometimes called "full row rank").  In this case, we need
-      $\rank(J) = 6$. But assigning an integer rank to a matrix doesn't tell
-      the entire story; for a real robot with (noisy) floating-point joint
-      positions, as the matrix gets <i>close</i> to losing rank, the
-      (pseudo-)inverse starts to "blow-up".  A better metric, then, is to watch
-      the smallest <a
-      href="https://en.wikipedia.org/wiki/Singular_value_decomposition">singular
-      value</a>; as this approaches zero, the norm of the pseudo-inverse will
-      approach infinity.</p>
+      <p>有一个简单检查可以帮助我们理解：
+      什么时候伪逆能够对任意空间速度给出精确解
+      （也就是精确实现期望空间速度）。
+      这个条件是：雅可比矩阵的<i>秩（rank）</i>必须等于其行数
+      （有时称为“满行秩 full row rank”）。
+      在这里，我们需要 $\rank(J) = 6$。
+      但仅仅给矩阵指定一个整数秩并不能说明全部问题；
+      对于真实机器人和带噪声的浮点关节位置而言，
+      当矩阵<i>接近</i>秩亏时，
+      （伪）逆会开始“爆炸（blow-up）”。
+      因此，一个更好的指标是观察最小
+      <a href="https://en.wikipedia.org/wiki/Singular_value_decomposition">奇异值（singular
+      value）</a>；
+      当它趋近于零时，伪逆的范数会趋近于无穷大。</p>
 
-      <example><h1>Invertibility of the gripper Jacobian</h1>
+      <example><h1>夹爪雅可比矩阵的可逆性</h1>
       
-        <p>You might have noticed that I printed out the smallest singular value
-        of $J^G$ in one of the previous examples.  Take it for another spin.
-        See if you can find configurations where the smallest singular value
-        gets close to zero.</p>
+        <p>你可能已经注意到，
+        我在前面某个示例中打印出了 $J^G$ 的最小奇异值。
+        再运行一次试试看。
+        看看你能否找到一些构型，使得最小奇异值接近于零。</p>
 
         <script>document.write(notebook_link('pick', notebook="jacobian"))</script>
 
-        <p>Here's a hint: try some configurations where the arm is very
-        straight, (e.g. driving joint 2 and 4 close to zero).</p>
+        <p>给你一个提示：
+        试试那些机械臂非常伸直的构型
+        （例如，让第 2 和第 4 个关节接近零）。</p>
 
-        <p>Another good way to find the singularities are to use your
-        pseudo-inverse controller to send gripper spatial velocity commands
-        that drive the gripper to the limits of the robot's workspace.  Try it
-        and see!  In fact, this can happen easily in practice when using
-        end-effector commands, and we will work hard to avoid it.</p>
+        <p>另一种寻找奇异位形的好方法是：
+        使用你的伪逆控制器发送夹爪空间速度命令，
+        让夹爪移动到机器人工作空间的边界。
+        试一试，看看会发生什么！
+        事实上，在使用末端执行器命令时，这种情况在实践中很容易发生，
+        而我们会努力避免它。</p>
 
       </example>
 
-      <p>Configurations $q$ for which $\rank(J(q_{iiwa})) < 6$ for a frame of
-      interest (like our gripper frame $G$) are called <i>kinematic
-      singularities</i>.  Try to avoid going near them if you are using
-      end-effector control!  The iiwa has many virtues, but admittedly its
-      kinematic workspace is not one of them. Trust me, if you try to get a big
-      Kuka to reach into a little kitchen sink all day, every day, then you
-      will spend a non-trivial amount of time thinking about avoiding
-      singularities.</p>
+      <p>对于某个感兴趣的坐标系（例如我们的夹爪坐标系 $G$），
+      若某个构型 $q$ 满足
+      $\rank(J(q_{iiwa})) < 6$，
+      则称该构型为<i>运动学奇异位形（kinematic
+      singularity）</i>。
+      如果你在使用末端执行器控制，
+      请尽量避免靠近这些奇异位形！
+      iiwa 有很多优点，
+      但不得不承认，它的运动学工作空间并不是其中之一。
+      相信我，如果你每天都试图让一个大型 Kuka 机械臂伸进一个小厨房水槽里工作，
+      那么你会花费相当多的时间去思考如何避免奇异位形。</p>
 
-      <p>In practice, things can get a lot better if we stop bolting our robot
-      base to a fixed location in the world.  Mobile bases add complexity, but
-      they are wonderful for improving the kinematic workspace of a robot.</p>
+      <p>在实际中，如果我们不再把机器人底座固定在世界中的某个位置，
+      情况通常会好很多。
+      移动底座会增加系统复杂度，
+      但它们对于提升机器人运动学工作空间来说非常有价值。</p>
 
-      <example id="singularities"><h1>Are kinematic singularities real?</h1>
+      <example id="singularities"><h1>运动学奇异位形是真实存在的吗？</h1>
 
-        <p>A natural question when discussing singularities is whether they are
-        somehow real, or whether they are somehow an artifact of the analysis.
-        Does the robot blow up? Does it get mechanically stuck? Or is it just
-        our math that is broken? Perhaps it is useful to look at an extremely
-        simple case.</p>
+        <p>在讨论奇异位形时，一个很自然的问题是：
+        它们究竟是真实存在的，
+        还是只是分析方法中的某种人为产物？
+        机器人会爆炸吗？
+        它会机械卡死吗？
+        还是说只是我们的数学模型失效了？
+        或许从一个极其简单的例子来看会更有帮助。</p>
 
-        <p>Imagine a two-link arm, where each link has length one.  Then the
-        kinematics reduce to $$p^G = \begin{bmatrix} c_0 + c_{0+1} \\ s_0 +
-        s_{0 + 1} \end{bmatrix},$$  where I've used the (very common) shorthard
-        $s_0$ for $\sin(q_0)$, $c_0$ for $\cos(q_0)$, $s_{0+1}$ for
-        $\sin(q_0+q_1),$ etc. The
-        <i>translational</i> Jacobian is $$J^G(q) = \begin{bmatrix} -s_0 -
+        <p>想象一个两连杆机械臂，每根连杆长度都为 1。
+        那么其运动学可以写成：
+        $$p^G = \begin{bmatrix} c_0 + c_{0+1} \\ s_0 +
+        s_{0 + 1} \end{bmatrix},$$
+        这里我使用了（非常常见的）简写：
+        $s_0$ 表示 $\sin(q_0)$，
+        $c_0$ 表示 $\cos(q_0)$，
+        $s_{0+1}$ 表示
+        $\sin(q_0+q_1)$，等等。
+        对应的<i>平移</i>雅可比矩阵为：
+        $$J^G(q) = \begin{bmatrix} -s_0 -
         s_{0+1} & -s_{0 + 1} \\ c_0 + c_{0 + 1} & c_{0 + 1} \end{bmatrix},$$
-        and as expected, it loses rank when the arm is at full extension (e.g.
-        when $q_0 = q_1 = 0$ which implies the first row is zero).</p>
+        正如预期的那样，
+        当机械臂完全伸直时它会失去秩
+        （例如当 $q_0 = q_1 = 0$ 时，第一行变为零）。</p>
 
         <figure>
           <iframe style="border:0;height:300px;width:400px;" src="data/two_link_singularities.html" pdf="no"></iframe>
-          <p pdf="only"><a href="data/two_link_singularities.html">Click here for the animation.</a></p>
+          <p pdf="only"><a href="data/two_link_singularities.html">点击这里查看动画。</a></p>
         </figure>
 
-        <p>Let's move the robot along the $x$-axis, by taking $q_0(t) = 1-t,$
-        and $q_1(t) = -2 + 2t$.  This clearly visits the singularity $q_0 = q_1
-        = 0$ at time 1, and then leaves again without trouble.  In fact, it does
-        all this with a <i>constant</i> joint velocity ($\dot{q}_0=-1,
-        \dot{q}_1=2$)!  The resulting trajectory is $$p^G(t) = \begin{bmatrix}
-        2\cos(1-t) \\ 0 \end{bmatrix}.$$</p>
+        <p>让我们沿着 $x$ 轴移动机器人，
+        取
+        $q_0(t) = 1-t,$
+        且
+        $q_1(t) = -2 + 2t$。
+        很明显，这条轨迹会在时间 $t=1$ 时经过奇异位形
+        $q_0 = q_1 = 0$，
+        然后又顺利离开，没有任何问题。
+        实际上，整个过程中关节速度始终保持<i>常数</i>
+        （$\dot{q}_0=-1,
+        \dot{q}_1=2$）！
+        对应得到的末端轨迹是：
+        $$p^G(t) = \begin{bmatrix}
+        2\cos(1-t) \\ 0
+        \end{bmatrix}.$$</p>
 
-        <p>There are a few things to understand.  At the singularity, there is
-        nothing that the robot can do to move its gripper farther in positive
-        $x$ -- that singularity is real.  But it is also true that there is no
-        way for the robot to move instantaneously back in the direction of
-        $-x.$ The Jacobian analysis is not an approximation, it is a perfect
-        description of the relationship between joint velocities and gripper
-        velocities.  However, just because you cannot achieve an instantaneous
-        velocity in the backwards direction, it does not mean you cannot get
-        there!  At $t=1$, even though the joint velocities are constant, and
-        the translational Jacobian is singular, the robot is
-        <i>accelerating</i> in $-x$, $\ddot{p}^G_{W_x}(t) = -2\cos(1-t).$</p>
+        <p>这里有几个重要的点需要理解。
+        在奇异位形处，
+        机器人确实无法让夹爪继续朝正 $x$ 方向移动——
+        这一奇异性是真实存在的。
+        但同样真实的是，
+        机器人也无法瞬时朝 $-x$ 方向移动。
+        雅可比矩阵分析并不是某种近似，
+        它对关节速度与夹爪速度之间的关系给出了精确描述。
+        然而，仅仅因为你无法实现某个瞬时速度，
+        并不意味着你永远到不了那个方向！
+        在 $t=1$ 时，
+        尽管关节速度保持常数，
+        且平移雅可比矩阵是奇异的，
+        机器人实际上仍然在朝 $-x$ 方向<i>加速</i>：
+        $\ddot{p}^G_{W_x}(t) = -2\cos(1-t).$</p>
 
-        <todo>Update this to use the two-link iiwa (like i've done in the
-        qp_diff_ik notebook).  The link lengths aren't *quite* one to one, but
-        it's close.  could have a point on the second link that is the right
-        distance away, or just add the ratio logic here.</todo>
+        <todo>更新这里，改用二连杆 iiwa（就像我在
+        qp_diff_ik notebook 中所做的那样）。连杆长度并不是完全一比一，
+        但已经很接近了。可以在第二根连杆上放一个距离合适的点，
+        或者直接在这里加入比例逻辑。</todo>
 
       </example>
 
-      <p>For the cases when the Jacobian does not have a unique inverse, there
-      is an interesting subtlety to be aware of regarding <i>integrability</i>.
-      Let's start our robot in at time zero in a joint configuration, $q(0)$
-      with a corresponding in an end-effector pose $X^G(0)$. Now let us execute
-      an end-effector trajectory using the pseudo-inverse controller that moves
-      along a closed-path in the task space, coming back to the original
-      end-effector pose at time one: $X^G(1) = X^G(0)$. Unfortunately, there is
-      no guarantee that $q(1) = q(0)$; this is not simply due to numerical
-      errors in our numerical implementation, it is well known that the
-      pseudo-inverse does not in general produce an integrable function.
-      <elib>Mussa-Ivaldi91</elib> discusses this thoroughly, and proposed a
-      weighted pseudo-inverse that can restore the integrability conditions by
-      means of a virtual "compliance function".</p>
+      <p>当雅可比矩阵不存在唯一逆时，
+      还需要注意一个关于<i>可积性（integrability）</i>的有趣微妙之处。
+      假设机器人在时间零从某个关节构型 $q(0)$ 开始，
+      对应的末端执行器位姿为 $X^G(0)$。
+      现在让我们使用伪逆控制器执行一条末端执行器轨迹：
+      它在任务空间中沿一条闭合路径运动，
+      并在时间一回到原始末端执行器位姿：
+      $X^G(1) = X^G(0)$。
+      不幸的是，我们并不能保证 $q(1) = q(0)$；
+      这并不只是数值实现中的数值误差造成的，
+      而是因为众所周知，伪逆通常不会产生一个可积函数。
+      <elib>Mussa-Ivaldi91</elib> 对此进行了深入讨论，
+      并提出了一种加权伪逆方法，
+      可以通过一个虚拟的“柔顺性函数（compliance function）”
+      来恢复可积性条件。</p>
 
     </subsection>
 
   </section>
 
-  <section><h1>Defining the grasp and pre-grasp poses</h1>
+  <section><h1>定义抓取位姿与预抓取位姿</h1>
   
-    <p>I'm going to put my red foam brick on the table.  Its geometry is <a
-    href="https://github.com/RobotLocomotion/models/blob/master/manipulation_station/061_foam_brick.sdf#L21">defined</a>
-    as a 7.5cm x 5cm x 5cm box.  For reference, the distance between the fingers
-    on our gripper in the default "open" position is 10.7cm.  The "palm" of the
-    gripper is 3.625cm from the body origin, and the fingers are 8.2cm long.</p>
+    <p>我会把我的红色泡沫砖放在桌子上。
+    它的几何形状被<a
+    href="https://github.com/RobotLocomotion/models/blob/master/manipulation_station/061_foam_brick.sdf#L21">定义</a>
+    为一个 7.5cm x 5cm x 5cm 的长方体。
+    作为参考，我们夹爪在默认“张开”位置时，两个手指之间的距离是 10.7cm。
+    夹爪的“手掌”距离刚体原点 3.625cm，
+    手指长度为 8.2cm。</p>
     
-    <p>To make things easy to start, I'll promise to set the object down on the
-    table with the object frame's $z$-axis pointing up (aligned with the world
-    $z$ axis), and you can assume it is resting on the table safely within the
-    workspace of the robot.  But I reserve the right to give the object
-    arbitrary initial yaw.  Don't worry, you might have noticed that the
-    seventh joint of the iiwa will let you rotate your gripper around quite
-    nicely (well beyond what my human wrist can do).</p>
+    <p>为了让一开始的问题更简单，
+    我保证会把物体放在桌面上，
+    并使物体坐标系的 $z$ 轴朝上
+    （与世界坐标系的 $z$ 轴对齐），
+    你也可以假设它安全地放置在机器人工作空间内的桌面上。
+    但我保留给物体任意初始 yaw 角的权利。
+    别担心，你可能已经注意到，iiwa 的第七个关节可以让你的夹爪相当灵活地旋转
+    （远远超过我的人类手腕所能做到的范围）。</p>
     
-    <p>Observe that visually the box has rotational symmetry -- I could always
-    rotate the box 90 degrees around its $x$-axis and you wouldn't be able to
-    tell the difference.  We'll think about the consequences of that more in the
-    next chapter when we start using perception.  But for now, we are ok using
-    the omniscient "cheat port" from the simulator which gives us the
-    unambiguous pose of the brick.</p>
+    <p>注意，从视觉上看，这个盒子具有旋转对称性——
+    我总是可以让盒子绕其 $x$ 轴旋转 90 度，
+    而你无法看出区别。
+    当我们在下一章开始使用感知时，
+    会进一步思考这件事带来的后果。
+    但目前，我们可以使用模拟器中全知的“作弊端口（cheat port）”，
+    它会为我们提供砖块的明确位姿。</p>
 
     <figure id="grasp_frames">
       <img style="width:40%" src="data/grasp_frames.png"/>
-      <figcaption>The gripper frame and the object frame.  For each frame, the
-      <span style="color:red">positive $x$ axis is in red</span>, the <span
-      style="color:green">positive $y$ axis is in green</span>, and the <span
-      style="color:blue">positive $z$ axis is in blue</span> (XYZ $\Leftrightarrow$
-      RGB).</figcaption>
+      <figcaption>夹爪坐标系与物体坐标系。
+      对于每个坐标系，
+      <span style="color:red">正 $x$ 轴为红色</span>，
+      <span style="color:green">正 $y$ 轴为绿色</span>，
+      <span style="color:blue">正 $z$ 轴为蓝色</span>
+      （XYZ $\Leftrightarrow$ RGB）。</figcaption>
     </figure>
 
-    <p>Take a careful look at the gripper frame in the figure above, using the colors to
-    understand the axes.  Here is my thinking:  Given the size of the hand and the
-    object, I want the <i>desired</i> position (in meters) of the object in the gripper
-    frame, $${}^{G_{grasp}}p^O = \begin{bmatrix} 0 \\ 0.11 \\ 0 \end{bmatrix}, \qquad
-    {}^{G_{pregrasp}}p^O = \begin{bmatrix} 0 \\ 0.2 \\ 0 \end{bmatrix}.$$  Recall that
-    the logic behind a <i>pregrasp</i> pose is to first move to safely above the object,
-    if our only gripper motion that is very close to the object is a straight
-    translation from the pregrasp pose to the grasp pose and back, then it allows us to
-    mostly avoid having to think about collisions (for now).  I want the orientation of
-    my gripper to be set so that the positive $z$ axis of the object aligns with the
-    negative $y$ axis of the gripper frame, and the positive $x$ axis of the object
-    aligns with the positive $z$ axis of the gripper.  We can accomplish that with
+    <p>请仔细观察上图中的夹爪坐标系，
+    并通过颜色来理解各个坐标轴。
+    我的思路是这样的：
+    根据夹爪和物体的尺寸，
+    我希望物体在夹爪坐标系中的<i>期望</i>位置（单位为米）为：
+    $${}^{G_{grasp}}p^O = \begin{bmatrix} 0 \\ 0.11 \\ 0 \end{bmatrix}, \qquad
+    {}^{G_{pregrasp}}p^O = \begin{bmatrix} 0 \\ 0.2 \\ 0 \end{bmatrix}.$$
+    回想一下，<i>预抓取</i>位姿背后的逻辑是：
+    先移动到物体上方一个安全的位置；
+    如果夹爪在非常靠近物体时唯一的运动只是从预抓取位姿到抓取位姿、
+    再返回的一段直线平移，
+    那么这就能让我们在很大程度上暂时避免考虑碰撞问题。
+    我希望夹爪的方向设置为：
+    物体的正 $z$ 轴与夹爪坐标系的负 $y$ 轴对齐，
+    并且物体的正 $x$ 轴与夹爪的正 $z$ 轴对齐。
+    我们可以通过以下方式实现：
     \begin{gather*}{}^{G_{grasp}}R^O = \text{MakeXRotation}\left(\frac{\pi}{2}\right)
-    \text{MakeZRotation} \left(\frac{\pi}{2}\right).\end{gather*}  I admit I had my
-    right hand in the air for that one! We can step through this (by looking at the <a
-    href="#grasp_frames">figure above</a>). Put your right hand in the air in the
-    standard "right-hand-rule pose" (index finger forward, middle finger to the left,
-    thumb up); we'll call this frame $H$ (for hand) and we'll attach it to the object
-    frame, so ${}^OR^H = I.$ We want to understand the orientation of your hand in the
-    gripper frame, ${}^{G_{grasp}}R^H$. Working from right to left in the matrix
-    multiplications, we first rotate 90 degrees around the current $z$ axis (your thumb)
-    -- your index finger should be pointing to the left. Now we rotate 90 degrees about
-    the current $x$ axis (still forward), so your index finger is pointing up, your
-    middle finger is point towards you, and your thumb is pointing to the right. As
-    desired, the positive $z$ axis (your thumb) aligns with the negative $y$ axis, and
-    the positive $x$ axis (your index finger) aligns with the positive $z$ axis of the
-    gripper frame.</p>
+    \text{MakeZRotation} \left(\frac{\pi}{2}\right).\end{gather*}
+    我承认，推这个的时候我又把右手举到空中了！
+    我们可以一步步看这个过程（参照<a href="#grasp_frames">上图</a>）。
+    请把右手举到空中，摆成标准的“右手定则姿态”
+    （食指向前，中指向左，拇指向上）；
+    我们将这个坐标系称为 $H$（代表 hand），
+    并把它附着到物体坐标系上，因此 ${}^OR^H = I.$
+    我们想理解的是你的手在夹爪坐标系中的方向，
+    即 ${}^{G_{grasp}}R^H$。
+    从矩阵乘法的右侧向左侧依次作用，
+    我们首先绕当前的 $z$ 轴（你的拇指）旋转 90 度——
+    此时你的食指应该指向左方。
+    接着，我们绕当前的 $x$ 轴（仍然朝前）旋转 90 度，
+    于是你的食指指向上方，
+    中指指向你自己，
+    拇指指向右方。
+    这正是我们想要的结果：
+    正 $z$ 轴（你的拇指）与负 $y$ 轴对齐，
+    而正 $x$ 轴（你的食指）与夹爪坐标系的正 $z$ 轴对齐。</p>
         
-    <p>Our pregrasp pose will have the same orientation as our grasp pose.</p>
+    <p>我们的预抓取位姿将与抓取位姿具有相同的方向。</p>
 
-    <example><h1>Computing grasp and pregrasp poses</h1>
+    <example><h1>计算抓取位姿与预抓取位姿</h1>
     
       <figure>
         <img style="width:70%" src="figures/grasp_pose.png"/>
       </figure>
   
-      <p>Here is a simple example of loading a floating Schunk gripper and a
-      brick, computing the grasp / pregrasp pose (drawing out each
-      transformation clearly), and rendering the hand relative to the
-      object.</p>
+      <p>下面是一个简单示例：
+      加载一个浮动的 Schunk 夹爪和一块砖，
+      计算抓取 / 预抓取位姿
+      （并清晰地展示每一步变换），
+      然后渲染夹爪相对于物体的位置关系。</p>
 
       <script>document.write(notebook_link('pick', notebook="grasp"))</script>
 
-      <p>I hope you can see the value of having good notation at work here.  My
-      right hand was in the air when I was deciding what a suitable relative
-      pose for the object in the hand should be (when writing the notes).  But
-      once that was decided, I went to type it in and everything just
-      worked.</p>
+      <p>我希望你已经能够体会到良好符号体系的价值。
+      当我在编写这些笔记、思考物体相对于夹爪的合适相对位姿时，
+      我的右手依然举在空中比划。
+      但一旦这个位姿被确定下来，
+      我把它输入代码后，一切就自然地正常工作了。</p>
 
     </example>
   
   </section>
 
-  <section id="pick_and_place_trajectory"><h1>A pick and place trajectory</h1>
+  <section id="pick_and_place_trajectory"><h1>抓取与放置轨迹</h1>
   
-    <p>We're getting close.  We know how to produce desired gripper poses, and
-    we know how to change the gripper pose instantaneously using spatial
-    velocity commands. Now we need to specify how we want the gripper poses to
-    change over time, so that we can convert our gripper poses into spatial
-    velocity commands.</p>
+    <p>我们已经非常接近目标了。
+    我们知道如何生成期望的夹爪位姿，
+    也知道如何利用空间速度命令瞬时改变夹爪位姿。
+    现在我们需要规定：
+    夹爪位姿应当如何随时间变化，
+    这样我们才能将夹爪位姿转换为空间速度命令。</p>
 
-    <p>Let's define all of the "keyframe" poses that we'd like the gripper to
-    travel through, and time that it should visit each one.  The following
-    example does precisely that.</p>
+    <p>让我们定义所有夹爪需要经过的“关键帧（keyframe）”位姿，
+    以及到达每个位姿的时间点。
+    下面的示例正是在完成这件事。</p>
 
-    <example><h1>A plan "sketch"</h1>
+    <example><h1>一个计划“草图”</h1>
 
       <script>document.write(notebook_link('pick'))</script>
 
       <figure>
         <img style="width:70%" src="figures/pick_sketch.png"/>
-        <figcaption>Keyframes of the gripper.  The robot's base will be at the
-        origin, so we're looking over the (invisible) robot's shoulder here. The
-        hand starts in the "initial" pose near the center, moves to the
-        "prepick" to "pick" to "postpick" to "clearance" to "preplace" to "place"
-        and finally back to "postplace".</figcaption>
+        <figcaption>夹爪的关键帧。
+        机器人的基座会位于原点，
+        因此这里相当于从（不可见的）机器人肩膀上方向前看。
+        手从靠近中心的“initial”位姿开始，
+        依次移动到“prepick”、“pick”、“postpick”、“clearance”、“preplace”、“place”，
+        最后回到“postplace”。</figcaption>
       </figure>
 
-      <todo>timeline graphic here, from time zero, to pre-grasp, to grasp, to
+      <todo>这里添加时间线图，从时间零，到预抓取，到抓取，再到
       </todo>
 
-      <p>How did I choose the times?  I started everything at time, $t=0$, and
-      listed the rest of our times as absolute (time from zero). That's when the
-      robot wakes up and sees the brick.  How long should we take to transition
-      from the starting pose to the pregrasp pose?  A really good answer might
-      depend on the exact joint speed limits of the robot, but we're not trying
-      to move fast yet.  Instead I chose a conservative time that is
-      proportional to the total Euclidean distance that the hand will travel,
-      say $k=10~s/m$ (aka $10~cm/s$): $$t_{pregrasp} = k
-      \left\|{}^{G_0}p^{G_{pregrasp}}\right\|_2.$$  I just chose a fixed
-      duration of 2 seconds for the transitions from pregrasp to grasp and back,
-      and also left 2 seconds with the gripper stationary for the segments where
-      the fingers needs to open/close.</p>
+      <p>我是如何选择这些时间的？
+      我让所有事情都从时间 $t=0$ 开始，
+      并将其余时间都列为绝对时间（也就是从零时刻开始计算的时间）。
+      这就是机器人“醒来”并看到砖块的时刻。
+      从起始位姿过渡到预抓取位姿应该花多久？
+      一个非常好的答案可能取决于机器人精确的关节速度限制，
+      但我们目前还不是在追求快速运动。
+      因此，我选择了一个保守时间，
+      它与手部将要移动的总欧氏距离成正比，
+      例如 $k=10~s/m$（也就是 $10~cm/s$）：
+      $$t_{pregrasp} = k
+      \left\|{}^{G_0}p^{G_{pregrasp}}\right\|_2.$$
+      对于从预抓取到抓取以及返回的过渡，
+      我只是选择了固定的 2 秒持续时间；
+      对于手指需要张开/闭合的那些片段，
+      我也让夹爪保持静止 2 秒。</p>
   
     </example>
 
-    <p>There are a number of ways one might represent a trajectory
-    computationally. We have a pretty good collection of
-    <a
-    href="https://drake.mit.edu/doxygen_cxx/namespacedrake_1_1trajectories.html">trajectory</a>
-    classes available in Drake.  Many of them are implemented as <a
-    href="https://en.wikipedia.org/wiki/Spline_(mathematics)">splines</a> --
-    piecewise polynomial functions of time.  Interpolating between orientations
-    requires some care, but for positions we can do a simple linear
-    interpolation between each of our keyframes.  That would be called a "<a
-    href="https://en.wikipedia.org/wiki/First-order_hold">first-order hold</a>",
-    and it's implemented in Drake's <a
-    href="https://drake.mit.edu/doxygen_cxx/classdrake_1_1trajectories_1_1_piecewise_polynomial.html">PiecewisePolynomial</a>
-    class.  For rotations, we'll use something called "spherical linear
-    interpolation" or <a href="https://en.wikipedia.org/wiki/Slerp">slerp</a>,
-    which is implemented in Drake's <a
-    href="https://drake.mit.edu/doxygen_cxx/classdrake_1_1trajectories_1_1_piecewise_quaternion_slerp.html">PiecewiseQuaternionSlerp</a>, and which you can explore in <a href="#slerp">this exercise</a>.  The <a href="https://drake.mit.edu/doxygen_cxx/classdrake_1_1trajectories_1_1_piecewise_pose.html">PiecewisePose</a> class makes it convenient to construct and work with the position and orientation trajectories together.</p>
+    <p>在计算中表示轨迹有许多种方式。
+    Drake 提供了一组相当不错的
+    <a href="https://drake.mit.edu/doxygen_cxx/namespacedrake_1_1trajectories.html">轨迹（trajectory）</a>
+    类。
+    其中许多轨迹类都实现为
+    <a href="https://en.wikipedia.org/wiki/Spline_(mathematics)">样条（splines）</a>——
+    也就是关于时间的分段多项式函数。
+    在不同方向之间插值需要格外小心，
+    但对于位置来说，我们可以在各个关键帧之间进行简单的线性插值。
+    这被称为
+    “<a href="https://en.wikipedia.org/wiki/First-order_hold">一阶保持（first-order hold）</a>”，
+    并且已在 Drake 的
+    <a href="https://drake.mit.edu/doxygen_cxx/classdrake_1_1trajectories_1_1_piecewise_polynomial.html">PiecewisePolynomial</a>
+    类中实现。
+    对于旋转，我们会使用一种称为“球面线性插值（spherical linear interpolation）”、
+    或简称
+    <a href="https://en.wikipedia.org/wiki/Slerp">slerp</a>
+    的方法；
+    它在 Drake 的
+    <a href="https://drake.mit.edu/doxygen_cxx/classdrake_1_1trajectories_1_1_piecewise_quaternion_slerp.html">PiecewiseQuaternionSlerp</a>
+    中实现，你也可以在<a href="#slerp">这个练习</a>中探索它。
+    <a href="https://drake.mit.edu/doxygen_cxx/classdrake_1_1trajectories_1_1_piecewise_pose.html">PiecewisePose</a>
+    类可以方便地同时构建和处理位置轨迹与方向轨迹。</p>
 
-    <example><h1>Grasping with trajectories</h1>
+    <example><h1>使用轨迹进行抓取</h1>
     
-      <p>There are a number of ways to visualize the trajectory when it's
-      connected to 3D.  I've plotted the <i>position</i> trajectory as a
-      function of time below.<p>  
+      <p>当轨迹与三维空间相关联时，有许多种方式可以将其可视化。
+      我在下面将<i>位置</i>轨迹绘制成了时间的函数。<p>  
 
       <script>document.write(notebook_link('pick'))</script>
 
@@ -1034,30 +1179,28 @@ Velocity names: ['$world_base_link_wx', '$world_base_link_wy', '$world_base_link
         height=400 width="100%" src="data/gripper_position_trajectory.html"/> -->
       </figure>
 
-      <p></p>With 3D data, you can <a
-      href="data/gripper_position_trajectory.html">plot it in 3D</a>.  But my
-      favorite approach is as <a href="data/gripper_trajectory.html">an
-      animation in our 3D renderer</a>!  Make sure you try the "Open
-      controls>Animation" interface.  You can pause it and then scrub through
-      the trajectory using the time slider.</p>
+      <p></p>对于三维数据，你可以<a
+      href="data/gripper_position_trajectory.html">在三维中绘制它</a>。
+      但我最喜欢的方法是把它做成
+      <a href="data/gripper_trajectory.html">我们三维渲染器中的动画</a>！
+      一定要试试 “Open controls&gt;Animation” 界面。
+      你可以暂停动画，然后使用时间滑块沿着轨迹来回查看。</p>
 
-      <p>For a super interesting discussion on how we might visualize the 4D
-      quaternions as creatures trapped in 3D, you might enjoy <a
-      href="https://eater.net/quaternions">this series of "explorable"
-      videos</a>.</p>
+      <p>如果你对如何把四维四元数可视化成被困在三维空间中的生物这一话题感兴趣，
+      你可能会喜欢<a href="https://eater.net/quaternions">这一系列“可探索”的视频</a>。</p>
     </example>
 
-    <p>One final detail -- we also need a trajectory of gripper commands (to
-    open and close the gripper).  We'll use a first-order hold for that, as
-    well.</p>
+    <p>最后还有一个细节——我们还需要一条夹爪命令轨迹
+    （用于打开和闭合夹爪）。
+    对此我们同样会使用一阶保持。</p>
 
   </section>
 
-  <section><h1>Putting it all together</h1>
+  <section><h1>整合所有内容</h1>
   
-    <p>We can slightly generalize our PseudoInverseController to have
-    additional input ports for the desired gripper spatial velocity, ${}^WV^G$
-    (in our first version, this was just hard-coded in the controller).</p>
+    <p>我们可以稍微泛化一下 PseudoInverseController，
+    为期望夹爪空间速度 ${}^WV^G$ 添加额外的输入端口
+    （在第一个版本中，这个速度只是硬编码在控制器里）。</p>
 
     <div>
       <script type="text/javascript">
@@ -1069,20 +1212,19 @@ Velocity names: ['$world_base_link_wx', '$world_base_link_wy', '$world_base_link
       </script>
     </div>
 
-    <p>The trajectory we have constructed is a <i>pose</i> trajectory, but our
-    controller needs spatial velocity commands. Fortunately, the trajectory
-    classes we have used support differentiating the trajectories.  In fact,
-    the <code>PiecewiseQuaternionSlerp</code> is clever enough to return the
-    derivative of the 4-component quaternion trajectory as a 3-component
-    angular velocity trajectory, and taking the derivative of a
-    <code>PiecewisePose</code> trajectory returns a spatial velocity
-    trajectory.  The rest is just a matter of wiring up the system diagram.</p>
+    <p>我们构造出来的轨迹是一条<i>位姿</i>轨迹，
+    但我们的控制器需要的是空间速度命令。
+    幸运的是，我们使用的轨迹类支持对轨迹求导。
+    事实上，<code>PiecewiseQuaternionSlerp</code>
+    足够聪明，能够将四分量四元数轨迹的导数返回为三分量角速度轨迹；
+    而对 <code>PiecewisePose</code> 轨迹求导，
+    会返回一条空间速度轨迹。
+    剩下的就只是把系统图连接起来了。</p>
 
-    <example><h1>The full pick and place demo</h1>
+    <example><h1>完整的抓取与放置演示</h1>
     
-      <p>The next few cells of the notebook should get you a pretty satisfying
-      result.  <a href="data/pick.html">Click here to watch it without doing the
-      work</a>.</p>
+      <p>notebook 接下来的几个单元应该会给你一个相当令人满意的结果。
+      <a href="data/pick.html">点击这里可以不做这些工作、直接观看效果</a>。</p>
 
       <script>document.write(notebook_link('pick'))</script>
 
@@ -1090,109 +1232,116 @@ Velocity names: ['$world_base_link_wx', '$world_base_link_wy', '$world_base_link
         <img width="100%" src="data/pick_diagram.svg"/>
       </figure>
 
-      <p>It's worth scrutinizing the result.  For instance, if you examine the
-      context at the final time, how close did it come to the desired final
-      gripper position?  Are you happy with the joint positions?  If you ran
-      that same trajectory in reverse, then back and forth (as an industrial
-      robot might), would you expect errors to accumulate?</p>
+      <p>这个结果值得仔细检查。
+      例如，如果你检查最终时刻的 context，
+      它距离期望的最终夹爪位置有多近？
+      你对关节位置满意吗？
+      如果你将同一条轨迹反向运行，然后来回反复执行
+      （就像工业机器人可能会做的那样），
+      你是否预计误差会累积？</p>
 
     </example>
 
   </section>
 
-  <section id="diff_ik_w_constraints"><h1>Differential inverse kinematics with
-  constraints</h1>
+  <section id="diff_ik_w_constraints"><h1>带约束的微分逆运动学</h1>
 
-    <p>Our solution above works in many cases.  We could potentially move on.
-    But with just a little more work, we can get a much more robust solution...
-    one that we will be happy with for many chapters to come.</p>
+    <p>上面的解法在许多情况下都能工作。
+    我们本可以就此继续往下走。
+    但只需要再多做一点工作，
+    就能得到一个稳健得多的解法……
+    一个我们在接下来许多章节中都会满意使用的解法。</p>
 
-    <p>So what's wrong with the pseudo-inverse controller?  You won't be
-    surprised when I say that it does not perform well around singularities.
-    When the minimum singular value of the Jacobian gets small, that means that
-    some values in the inverse get very large.  If you ask our controller to
-    track a seemingly reasonable end-effector spatial velocity, then you might
-    have extremely large velocity commands as a result.</p>
+    <p>那么，伪逆控制器到底有什么问题？
+    当我说它在奇异位形附近表现不好时，你大概不会感到意外。
+    当雅可比矩阵的最小奇异值变小时，
+    这意味着其逆中的某些数值会变得非常大。
+    如果你要求我们的控制器跟踪一个看起来很合理的末端执行器空间速度，
+    那么结果可能会产生极大的速度命令。</p>
 
-    <p>There are other important limitations, though, which are perhaps more
-    subtle. The real robot has constraints, very real constraints on the joint
-    angles, velocities, accelerations, and torques.  If you, for instance, send
-    a velocity command to the iiwa controller that cannot be followed, that
-    velocity will be clipped.  In the mode we are running the iiwa
-    (joint-impedance mode), the iiwa doesn't know anything about your
-    end-effector goals.  So it will very likely simply saturate your velocity
-    commands independently joint by joint.  The result, I'm afraid, will not be
-    as convenient as a slower end-effector trajectory.  Your end-effector could
-    run wildly off course.</p>
+    <p>不过，它还有其他重要限制，
+    而且这些限制可能更微妙。
+    真实机器人有约束——非常真实的关节角、速度、加速度和力矩约束。
+    例如，如果你向 iiwa 控制器发送一个无法跟踪的速度命令，
+    这个速度会被裁剪。
+    在我们运行 iiwa 的模式中（关节阻抗模式），
+    iiwa 并不知道你的末端执行器目标。
+    因此，它很可能只是逐个关节独立地饱和你的速度命令。
+    恐怕其结果并不会像一条更慢的末端执行器轨迹那样方便可控；
+    你的末端执行器可能会严重偏离原本的路径。</p>
 
-    <p>Since we know the limits of the iiwa, a better approach is to take these
-    constraints into account at the level of our controller.  It's relatively
-    straight-forward to take position, velocity, and acceleration constraints
-    into account; torque constraints require a full dynamics model so we won't
-    worry about them yet here (but they <i>can</i> plug in naturally to this
-    framework).</p>
+    <p>既然我们知道 iiwa 的限制，
+    更好的方法就是在控制器层面把这些约束考虑进去。
+    将位置、速度和加速度约束纳入考虑是相对直接的；
+    力矩约束需要完整的动力学模型，
+    所以这里我们暂时不处理它们
+    （但它们<i>确实可以</i>很自然地接入这个框架）。</p>
 
-    <subsection><h1>Pseudo-inverse as an optimization</h1>
+    <subsection><h1>将伪逆视为一种优化</h1>
 
-      <p>I introduced the pseudo-inverse as having almost magical properties:
-      it returns an exact solution when one is available, or the best possible
-      solution (in the least-squares norm) when one is not.  These properties
-      can all be understood by realizing that the pseudo-inverse is just the
-      optimal solution to a least-squares optimization problem:
+      <p>我曾介绍过伪逆几乎像是拥有某种神奇性质：
+      当精确解存在时，它会返回一个精确解；
+      当精确解不存在时，它会返回最佳可能解
+      （在最小二乘范数意义下）。
+      这些性质都可以通过认识到一点来理解：
+      伪逆其实只是一个最小二乘优化问题的最优解：
       \begin{equation} \min_v \left|J^G(q)v - V^{G_d}\right|^2_2.
-      \end{equation}  When I write an optimization of this form, I will refer
-      to $v$ as the decision variable(s), and I will use $v^*$ to denote the
-      optimal solution (the value of the decision variables that minimizes the
-      cost).  This particular optimization problem has a closed-form solution,
-      which just happens to be exactly what is provided by the pseudo-inverse:
-      $$v^* = \left[ J^G(q) \right]^+V^{G_d}.$$ More generally, we will expect
-      to employ numerical methods to solve optimization problems.</p>
+      \end{equation}
+      当我写出这种形式的优化问题时，
+      我会把 $v$ 称为决策变量，
+      并使用 $v^*$ 表示最优解
+      （也就是使代价最小的决策变量取值）。
+      这个特定的优化问题存在闭式解，
+      而这个闭式解恰好正是伪逆所给出的结果：
+      $$v^* = \left[ J^G(q) \right]^+V^{G_d}.$$
+      更一般地，我们会期待使用数值方法来求解优化问题。</p>
 
-      <p>Optimization is an incredibly rich topic, and we will put many tools
-      from optimization to use over the course of this text.  For a beautiful
-      rigorous but accessible treatment of convex optimization, I highly
-      recommend <elib>Boyd04a</elib>; it is free online and even reading the
-      first chapter can be incredibly valuable.  For a very short introduction
-      to using optimization in Drake, please take a look at the
+      <p>优化是一个极其丰富的主题，
+      在本文的后续内容中，我们会使用许多优化工具。
+      关于凸优化，如果你想看一份严谨但又易懂的精彩介绍，
+      我强烈推荐 <elib>Boyd04a</elib>；
+      它可以免费在线阅读，甚至只读第一章也会非常有价值。
+      如果你想快速了解如何在 Drake 中使用优化，
+      请查看
       <script>document.write(drake_tutorials_link(
         'mathematical_program',
-        link_text='tutorials on MathematicalProgram'))</script>.
-      I use the term "mathematical program" almost synonymously with
-      "optimization problem".  Mathematical program is perhaps slightly more
-      appropriate if we don't actually have an objective; only constraints.</p>
+        link_text='MathematicalProgram 教程'))</script>。
+      我几乎把“mathematical program（数学规划）”这个术语
+      与“optimization problem（优化问题）”等同使用。
+      如果我们实际上没有目标函数、只有约束，
+      那么“数学规划”这个说法也许会稍微更合适一些。</p>
     
     </subsection>
 
-    <subsection><h1>Adding velocity constraints</h1>
+    <subsection><h1>添加速度约束</h1>
     
-      <p>Once we understand our existing solution through the lens of
-      optimization, we have a natural route to generalizing our approach to
-      explicitly reason about the constraints.  The velocity constraints are the
-      most straight-forward to add.  \begin{align} \min_v && \left|J^G(q)v -
+      <p>一旦我们从优化的视角理解了现有解法，
+      就自然有了一条路径，可以将方法推广为显式考虑约束。
+      速度约束是最直接可以加入的约束：
+      \begin{align} \min_v && \left|J^G(q)v -
       V^{G_d}\right|^2_2\,, \\ \subjto && v_{min} \le v \le v_{max}. \nonumber
-      \end{align}  You can read this as "find me the joint velocities that
-      achieve my desired gripper spatial velocity as closely as possible, but
-      satisfy my joint velocity constraints."  The solution to this can be much
-      better than what you would get from solving the unconstrained optimization
-      and then simply trimming any velocities to respect the constraints after
-      the fact.</p>
+      \end{align}
+      你可以把它读作：
+      “请找到一组关节速度，使它们尽可能接近地实现我期望的夹爪空间速度，
+      但同时满足我的关节速度约束。”
+      这个问题的解可能远好于先求解无约束优化问题、
+      然后事后简单地裁剪所有超出约束的速度所得到的结果。</p>
 
-      <p>This is, admittedly, a harder problem to solve in general.  The
-      solution cannot be described using only the pseudo-inverse of the
-      Jacobian.  Rather, we are going to solve this (small) optimization problem
-      directly in our controller every time it is evaluated.  This problem has a
-      convex quadratic objective and linear constraints, so it falls into the
-      class of convex Quadratic Programming (QP).  This is a particularly nice
-      class of optimization problems where we have very strong numerical
-      tools.</p>
+      <p>诚然，一般来说这是一个更难求解的问题。
+      它的解不能仅仅用雅可比矩阵的伪逆来描述。
+      相反，我们将在控制器每次被求值时，
+      直接求解这个（小型）优化问题。
+      该问题具有凸二次目标函数和线性约束，
+      因此属于凸二次规划（Quadratic Programming，QP）问题。
+      这是一类特别友好的优化问题，
+      我们拥有非常强大的数值工具来求解它。</p>
 
-      <example><h1>Jacobian-based control with velocity constraints</h1>
+      <example><h1>带速度约束的基于雅可比矩阵的控制</h1>
       
-        <p>To help think about the differential inverse kinematics problem as
-        an optimization, I've put together a visualization of the optimization
-        landscape of the quadratic program.  In the notebook below, you will
-        see the constraints visualized as in red, and the objective function
-        visualized as a function in green.</p>
+        <p>为了帮助理解如何将微分逆运动学问题看作一个优化问题，
+        我整理了一个二次规划优化景观的可视化示例。
+        在下面的 notebook 中，你会看到约束以红色可视化显示，
+        目标函数则以绿色函数的形式可视化显示。</p>
 
         <script>document.write(notebook_link('pick', notebook="qp_diff_ik"))</script>
 
@@ -1200,23 +1349,26 @@ Velocity names: ['$world_base_link_wx', '$world_base_link_wy', '$world_base_link
     
     </subsection>
 
-    <subsection><h1>Adding position and acceleration constraints</h1>
+    <subsection><h1>添加位置约束和加速度约束</h1>
 
-      <p>We can easily add more constraints to our QP, without significantly
-      increasing the complexity, as long as they are linear in the decision
-      variables.  So how should we add constraints on the joint position and
-      acceleration?</p>        
+      <p>只要新增约束对于决策变量是线性的，
+      我们就可以很容易地向 QP 中加入更多约束，
+      而不会显著增加问题复杂度。
+      那么，我们应该如何加入关节位置和加速度约束呢？</p>        
 
-      <p>The natural approach is to make a first-order approximation of these
-      constraints.  To do that, the controller needs some characteristic time step / timescale to relate its velocity decisions to positions and accelerations.  We'll denote that time step as $h$.</p>
+      <p>自然的做法是对这些约束进行一阶近似。
+      为此，控制器需要某个特征时间步长 / 时间尺度，
+      用来将它所做出的速度决策与位置、加速度联系起来。
+      我们将这个时间步长记为 $h$。</p>
       
-      <p>The controller already accepts the current measured joint positions $q$
-      as an input; let us now also take the current measured joint velocities
-      $v$ as a second input.  And we'll use $v_n$ for our decision variable --
-      the next velocity to command.  Using a simple <a
-      href="https://en.wikipedia.org/wiki/Euler_method">Euler approximation</a>
-      of position and first-order derivative for acceleration gives us the
-      following optimization problem: \begin{align} \min_{v_n} \quad &
+      <p>控制器已经接收当前测得的关节位置 $q$ 作为输入；
+      现在让我们再把当前测得的关节速度 $v$ 作为第二个输入。
+      并且我们使用 $v_n$ 表示决策变量——也就是下一步要命令的速度。
+      使用简单的<a
+      href="https://en.wikipedia.org/wiki/Euler_method">欧拉近似</a>
+      来近似位置，并使用一阶导数来近似加速度，
+      可以得到如下优化问题：
+      \begin{align} \min_{v_n} \quad &
       \left|J^G(q)v_n - V^{G_d}\right|^2_2, \\ \subjto \quad & v_{min} \le v_n
       \le v_{max}, \nonumber \\ & q_{min} \le q + h v_n \le q_{max}, \nonumber
       \\ & \dot{v}_{min} \le \frac{v_n - v}{h} \le \dot{v}_{max}. \nonumber
@@ -1224,414 +1376,570 @@ Velocity names: ['$world_base_link_wx', '$world_base_link_wy', '$world_base_link
 
     </subsection>
 
-    <subsection id="joint_centering"><h1>Joint centering</h1>
+    <subsection id="joint_centering"><h1>关节居中（Joint centering）</h1>
   
-      <p>Our Jacobian is $6 \times 7$, so we actually have more degrees of
-      freedom than end-effector goals. This is not only an opportunity, but a
-      responsibility. When the rank of $J^G$ is less than the number of columns
-      / number of degrees of freedom, then we have specified an optimization
-      problem that has an infinite number of solutions; and we've left it up to
-      the solver to choose one. Typically a convex optimization solver does
-      choose something reasonable, like taking the "analytic center" of the
-      constraints, or a minimum-norm solution for an unconstrained problem. But
-      why leave this to chance? It's much better for us to completely specify
-      the problem so that there is a unique global optima.</p>
+      <p>我们的雅可比矩阵是 $6 \times 7$，
+      因此实际上我们拥有比末端执行器目标更多的自由度。
+      这不仅是一种机会，也是一种责任。
+      当 $J^G$ 的秩小于其列数 / 自由度数量时，
+      我们所定义的优化问题实际上拥有无穷多个解；
+      而我们把选择哪一个解这件事留给了解算器。
+      通常，一个凸优化求解器会选择某种合理的解，
+      例如取约束的“解析中心（analytic center）”，
+      或者在无约束问题中选择最小范数解。
+      但为什么要把这件事交给运气呢？
+      更好的做法是由我们自己完整定义问题，
+      从而让它拥有唯一的全局最优解。</p>
 
-      <p>In the rich history of Jacobian-based control for robotics, there is a
-      very elegant idea of implementing a "secondary" control, guaranteed (in
-      some cases) not to interfere with our primary end-effector spatial
-      velocity controller, by projecting it into the <i>null space</i> of $J^G$.
-      So in order to fully specify the problem, we will provide a secondary
-      controller that attempts to control <i>all</i> of the joints.  We'll do
-      that here with a simple joint-space controller $v = K(q_0 - q)$; this is
-      a proportional controller that drives the robot to its nominal
-      configuration.</p>
+      <p>在机器人学基于雅可比矩阵控制的丰富历史中，
+      有一个非常优雅的思想：
+      通过将一个“次级（secondary）”控制器投影到 $J^G$ 的<i>零空间（null space）</i>中，
+      来实现一个（在某些情况下）保证不会干扰主末端执行器空间速度控制器的附加控制。
+      因此，为了完整定义问题，
+      我们会提供一个试图控制<i>所有</i>关节的次级控制器。
+      在这里，我们使用一个简单的关节空间控制器
+      $v = K(q_0 - q)$；
+      这是一个比例控制器，
+      它会驱动机器人回到其标称构型。</p>
       
-      <p>Denote $P(q)$ as a linear map from the generalized velocities into the
-      nullspace of $J(q)$. Traditionally in robotics we implemented this using the
-      pseudo-inverse: $P = (I - J^+J)$, but many linear algebra packages now provide
-      methods to obtain an orthonormal basis for the kernel of a Jacobian $J$ directly.
-      Adding $Pv \approx PK(q_0 - q)$ as a secondary objective can be accomplished with
-      \begin{align}\min_{v_n} \quad & \left|J^G(q)v_n - V^{G_d}\right|^2_2 + \epsilon
-      \left|P(q)\left(v_n - K(q_0 - q)\right)\right|^2_2, \\ \subjto \quad &
-      \text{constraints}.\nonumber\end{align} Note the scalar $\epsilon$ that we've
-      placed in front of the secondary objective.  There is something important to
-      understand here.  If we do not have any constraints, then we can remove $\epsilon$
-      completely -- the secondary task will in no way interfere with the primary task of
-      tracking the spatial velocity. However, if there are constraints, then these
-      constraints can cause the two objectives to clash (<a
-      href="#competing_objectives">Exercise</a>).  So we pick $\epsilon \ll 1$ to give
-      the primary objective relatively more weight.  But don't make it too small,
-      because that might make the numerics bad for your solver.  I'd say $\epsilon ~=
-      0.01$ is just about right.</p>
+      <p>记 $P(q)$ 为一个将广义速度映射到 $J(q)$ 零空间中的线性映射。
+      在传统机器人学中，
+      我们通常使用伪逆来实现这一点：
+      $P = (I - J^+J)$，
+      但现在许多线性代数库已经能够直接获得雅可比矩阵 $J$ 的核空间（kernel）
+      的一组正交归一基。
+      将
+      $Pv \approx PK(q_0 - q)$
+      作为一个次级目标加入，
+      可以写成：
+      \begin{align}
+      \min_{v_n} \quad &
+      \left|J^G(q)v_n - V^{G_d}\right|^2_2
+      +
+      \epsilon
+      \left|P(q)\left(v_n - K(q_0 - q)\right)\right|^2_2,
+      \\
+      \subjto \quad &
+      \text{constraints}.
+      \nonumber
+      \end{align}
 
-      <p>There are more sophisticated methods if one wishes to establish a
-      strict task prioritization in the presence of constraints (e.g.
-      <elib>Flacco15+Escande14</elib>), but for the simple prioritization we
-      have formulated here, the penalty method is quite reasonable.</p>
+      请注意，我们在次级目标前加入了一个标量 $\epsilon$。
+      这里有一个重要的点需要理解。
+      如果不存在任何约束，
+      那么我们甚至可以完全去掉 $\epsilon$——
+      次级任务不会以任何方式干扰主任务（即跟踪空间速度）。
+      然而，如果存在约束，
+      那么这些约束可能会导致两个目标之间发生冲突
+      （参见<a href="#competing_objectives">练习</a>）。
+      因此，我们选择 $\epsilon \ll 1$，
+      从而赋予主目标相对更大的权重。
+      但也不要把它设得太小，
+      因为那可能会导致求解器数值表现变差。
+      我认为 $\epsilon ~= 0.01$ 差不多是一个很合适的值。</p>
+
+      <p>如果希望在存在约束的情况下建立严格的任务优先级，
+      还存在更复杂的方法
+      （例如 <elib>Flacco15+Escande14</elib>），
+      但对于我们这里构建的这种简单优先级关系，
+      惩罚法（penalty method）已经是相当合理的选择。</p>
 
     </subsection>
 
-    <subsection><h1>Tracking a desired pose</h1>
+    <subsection><h1>跟踪期望位姿</h1>
     
-      <p>Sometimes it can be more natural to specify the goal for differential IK as
-      tracking a desired pose, ${}^AX^{G_d}$, rather than explicitly specifying the
-      desired spatial velocity. But we can naturally convert the pose command into a
-      spatial velocity command, ${}^AV^{G_d}_A.$ The translational component is simple
-      enough, we'll use $${}^Ap^{G_d}_A = {}^Ap^G_A + h {}^Av^{G}_A \quad \Rightarrow
+      <p>有时，将微分 IK 的目标指定为跟踪某个期望位姿
+      ${}^AX^{G_d}$，
+      会比显式指定期望空间速度更加自然。
+      但我们可以很自然地将位姿命令转换为空间速度命令
+      ${}^AV^{G_d}_A$。
+      平移分量足够简单，我们使用：
+      $${}^Ap^{G_d}_A = {}^Ap^G_A + h {}^Av^{G}_A \quad \Rightarrow
       \quad {}^A\text{v}^{G}_A  = \frac{1}{h} \left({}^Ap^{G_d}_A - {}^Ap^G_A\right) =
-      \frac{1}{h}{}^Gp^{G_d}_A.$$ Similarly, for the angular velocity, we will choose
-      $${}^A\omega^{G}_A = \frac{1}{h} {}^GR^{G_d},$$ where ${}^GR^{G_d}$ is represented
-      in <a href="#axis-angle">axis-angle</a> form.</p>
+      \frac{1}{h}{}^Gp^{G_d}_A.$$
+      类似地，对于角速度，我们会选择：
+      $${}^A\omega^{G}_A = \frac{1}{h} {}^GR^{G_d},$$
+      其中 ${}^GR^{G_d}$ 使用
+      <a href="#axis-angle">轴角（axis-angle）</a>形式表示。</p>
     
     </subsection>
 
-    <subsection><h1>Alternative formulations</h1>
+    <subsection><h1>其他形式</h1>
     
-      <p>Once we have embraced the idea of solving a small optimization problem
-      in our control loop, many other formulations are possible, too.  You will
-      find many in the literature.  Minimizing the least-squares distance
-      between the commanded spatial velocity and the resulting velocity might
-      not actually be the best solution.  The formulation we have been using
-      heavily in Drake adds an additional constraint that our solution
-      <b>must</b> move in the same <i>direction</i> as the commanded spatial
-      velocity.  If we are up against constraints, then we may slow down, but we
-      will not deviate (instantaneously) from the commanded path.  It would be a
-      pity to spend a long time carefully planning collision-free paths for your
-      end-effector, only to have your controller treat the path as merely a
-      suggestion.  Note, however, that your plan playback system still needs to be smart enough to realize that the slow-down occurred (open-loop velocity commands are not enough).</p>
+      <p>一旦我们接受了在控制回路中求解一个小型优化问题的思想，
+      许多其他形式也都成为可能。
+      你会在文献中找到很多这样的形式。
+      最小化命令空间速度与实际产生速度之间的最小二乘距离，
+      未必真的是最好的解法。
+      我们在 Drake 中大量使用的形式会额外加入一个约束：
+      我们的解<b>必须</b>沿着命令空间速度的相同<i>方向</i>运动。
+      如果我们正好受到约束限制，
+      那么机器人可以减速，
+      但不会（在瞬时意义上）偏离命令路径。
+      如果你花了很长时间仔细规划末端执行器的无碰撞路径，
+      结果控制器却只把这条路径当成一个建议，
+      那就太可惜了。
+      不过请注意，你的计划回放系统仍然需要足够智能，
+      能够意识到减速已经发生
+      （开环速度命令是不够的）。</p>
 
       <p>\begin{align} \max_{v_n, \alpha} \quad & \alpha, \\ \subjto \quad &
       J^G(q)v_n = \alpha V^{G_d}, \nonumber \\ & 0 \le \alpha \le 1, \nonumber
-      \\ & \text{additional constraints}. \nonumber \end{align}  You should
-      immediately ask yourself: is it reasonable to scale a spatial velocity by
-      a scalar?  That's another great <a
-      href="#scaling_spatial_velocity">exercise</a>. </p>
+      \\ & \text{additional constraints}. \nonumber \end{align}
+      你应该立刻问自己：
+      用一个标量缩放空间速度是否合理？
+      这是另一个很好的<a
+      href="#scaling_spatial_velocity">练习</a>。</p>
 
-      <p>What happens in this formulation when the Jacobian drops row rank?
-      Observe that $v_n = 0, \alpha = 0$ is always a feasible solution for this
-      problem.  So if it's not possible to move in the commanded direction,
-      then the robot will just stop.</p>
+      <p>当雅可比矩阵失去行秩时，这种形式会发生什么？
+      注意，$v_n = 0, \alpha = 0$
+      对这个问题来说始终是一个可行解。
+      因此，如果机器人无法沿命令方向运动，
+      那么它就会直接停下来。</p>
 
-      <p id="rpy_diffik">For teleop with human operators, coming to a complete stop when
-      one cannot move in exactly the commanded direction can be too restrictive -- the
-      operator feels like the robot gets "stuck" every time that the robot approaches a
-      constraint. For instance, imagine if we have a collision avoidance constraint
-      between the robot gripper and a table, and the operator wants to move the hand
-      along the table top. This would be effectively impossible given the strict
-      formulation. We have found that the following relaxation is more intuitive for the
-      operator:
+      <p id="rpy_diffik">对于有人类操作员的遥操作而言，
+      当无法严格沿着命令方向运动时就完全停止，
+      可能过于保守——
+      每当机器人接近某个约束时，
+      操作员会感觉机器人“卡住”了。
+      例如，假设我们在机器人夹爪和桌子之间有一个避碰约束，
+      而操作员希望沿桌面移动机械手。
+      在严格形式下，这实际上会变得不可能。
+      我们发现，下面这种松弛形式对操作员来说更加直观：
       <p>\begin{align} \max_{v_n, \alpha} \quad & \sum_i \alpha_i, \\ \subjto \quad &
       J^G(q)v_n = E(q) \text{diag}(\alpha) E^{-1}(q) V^{G_d}, \nonumber \\ & 0 \le
       \alpha_i \le 1, \nonumber \\ & \text{additional constraints}. \nonumber
-      \end{align} Here $E(q)$ is the <a
-      href="https://github.com/RobotLocomotion/drake/blob/d1a1d14b323c8a4a481a8d11fc8e9c527d63bf20/multibody/tree/rpy_ball_mobilizer.cc#L223">linear
-      map</a> from the derivative of the Euler angle representation (e.g.
-      $\frac{d}{dt}[roll, pitch, yaw, x, y, z]$) to the spatial velocity. Note that we
-      can avoid the $E^{-1}(q)$, which can become singular, by accepting the spatial
-      velocity command using the Euler angle derivatives. To someone familiar with
-      optimization, this looks a bit strange -- the diagonal matrix is a
-      <i>coordinate-dependent</i>
-      scaling of the velocity. But that is exactly the point -- for human operators is
-      it more intuitive to saturate the velocity commands component-wise in the
-      coordinates of x, y, z, roll, pitch, and yaw, typically specified in the robot's
-      base frame. When you're trying to slide the robot end-effector along the table
-      top, the velocity component going into the table will saturate, but the components
-      orthogonal the table need not saturate. Importantly, you won't ever see the
-      end-effector twist when you are commanding pure translation, and won't see the
-      end-effector translate when you are commanding a pure rotation.</p>
+      \end{align}
+      这里 $E(q)$ 是一个
+      <a href="https://github.com/RobotLocomotion/drake/blob/d1a1d14b323c8a4a481a8d11fc8e9c527d63bf20/multibody/tree/rpy_ball_mobilizer.cc#L223">线性映射</a>，
+      它将欧拉角表示的导数
+      （例如 $\frac{d}{dt}[roll, pitch, yaw, x, y, z]$）
+      映射为空间速度。
+      注意，我们也可以通过直接使用欧拉角导数来接收空间速度命令，
+      从而避免使用可能变得奇异的 $E^{-1}(q)$。
+      对熟悉优化的人来说，这看起来可能有些奇怪——
+      这个对角矩阵是在对速度进行一种<i>依赖坐标系</i>的缩放。
+      但这正是重点：
+      对于人类操作员来说，
+      在通常由机器人基座坐标系指定的
+      x、y、z、roll、pitch、yaw 坐标中，
+      逐分量地饱和速度命令会更加直观。
+      当你试图让机器人末端执行器沿桌面滑动时，
+      指向桌面的速度分量会饱和，
+      但与桌面正交的其他分量并不需要饱和。
+      重要的是，当你命令纯平移时，
+      你永远不会看到末端执行器发生扭转；
+      当你命令纯旋转时，
+      你也不会看到末端执行器发生平移。</p>
 
-      <todo>Updated block diagram</todo>
+      <todo>更新后的框图</todo>
 
-      <example><h1>Drake's DifferentialInverseKinematics</h1>
+      <example><h1>Drake 的 DifferentialInverseKinematics</h1>
       
       </example>
        
-      <p>We will use this implementation of differential inverse kinematics
-      whenever we need to command the end-effector in the next few chapters.</p>
+      <p>在接下来的几章中，
+      每当我们需要命令末端执行器时，
+      都会使用这种微分逆运动学实现。</p>
 
-      <todo>We could add collision-avoidance constraints naturally here, too.
-      But I haven't introduced those ideas yet, so instead I should link forward
-      to the relevant exposition once it exists.</todo>
+      <todo>我们也可以很自然地在这里加入避碰约束。
+      但我还没有介绍这些思想，
+      因此等相关阐述存在之后，
+      我应该在这里添加一个指向相应内容的前向链接。</todo>
 
     </subsection>
 
-    <todo>Find a home for inverse kinematics, including nonlinear optimization
-    and closed-form solutions (e.g. IK-fast)</todo>
+    <todo>为逆运动学找一个合适的位置，
+    包括非线性优化和闭式解（例如 IK-fast）</todo>
 
   </section>
 
-  <section><h1>Exercises</h1>
+  <section><h1>练习</h1>
   
-  <exercise><h1>Spatial frames and positions.</h1>
+  <exercise><h1>空间坐标系与位置。</h1>
   
     <figure><img style="width:60%" src="data/grasp_frames.png"/></figure>
 
-    <div>I've rendered the gripper and the brick with their corresponding body
-    frames. Please take note of the very thin colored lines indicating the world frame, $W.$ Given the configuration displayed in the figure, which is a
-    possible value for ${^Gp^O}$?
+    <div>我已经渲染了夹爪和砖块，
+    并显示了它们各自对应的刚体坐标系。
+    请注意图中表示世界坐标系 $W$ 的非常细的彩色线。
+    给定图中显示的构型，
+    ${^Gp^O}$ 的一个可能取值是什么？
     <ol type="a">
       <li>[0.2, 0, -.2]</li> <!-- p_GO_W -->
       <li>[0, 0.3, .1]</li>  <!-- p_GO_G -->
       <li>[0, -.3, .1]</li>  <!-- p_OG_O -->
     </ol>
-    Which is a possible value for ${^Gp^O_W}$?
+    ${^Gp^O_W}$ 的一个可能取值是什么？
     </div>
   
   </exercise>
   
-  <exercise id="angular_velocity_addition"><h1>The additive property of angular
-  velocity vectors.</h1>
+  <exercise id="angular_velocity_addition"><h1>角速度向量的加法性质。</h1>
   
-    <p>TODO(russt): Fill this in.</p>
+    <p>TODO(russt)：补充这里。</p>
 
   </exercise>
 
-  <exercise id="slerp"><h1>Spherical linear interpolation (slerp)</h1>
-    <p>For positions, we can linearly interpolate between points, i.e. a
-    "first-order hold". When dealing with rotations, we cannot simply linearly
-    interpolate and must instead use spherical linear interpolation (slerp).
-    The goal of this problem is to dig into the details of slerp.</p>
+  <exercise id="slerp"><h1>球面线性插值（slerp）</h1>
+    <p>对于位置，我们可以在点之间进行线性插值，
+    也就是“一阶保持（first-order hold）”。
+    在处理旋转时，我们不能简单地线性插值，
+    而必须使用球面线性插值（slerp）。
+    本题的目标是深入理解 slerp 的细节。</p>
 
-    <p>To do so we will consider the simpler case where our rotations are in
-    $\Re^{2}$ and can be represented with complex numbers.  Here are the rules
-    of the game:  a 2D vector (x,y) will be represented as a complex number $z
-    = x + yi$.  To rotate this vector by $\theta$, we will multiply by
-    $e^{i\theta} = \cos(\theta) + i\sin(\theta).$  </p>
+    <p>为此，我们将考虑一个更简单的情形：
+    旋转位于 $\Re^{2}$ 中，并且可以用复数表示。
+    游戏规则如下：
+    一个二维向量 (x,y) 将表示为复数
+    $z = x + yi$。
+    若要将该向量旋转 $\theta$，
+    我们将其乘以
+    $e^{i\theta} = \cos(\theta) + i\sin(\theta).$</p>
 
     <figure>
       <img style="width:50%", src="figures/exercises/slerp.png"/>
     </figure>
 
     <ol type="a">
-      <li> Let's verify that this works. Take the 2D vector $(x,y) = (1,1)$.
-      If you convert this vector into a complex number, multiply by $z =
-      e^{i\pi/4}$ using complex multiplication, and convert the result back to
-      a 2D vector, do you get the expected result?  Show your work and explain
-      why this is the expected result. </li>
+      <li>让我们验证一下这确实可行。
+      取二维向量 $(x,y) = (1,1)$。
+      如果你将这个向量转换为复数，
+      使用复数乘法乘以 $z =
+      e^{i\pi/4}$，
+      然后再把结果转换回二维向量，
+      你是否会得到预期结果？
+      请展示你的推导过程，并解释为什么这是预期结果。</li>
     </ol>
 
-    <p>Take a minute to convince yourself that this recipe (going from a 2D
-    vector to a complex number, multiply by $e^{i\theta}$, and converting back
-    to a 2D vector) is mathematically equivalent to multiplying the original
-    number by the 2D rotation matrix: $$R(\theta) = \begin{bmatrix} \cos\theta & -\sin\theta
+    <p>请花一点时间说服自己：
+    这个过程（从二维向量转换为复数，
+    乘以 $e^{i\theta}$，
+    再转换回二维向量）
+    在数学上等价于将原始向量乘以二维旋转矩阵：
+    $$R(\theta) = \begin{bmatrix} \cos\theta & -\sin\theta
     \\ \sin\theta & \cos\theta \end{bmatrix}.$$</p>     
 
-    <p>A frame $F$ has an orientation. We can represent that orientation using
-    the rotation from the world frame, e.g. $^WR^F$. We've just verified that
-    you can represent that rotation using a complex number, $e^{i\theta}$. Now
-    assume we want to interpolate between two orientations, represented by
-    frames $F$ and $G$. How should we smoothly interpolate between the two
-    frames, e.g. using $t\in [0,1]$? You'll explore this in parts (b) and (c).
+    <p>坐标系 $F$ 具有一个方向。
+    我们可以使用相对于世界坐标系的旋转来表示该方向，
+    例如 $^WR^F$。
+    我们刚刚已经验证了，
+    你可以用一个复数 $e^{i\theta}$ 来表示这个旋转。
+    现在假设我们想在两个方向之间插值，
+    这两个方向分别由坐标系 $F$ 和 $G$ 表示。
+    我们应该如何在这两个坐标系之间平滑插值，
+    例如使用 $t\in [0,1]$？
+    你将在 (b) 和 (c) 两部分中探索这个问题。
     </p>
 
     <ol type="a" start=2>
-      <li> Attempt 1: Consider $z(t) = (a_F*(1-t) + a_G*t) + i (b_F*(1-t) +
-      b_G*t)$.  Take $t=.5$.  What happens if you multiply the 2D vector
-      $(1,1)$ by $z(t = .5)$? Show your work and explain what goes wrong.
+      <li>尝试 1：
+      考虑 $z(t) = (a_F*(1-t) + a_G*t) + i (b_F*(1-t) +
+      b_G*t)$。
+      取 $t=.5$。
+      如果你将二维向量
+      $(1,1)$
+      乘以 $z(t = .5)$，会发生什么？
+      请展示你的推导过程，并解释哪里出了问题。
       </li><br/>
 
-      <li> Attempt 2: Instead we can leverage the other representation: $z(t) =
-      e^{i \theta_{F}*(1-t) + i\theta_{G}*t}$.  What happens if we multiply by
-      the 2D vector $(1,1)$ by $z(t = .5)$? Again, show your work.</li>
+      <li>尝试 2：
+      相反，我们可以利用另一种表示方式：
+      $z(t) =
+      e^{i \theta_{F}*(1-t) + i\theta_{G}*t}$。
+      如果我们将二维向量 $(1,1)$ 乘以
+      $z(t = .5)$，会发生什么？
+      同样，请展示你的推导过程。</li>
     </ol>
 
-    <p>Quaternions simply are a generalization of this idea to 3D. In 2D, it
-    might seem inefficient to use two numbers and a constraint that $a^2 + b^2
-    = 1$ to represent a single rotation (why not just $\theta$!?), but we've
-    seen that it works.  In 3D we can use 4 numbers $x,y,z,w$ plus the
-    constraint that $x^2+y^2+z^2+w^2 = 1$ to represent a 3D rotation.  In 2D,
-    using just $\theta$ can work fine, but in 3D using only three numbers leads
-    to problems like the famous <a href="https://en.wikipedia.org/wiki/Gimbal_lock" target="_blank">gimbal lock</a>.
-    The 4 numbers forming a unit quaternion provides a non-degenerate mapping
-    of all 3D rotations.</p>
+    <p>四元数只是这个思想在三维中的推广。
+    在二维中，用两个数和一个约束
+    $a^2 + b^2
+    = 1$
+    来表示一个单一旋转可能看起来有些低效
+    （为什么不直接用 $\theta$ 呢！？），
+    但我们已经看到它确实可行。
+    在三维中，我们可以使用 4 个数 $x,y,z,w$
+    加上约束
+    $x^2+y^2+z^2+w^2 = 1$
+    来表示一个三维旋转。
+    在二维中，只用 $\theta$ 往往也能正常工作；
+    但在三维中，如果只使用三个数，
+    就会遇到著名的
+    <a href="https://en.wikipedia.org/wiki/Gimbal_lock" target="_blank">万向节死锁（gimbal lock）</a>
+    等问题。
+    由 4 个数组成的单位四元数为所有三维旋转提供了一种非退化映射。</p>
 
-    <p>Just like we saw in 2D, one cannot simply linearly interpolate the 4
-    numbers of the quaternion to interpolate orientations.  Instead, we
-    linearly interpolate the angle between two orientations, using the
-    quaternion slerp.  The details involve some quaternion notation, but the
-    concept is the same as in 2D.</p>
+    <p>就像我们在二维中看到的那样，
+    不能简单地对四元数的 4 个数进行线性插值来插值方向。
+    相反，我们会使用四元数 slerp，
+    对两个方向之间的角度进行线性插值。
+    细节会涉及一些四元数符号，
+    但其概念与二维情形相同。</p>
 
   </exercise>
   
-  <exercise id="scaling_spatial_velocity"><h1>Scaling spatial velocity</h1>
+  <exercise id="scaling_spatial_velocity"><h1>缩放空间速度</h1>
   
-    <p>TODO(russt): Fill this in.  Until then, here's a little code that might convince you it's reasonable.</p>
+    <p>TODO(russt)：补充这里。在此之前，下面这小段代码也许能让你相信这样做是合理的。</p>
 
     <pysrcinclude>figures/scaling_spatial_velocity.py</pysrcinclude>
   
   </exercise>
 
-  <exercise id="planar_manipulator"><h1>Planar Manipulator</h1>
-      <p> For this exercise you will derive the translational forward kinematics ${^A}p{^C}=f(q)$ and the translational Jacobian $J(q)$ of a planar two-link manipulator. You will work exclusively in <script>document.write(notebook_link('pick', notebook='05_planar_manipulator', link_text='this notebook'))</script>. You will be asked to complete the following steps: </p>
+  <exercise id="planar_manipulator"><h1>平面机械臂</h1>
+      <p>在本练习中，你将推导平面二连杆机械臂的平移正向运动学
+      ${^A}p{^C}=f(q)$
+      以及平移雅可比矩阵 $J(q)$。
+      你将完全在
+      <script>document.write(notebook_link('pick', notebook='05_planar_manipulator', link_text='这个 notebook'))</script>
+      中完成。
+      你需要完成以下步骤：</p>
 
       <ol type="a">
-        <li> Derive the forward kinematics of the manipulator. </li>
-        <li> Derive the Jacobian matrix of the manipulator. </li>
-        <li> Analyze the kinematic singularities of the manipulator from the Jacobian.</li>
+        <li>推导该机械臂的正向运动学。</li>
+        <li>推导该机械臂的雅可比矩阵。</li>
+        <li>根据雅可比矩阵分析该机械臂的运动学奇异位形。</li>
       </ol>
   </exercise>
 
-  <exercise id="jacobian_exploration"><h1>Exploring the Jacobian</h1>
-      <p>Exercise 3.5 asked you to derive the translational Jacobian for the
-      planar two-link manipulator. In this problem we will explore the
-      translational Jacobian in more detail in the context of multi-link manipulators.</p>
+  <exercise id="jacobian_exploration"><h1>探索雅可比矩阵</h1>
+      <p>练习 3.5 要求你推导平面二连杆机械臂的平移雅可比矩阵。
+      在本题中，我们将在多连杆机械臂的背景下更深入地探索平移雅可比矩阵。</p>
 
       <ol type="a">
-          <li>For the planar two-link manipulator, the size of the planar 
-          translational Jacobian is 2x2. Consider an N-link manipulator in which the 
-          joint angles are $(q_{0}, q_{1}, ..., q_{N-1})$, and has an end-effector position 
-          described by (x, y, z). What is the size of the translational Jacobian?</li><br/>
-          <li>In considering these multi-link manipulators, we'll call the space of possible 
-          joint angles the <b>configuration space</b> and the space of possible end-effector 
-          positions the <b>operational space</b>.
+          <li>对于平面二连杆机械臂，平面平移雅可比矩阵的大小是 2x2。
+          考虑一个 N 连杆机械臂，其关节角为
+          $(q_{0}, q_{1}, ..., q_{N-1})$，
+          并且其末端执行器位置由 (x, y, z) 描述。
+          那么平移雅可比矩阵的大小是多少？</li><br/>
+          <li>在考虑这些多连杆机械臂时，
+          我们把所有可能关节角组成的空间称为<b>构型空间（configuration space）</b>，
+          把所有可能末端执行器位置组成的空间称为<b>操作空间（operational space）</b>。
               <ol type="i">
-                  <li> If the shape of translational Jacobian is structured such that the 
-                  dimension of the configuration space is equal to the dimension of the 
-                  operational space, when can the inverse be computed? (give more than 
-                  "when the Jacobian is invertible"). If the inverse can be computed, how 
-                  many sets of joint velocities can be commanded to produce a desired end-effector 
-                  velocity?</li><br>
-                  <li>Consider if the dimension of the configuration space is greater than the
-                  dimension of the operational space. Would it be possible for there to be more
-                  than one set of joint velocities that can be commanded to produce a desired 
-                  end-effector velocity? If possible, when would this occur, and how many sets
-                  can be commanded? If not, explain why.</li><br>
-                  <li>Continuing from b.ii, is there ever an instance where there are no sets of 
-                  joint velocities that can be commanded to produce a desired end-effector velocity?
-                  Explain.</li><br>
+                  <li>如果平移雅可比矩阵的形状使得构型空间的维度等于操作空间的维度，
+                  那么在什么情况下可以计算其逆？
+                  （请给出比“当雅可比矩阵可逆时”更具体的回答。）
+                  如果可以计算该逆，
+                  那么有多少组关节速度可以被命令来产生一个期望末端执行器速度？</li><br>
+                  <li>考虑构型空间维度大于操作空间维度的情况。
+                  是否可能存在多于一组关节速度命令，
+                  能够产生同一个期望末端执行器速度？
+                  如果可能，这会在什么情况下发生，
+                  并且可以命令多少组这样的关节速度？
+                  如果不可能，请解释原因。</li><br>
+                  <li>继续 b.ii 的讨论，
+                  是否存在某种情况下，没有任何一组关节速度能够产生某个期望末端执行器速度？
+                  请解释。</li><br>
               </ol> </li><br/>
-          <li>Below, for the planar two-link manipulator, we draw the unit
-          circle of joint velocities in the $\dot{q_{1}}-\dot{q_{2}}$
-          plane. This circle is then mapped through the translational Jacobian
-          to an ellipse in the end effector velocity space. In other words,
-          this visualizes that the translational Jacobian maps the space of
-          joint velocities to the space of end-effector velocities.<br/><br/>
-          The ellipse in the end-effector velocity space is called the
-          <i>manipulability ellipsoid</i>. The manipulability ellipsoid
-          graphically captures the robot's ability to move its end effector in
-          each direction. For example, the closer the ellipsoid is to a circle,
-          the more easily the end effector can move in arbitrary directions.
-          When the robot is at a singularity, it cannot generate end effector
-          velocities in certain directions. Thinking back to the singularities
-          you explored in Exercise 3.5, at one of these singularities, what
-          shape would the manipulability ellipsoid collapse to?</li>
-      </ol>  
+          <li>下面，对于平面二连杆机械臂，
+          我们在 $\dot{q_{1}}-\dot{q_{2}}$
+          平面中绘制关节速度的单位圆。
+          这个圆随后通过平移雅可比矩阵映射到末端执行器速度空间中的一个椭圆。
+          换句话说，这张图展示了：
+          平移雅可比矩阵会将关节速度空间映射到末端执行器速度空间。<br/><br/>
+          末端执行器速度空间中的这个椭圆称为
+          <i>可操作性椭球（manipulability ellipsoid）</i>。
+          可操作性椭球以图形方式刻画了机器人在各个方向上移动末端执行器的能力。
+          例如，椭球越接近圆，
+          末端执行器就越容易沿任意方向运动。
+          当机器人处于奇异位形时，
+          它无法在某些方向上产生末端执行器速度。
+          回想你在练习 3.5 中探索过的奇异位形，
+          在其中一个奇异位形处，
+          可操作性椭球会塌缩成什么形状？</li>
+      </ol>
 
       <figure>
           <img style="width:80%", src="figures/exercises/manipulability.png"/>
-          <figcaption>Manipulability ellipsoids for two different postures of the planar two-link manipulator. Adapted from <elib>Lynch17</elib>.</figcaption>
+          <figcaption>平面二连杆机械臂在两种不同姿态下的可操作性椭球。
+          改编自 <elib>Lynch17</elib>。</figcaption>
       </figure>
   </exercise>
 
-  <exercise id="spatial_transforms"><h1>Spatial Transforms and Grasp Pose</h1>
-      <p> For this exercise you will apply your knowledge on spatial algebra to write poses of frames in different reference frames, and design a grasp pose yourself. You will work exclusively in <script>document.write(notebook_link('pick', notebook='07_rigid_transforms', link_text='this notebook'))</script>. You will be asked to complete the following steps: </p>
+  <exercise id="spatial_transforms"><h1>空间变换与抓取位姿</h1>
+      <p>在本练习中，你将运用空间代数知识，
+      在不同参考坐标系中写出各坐标系的位姿，
+      并自行设计一个抓取位姿。
+      你将完全在
+      <script>document.write(notebook_link('pick', notebook='07_rigid_transforms', link_text='这个 notebook'))</script>
+      中完成。
+      你需要完成以下步骤：</p>
 
       <ol type="a">
-        <li> Express poses of frames in different reference frames using spatial algebra. </li>
-        <li> Design grasp poses given the configuration of the target object and griper configuration. </li>
+        <li>使用空间代数，在不同参考坐标系中表达各坐标系的位姿。</li>
+        <li>根据目标物体的构型和夹爪构型设计抓取位姿。</li>
       </ol>
   </exercise>
 
-  <exercise id="robot_painter"><h1>The Robot Painter</h1>
-      <p> For this exercise you will design interesting trajectories for the robot to follow, and observe the robot virtually painting in the air! You will work exclusively in <script>document.write(notebook_link('pick', notebook='08_robot_painter', link_text='this notebook'))</script>. You will be asked to complete the following steps: </p>
+  <exercise id="robot_painter"><h1>机器人画家</h1>
+      <p>在本练习中，你将为机器人设计有趣的跟踪轨迹，
+      并观察机器人在空中虚拟作画！
+      你将完全在
+      <script>document.write(notebook_link('pick', notebook='08_robot_painter', link_text='这个 notebook'))</script>
+      中完成。
+      你需要完成以下步骤：</p>
 
       <ol type="a">
-        <li> Design and compute the poses of key frames of a designated trajectory. </li>
-        <li> Construct trajectories by interpolating through the key frames. </li>
+        <li>设计并计算指定轨迹的关键帧位姿。</li>
+        <li>通过对关键帧进行插值来构造轨迹。</li>
       </ol>
   </exercise>  
 
-  <exercise id="intro_to_qp"><h1>Introduction to QPs</h1>
-      <p> For this exercise you will practice the syntax of solving Quadratic Programs (QPs) via Drake's MathematicalProgram interface. You will work exclusively in <script>document.write(notebook_link('pick', notebook='09_intro_to_qp', link_text='this notebook'))</script>.</p> 
+  <exercise id="intro_to_qp"><h1>QP 入门</h1>
+      <p>在本练习中，你将练习通过 Drake 的 MathematicalProgram 接口求解二次规划
+      （Quadratic Programs，QP）的语法。
+      你将完全在
+      <script>document.write(notebook_link('pick', notebook='09_intro_to_qp', link_text='这个 notebook'))</script>
+      中完成。</p> 
   </exercise>  
 
-  <exercise id="virtual_wall"><h1>Virtual Wall</h1>
-      <p> For this exercise you will implement a virtual wall for a robot manipulator, using an optimization-based approach to differential inverse kinematics. You will work exclusively in <script>document.write(notebook_link('pick', notebook='10_differential_ik_optimization', link_text='this notebook'))</script>. You will be asked to complete the following steps: </p>
+  <exercise id="virtual_wall"><h1>虚拟墙</h1>
+      <p>在本练习中，你将使用基于优化的微分逆运动学方法，
+      为机器人机械臂实现一面虚拟墙。
+      你将完全在
+      <script>document.write(notebook_link('pick', notebook='10_differential_ik_optimization', link_text='这个 notebook'))</script>
+      中完成。
+      你需要完成以下步骤：</p>
 
       <ol type="a">
-        <li> Implement a optimization-based differential IK controller with joint velocity limits. </li>
-        <li> Using your own constraints, implement a virtual wall in the end-effector space using optimization-based differential IK controller. </li>
+        <li>实现一个带关节速度限制的基于优化的微分 IK 控制器。</li>
+        <li>使用你自己的约束，
+        通过基于优化的微分 IK 控制器，
+        在末端执行器空间中实现一面虚拟墙。</li>
       </ol>
   </exercise>  
 
-  <exercise id="competing_objectives"><h1>Competing objectives</h1>
+  <exercise id="competing_objectives"><h1>相互竞争的目标</h1>
 
-    <p>In the section on <a href="#joint_centering">joint centering</a>, I
-    claimed that an secondary objective might compete with a primary objective
-    if they are linked through constraints.  To see this, consider the following
-    optimization problem \begin{align*}\min_{x,y} \quad (x-5)^2 +
-    (y+3)^2.\end{align*}  Clearly, the optimal solution is given by $x^*=5,
-    y^*=-3$.  Moreover, the objective are separable.  The addition of the second
-    objective, $(y+3)^2$, did not in any way impact the solution of the
-    first.</p>
+    <p>在关于<a href="#joint_centering">关节居中</a>的小节中，
+    我声称如果次级目标和主目标通过约束关联起来，
+    那么次级目标可能会与主目标发生竞争。
+    为了看到这一点，请考虑如下优化问题：
+    \begin{align*}\min_{x,y} \quad (x-5)^2 +
+    (y+3)^2.\end{align*}
+    显然，最优解为 $x^*=5,
+    y^*=-3$。
+    此外，两个目标项是可分离的。
+    添加第二个目标项 $(y+3)^2$
+    并没有以任何方式影响第一个目标的解。</p>
     
-    <p>Now consider the constrained optimization \begin{align*}\min_{x,y} \quad&
-    (x-5)^2 + (y+3)^2 \\ \subjto \quad& x - y \le 6. \end{align*} If the second
-    objective was removed, then we would still have $x^*=5$.  What is the result
-    of the optimization as written (it's only a few lines of code, if you want
-    to do it that way)?  <!-- answer: 4, -2 --> I think you'll find that these
-    "orthogonal" objectives actually compete!</p>
+    <p>现在考虑带约束的优化问题：
+    \begin{align*}\min_{x,y} \quad&
+    (x-5)^2 + (y+3)^2 \\ \subjto \quad& x - y \le 6. \end{align*}
+    如果移除第二个目标，
+    那么我们仍然会有 $x^*=5$。
+    按照现在写出的这个优化问题，
+    最终结果是什么？
+    （如果你愿意用代码做，也只需要几行。）
+    <!-- answer: 4, -2 -->
+    我想你会发现，这些“正交”的目标实际上会相互竞争！</p>
 
-    <p>What happens if you change the problem to \begin{align*}\min_{x,y} \quad&
+    <p>如果你将问题改为：
+    \begin{align*}\min_{x,y} \quad&
     (x-5)^2 + \frac{1}{100}(y+3)^2 \\ \subjto \quad& x - y \le 6? \end{align*}
-    I think you'll find that solution is quite close to $x^*=5$, but also that
-    $y^*$ is quite different than that $y^*=0$ one would obtain if the
-    "secondary" objective was omitted completely.</p>
+    会发生什么？
+    我想你会发现，解会非常接近 $x^*=5$，
+    但同时 $y^*$ 也会与完全省略“次级”目标时得到的
+    $y^*=0$ 明显不同。</p>
 
-    <p>Note that if the constraint was not active at the optimal solution (e.g.
-    $x=5, y=-3$ satisfied the constraints), then the objectives do not
-    compete.</p>
+    <p>注意，如果约束在最优解处并未激活
+    （例如 $x=5, y=-3$ 满足约束），
+    那么这些目标就不会相互竞争。</p>
 
-    <p>This seems like an overly simple example.  But I think you'll find that
-    it is actually quite similar to what is happening in the null-space objective
-    formulation above.</p>
+    <p>这个例子看起来可能过于简单。
+    但我认为你会发现，
+    它实际上与上面零空间目标形式中发生的情况非常相似。</p>
 
   </exercise>
 
-  <exercise id="spatial_velocity_moving"><h1>Spatial Velocity for Moving Frame</h1>
+  <exercise id="spatial_velocity_moving"><h1>运动坐标系的空间速度</h1>
     <figure>
       <img style="width:80%", src="figures/exercises/spatial_velocity_moving_frame.png"/>
-      <figcaption> A manipulator with one moving joint. Frame A is the robot base while frame B is on the end-effector.</figcaption>
+      <figcaption>一个具有一个运动关节的机械臂。坐标系 A 是机器人基座坐标系，而坐标系 B 位于末端执行器上。</figcaption>
     </figure>
-    <p>A manipulator with one joint is shown above. The joint is rotating over time, with its angle as a function of time, $\theta(t)$. When $t=0, \theta(t)=0$ and the link(arm) is aligned with y-axis of frame A and that of frame B. For this exercise, we will explore the spatial velocity of the end-effector.</p>
+    <p>上图展示了一个具有一个关节的机械臂。该关节会随时间旋转，其角度是时间的函数 $\theta(t)$。当 $t=0$ 时，$\theta(t)=0$，并且连杆（机械臂）与坐标系 A 的 y 轴以及坐标系 B 的 y 轴对齐。在本练习中，我们将探索末端执行器的空间速度。</p>
 
     <ol type="a">
-      <li> For this manipulator, given ${}^Bp^C(0) = [1, 0, 0]^T$ , write
-      ${}^Ap^C(0)$. For a generic point C, derive 3x3 rotation matrix
-      ${^A}R{^B}(t)$ and translation vector ${^A}p{^B}(t)$, such that
-      ${^A}p^C_A(t)={^A}R{^B}(t) {^B}p^C_B+{^A}p{^B} (t)$. Your solutions
-      should involve $l_0, l_1, l_2,$ and $\theta(t)$. </li>
-      <li> Prove that for any rotation matrix $R$, $\widehat{\omega} \equiv
-      \dot{R}R^{-1}$ satisfies $\widehat{\omega} = -\widehat{\omega}^T$. Plug
-      in $R={^A}R{^B}(t)$ to verify your proof.</li>
-      <li> Solve for ${^A}V{^B}(t)$ for the manipulator, as a function of $l_0,
-      l_1, l_2, \theta(t)$ and $\dot\theta(t)$. </li>
+      <li>对于这个机械臂，给定 ${}^Bp^C(0) = [1, 0, 0]^T$，写出
+      ${}^Ap^C(0)$。对于一个一般点 C，推导 3x3 旋转矩阵
+      ${^A}R{^B}(t)$ 和平移向量 ${^A}p{^B}(t)$，使得
+      ${^A}p^C_A(t)={^A}R{^B}(t) {^B}p^C_B+{^A}p{^B} (t)$。
+      你的解应包含 $l_0, l_1, l_2,$ 和 $\theta(t)$。</li>
+      <li>证明对于任意旋转矩阵 $R$，$\widehat{\omega} \equiv
+      \dot{R}R^{-1}$ 满足 $\widehat{\omega} = -\widehat{\omega}^T$。
+      代入 $R={^A}R{^B}(t)$ 来验证你的证明。</li>
+      <li>求解该机械臂的 ${^A}V{^B}(t)$，
+      将其表示为 $l_0, l_1, l_2, \theta(t)$ 和 $\dot\theta(t)$ 的函数。</li>
     </ol>
   </exercise>
 
-  <exercise id="representing_rotations"><h1>Challenges with Representing of Rotations in 3D</h1></exercise>
-  <p>In the section on <a href="#3D_rotation">representing 3D rotations</a>, I mentioned that there is no one representation of 3D rotations that's best for everything. In this problem, you will explore some of the unexpected properties associated with a few of the most commonly used representations.</p>
+  <exercise id="representing_rotations"><h1>三维旋转表示中的挑战</h1></exercise>
+  <p>在关于<a href="#3D_rotation">表示三维旋转</a>的小节中，
+  我提到过，并不存在一种对所有事情都最好的三维旋转表示方式。
+  在本题中，你将探索几种最常用表示方式所带来的一些意想不到的性质。</p>
 
   <ol type="a">
-    <li><i>Roll-Pitch-Yaw:</i> One way we can represent a rotation is with a set of "roll-pitch-yaw" angles $(r,p,y)$. Refer to Drake's <a href="https://drake.mit.edu/doxygen_cxx/classdrake_1_1math_1_1_roll_pitch_yaw.html">RollPitchYaw</a> class for conventions on the ordering of these individual angle rotations into a single rotation matrix. Given that $p=-\pi/2$, compute a rotation matrix in terms of $r$ and $y$. In the resulting matrix, how does a change in $r$ compare to a change in $y$? What does this tell us about "roll-pitch-yaw" as a representation for rotations?<br /><br />
-    Hint: Try simplifying your solution using the <a href="https://en.wikipedia.org/wiki/List_of_trigonometric_identities#Angle_sum_and_difference_identities">angle sum trigonometric identities</a> $$\sin(\alpha+\beta)=\sin\alpha\cos\beta+\cos\alpha\sin\beta$$ $$\cos(\alpha+\beta)=\cos\alpha\cos\beta-\sin\alpha\sin\beta$$.</li>
-    <li id="axis-angle"><i>Axis-Angle:</i> Consider an orientation obtained by rotating a right-handed coordinate frame about its z-axis by an angle of $\pi/2$ radians. This rotation would result in the positive x-axis pointing in the direction where the positive y-axis was pointing before rotation. One way to represent this rotation is with the axis-angles vector $(0,0,\pi/2)$. (Recall that the vector describes the axis about which the rotation occurs, and its magnitude is the angle of rotation). This representation is not unique. Find two other sets of axis-angles that would give the same rotation.</li>
-    <li><i>Quaternion:</i> A unit quaternion is a set of four numbers $(w,x,y,z)$ such that $w^2+x^2+y^2+z^2=1$. Unit quaternions are an excellent way of representing orientations, since they don't suffer from singularities (unlike the roll-pitch-yaw and axis-angle representations). This makes them reliable for <a href="#pick_and_place_trajectory">interpolating orientations</a>, but unit quaternions still suffer from the "multiple representations" problem.<br /><br />
-    We can turn a unit quaternion $(w,x,y,z)$ into an axis-angle vector $(a_x,a_y,a_z)$ by computing $\theta=2\arccos(w)$, and then for any integer $n$: $$(a_x,a_y,a_z)=\left\{\begin{array}{ll} \displaystyle\frac{\theta}{\sin(\theta/2)}(x,y,z) & \theta\ne 2n\pi\\ (0,0,0) & \theta=2n\pi \end{array}\right.$$ Show that for any unit quaternion $(w,x,y,z)$, $(-w,-x,-y,-z)$ represents the same orientation by converting to axis-angle form, and simplifying the resulting trigonometric expressions.<br /><br />
-    As it turns out, there are precisely two unit quaternions corresponding to each orientation!<br /><br />
-    Hint 1: $\arccos(-\alpha)=\pi-\arccos(\alpha)$ and $\sin(\pi-\beta)=\sin(\beta)$ for any $\alpha$ and $\beta$.<br />
-    Hint 2: Use the fact that for any angle $\theta$, $\theta\pm 2\pi$ represents the same orientation.<br />
-    Hint 3: Note that $\frac{1}{\sin(\theta/2)}(x,y,z)$ is a unit vector.</li>
+    <li><i>Roll-Pitch-Yaw：</i>我们可以用一组 “roll-pitch-yaw” 角
+    $(r,p,y)$ 来表示旋转。
+    请参考 Drake 的
+    <a href="https://drake.mit.edu/doxygen_cxx/classdrake_1_1math_1_1_roll_pitch_yaw.html">RollPitchYaw</a>
+    类，了解这些单独角度旋转组合成一个旋转矩阵时所采用的顺序约定。
+    给定 $p=-\pi/2$，请计算一个用 $r$ 和 $y$ 表示的旋转矩阵。
+    在得到的矩阵中，$r$ 的变化与 $y$ 的变化相比有何关系？
+    这说明 “roll-pitch-yaw” 作为旋转表示方式有什么问题？<br /><br />
+    提示：尝试使用<a href="https://en.wikipedia.org/wiki/List_of_trigonometric_identities#Angle_sum_and_difference_identities">和差角三角恒等式</a>
+    $$\sin(\alpha+\beta)=\sin\alpha\cos\beta+\cos\alpha\sin\beta$$
+    $$\cos(\alpha+\beta)=\cos\alpha\cos\beta-\sin\alpha\sin\beta$$
+    来化简你的结果。</li>
+
+    <li id="axis-angle"><i>轴角（Axis-Angle）：</i>
+    考虑一个方向，它由一个右手坐标系绕其 z 轴旋转 $\pi/2$ 弧度得到。
+    这个旋转会使正 x 轴指向旋转前正 y 轴所在的方向。
+    表示这个旋转的一种方式是轴角向量 $(0,0,\pi/2)$。
+    （回想一下，该向量描述旋转所绕的轴，而其模长表示旋转角度。）
+    这种表示并不是唯一的。
+    请找出另外两组能够产生相同旋转的轴角表示。</li>
+
+    <li><i>四元数（Quaternion）：</i>
+    单位四元数是一组四个数 $(w,x,y,z)$，
+    满足 $w^2+x^2+y^2+z^2=1$。
+    单位四元数是一种非常优秀的方向表示方式，
+    因为它不像 roll-pitch-yaw 和轴角表示那样存在奇异性。
+    这使它们在<a href="#pick_and_place_trajectory">插值方向</a>时非常可靠，
+    但单位四元数仍然存在“多重表示”问题。<br /><br />
+    我们可以通过计算 $\theta=2\arccos(w)$，
+    将单位四元数 $(w,x,y,z)$ 转换为轴角向量 $(a_x,a_y,a_z)$；
+    对于任意整数 $n$：
+    $$(a_x,a_y,a_z)=\left\{\begin{array}{ll} \displaystyle\frac{\theta}{\sin(\theta/2)}(x,y,z) & \theta\ne 2n\pi\\ (0,0,0) & \theta=2n\pi \end{array}\right.$$
+    请通过转换到轴角形式并化简所得三角表达式，
+    证明对于任意单位四元数 $(w,x,y,z)$，
+    $(-w,-x,-y,-z)$ 表示相同的方向。<br /><br />
+    事实上，每个方向恰好对应两个单位四元数！<br /><br />
+    提示 1：对于任意 $\alpha$ 和 $\beta$，
+    $\arccos(-\alpha)=\pi-\arccos(\alpha)$ 且
+    $\sin(\pi-\beta)=\sin(\beta)$。<br />
+    提示 2：利用这样一个事实：对于任意角度 $\theta$，
+    $\theta\pm 2\pi$ 表示相同的方向。<br />
+    提示 3：注意
+    $\frac{1}{\sin(\theta/2)}(x,y,z)$
+    是一个单位向量。</li>
   </ol>
 
-  <exercise id="pick_place_initials"><h1>Grasping and Manipulating Assets</h1>
-  <p> For this exercise we will build on the <a href="https://manipulation.csail.mit.edu/pick.html#example13">Pick and Place Demo</a> we developed this chapter. You will program the robot to pick and place letter assets corresponding to your initials. You will work exclusively in <script>document.write(notebook_link('pick', notebook='14_pickplace_initials', link_text='this notebook'))</script>. You will be asked to complete the following steps: </p>
+  <exercise id="pick_place_initials"><h1>抓取与操作字母资产</h1>
+  <p>在本练习中，我们将基于本章开发的
+  <a href="https://manipulation.csail.mit.edu/pick.html#example13">抓取与放置演示</a>
+  继续扩展。
+  你将编写程序，让机器人抓取并放置与你姓名首字母对应的字母资产。
+  你将完全在
+  <script>document.write(notebook_link('pick', notebook='14_pickplace_initials', link_text='这个 notebook'))</script>
+  中完成。
+  你需要完成以下步骤：</p>
 
   <ol type="a">
-      <li> Solve for grasp and placement poses of the assets. </li>
-      <li> Fill in a Differential IK controller. </li>
-      <li> Build a <code>Diagram</code> to simulate control of the IIWA as it manipulates the letter assets.
+      <li>求解这些资产的抓取位姿和放置位姿。</li>
+      <li>补全一个 Differential IK 控制器。</li>
+      <li>构建一个 <code>Diagram</code>，用于仿真 IIWA 操作这些字母资产的控制过程。
   </ol>
 
   </exercise>
