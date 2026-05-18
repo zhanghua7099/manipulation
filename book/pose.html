@@ -56,89 +56,42 @@ href="https://www.youtube.com/channel/UChfUOAhz7ynELF-s_1LPpWg">Lecture videos a
 <script type="text/javascript">document.write(notebook_header('pose'))
 </script>
 <!-- EVERYTHING ABOVE THIS LINE IS OVERWRITTEN BY THE INSTALL SCRIPT -->
-<chapter style="counter-reset: chapter 3"><h1>Geometric Pose Estimation</h1>
+<chapter style="counter-reset: chapter 3"><h1>几何位姿估计</h1>
 
-  <p>In the last chapter, we developed an initial solution to moving objects
-  around, but we made one major assumption that would prevent us from using it
-  on a real robot: we assumed that we knew the initial pose of the object.  This
-  chapter is going to be our first pass at removing that assumption, by
-  developing tools to estimate that pose using the information obtained from the
-  robot's depth cameras.  The tools we develop here will be most useful when you
-  are trying to manipulate <i>known objects</i> (e.g. you have a mesh file of
-  their geometry) and are in a relatively <i>uncluttered</i> environment.  But
-  they will also form a baseline for the more sophisticated methods we will
-  study.</p>
+  <p>在上一章中，我们为移动物体开发了一个初步解决方案，但我们做了一个会阻止其应用于真实机器人上的重大假设：我们假设已知物体的初始位姿。本章将首次尝试消除这一假设，通过开发工具，利用机器人深度相机获取的信息来估计该位姿。我们在这里开发的工具，在你尝试操作<i>已知物体</i>（例如，你拥有其几何结构的网格文件）并且处于相对<i>非杂乱</i>环境中时，将特别有用。但它们也会成为我们后续学习更复杂方法的基础。</p>
 
-  <p>The approach that we'll take in this chapter is based on geometry. Not all
-  perception systems these days use geometry explicitly; many deep learning
-  approaches learn more direct maps from pixels. But many deep learning
-  approaches <i>do</i> build heavily on geometry, and indeed the last few years
-  have also brought a revolution in geometry processing (dense reconstruction,
-  text to 3D, etc.). Some of this was fueled initially by applications in
-  autonomous driving and virtual/augmented reality in addition to manipulation,
-  which brought advanced sensors and fantastic new algorithms.
+  <p>本章中我们采用的方法基于几何学。如今并非所有感知系统都会显式使用几何；许多深度学习方法会学习从像素到结果的更直接映射。但许多深度学习方法<i>确实</i>高度依赖几何，而且过去几年中，几何处理领域也经历了一场革命（稠密重建、文本生成 3D 等）。这些进展最初部分受到自动驾驶、虚拟/增强现实以及机器人操作等应用的推动，从而催生了先进的传感器和出色的新算法。
   </p>
 
-  <p>So we will start with geometry because it can provide a solid foundation
-  for our explorations in perception. I must state one caveat -- we will use
-  "pose estimation" as our goal for this chapter because it is concrete and
-  immediately useful. But I would say that I try <i>not</i> to use explicit
-  pose estimation as a concept in our most advanced manipulation systems; in
-  addition to assuming known objects, accurately estimating the pose of an
-  object can be difficult (due to partial views and/or occlusions) and it is
-  often more than we actually need to achieve our manipulation goals.</p>
+  <p>因此，我们将从几何开始，因为它能够为我们探索感知问题提供坚实基础。不过我必须说明一个注意事项——本章将“位姿估计”作为目标，因为它具体且能立即发挥作用。但我要说的是，在我们最先进的操作系统中，我会尽量<i>不</i>把显式位姿估计作为核心概念；除了需要假设物体已知之外，精确估计物体位姿本身也可能非常困难（由于视角不完整和/或遮挡），而且很多时候这已经超出了实现操作目标的实际需求。</p>
 
-  <section><h1>Cameras and depth sensors</h1>
+  <section><h1>相机与深度传感器</h1>
   
-    <p>Just as we had many choices when selecting the robot arm and hand, we
-    have many choices for instrumenting our robot/environment with sensors. Even
-    more so than our robot arms, the last few years have seen incredible
-    improvements in the quality and reductions in cost and size for these
-    sensors.  This is largely thanks to the cell phone industry, but the race
-    for autonomous cars has been fueling high-end sensors as well.</p>
+    <p>正如我们在选择机器人手臂和机械手时有许多选择一样，我们在为机器人/环境配置传感器时同样有很多选择。与机器人手臂相比，过去几年这些传感器在质量上的提升以及成本和尺寸上的降低更加惊人。这很大程度上得益于手机产业，而自动驾驶汽车的竞争也推动了高端传感器的发展。</p>
 
-    <p>These changes in hardware quality have caused sometimes dramatic changes
-    in our algorithmic approaches.  For example, estimation can be much easier
-    when the resolution and frame rate of our sensors is high enough that not
-    much can change in the world between two images; this undoubtedly
-    contributed to the revolutions in the field of "simultaneous localization
-    and mapping" (SLAM) we have seen over the last decade or so.</p>
+    <p>这些硬件质量的变化，有时会导致我们的算法方法发生巨大变化。例如，当传感器的分辨率和帧率足够高，以至于世界在两帧图像之间不会发生太大变化时，估计问题会变得容易得多；这无疑促进了过去十年左右“同步定位与建图”（SLAM）领域的革命性进展。</p>
 
-    <p>One might think that the most important sensors for manipulation are the
-    touch sensors (you might even be right!).  But in practice today, most of
-    the emphasis is on camera-based and/or range sensing.  At very least, we
-    should consider this first, since our touch sensors won't do us much good if
-    we don't know where in the world we need to touch.</p>
+    <p>人们可能会认为，对机器人操作来说最重要的传感器是触觉传感器（你甚至可能是对的！）。但在当前实践中，大多数重点仍然放在基于相机和/或距离感知的传感器上。至少，我们应该首先考虑这一点，因为如果我们不知道世界中需要触碰的位置，那么触觉传感器也帮不上太大忙。</p>
 
-    <p>Traditional cameras, which we think of as a sensor that outputs a color
-    image at some framerate, play an important role.  But robotics makes heavy
-    use of sensors that make an explicit measurement of the distance (between
-    the camera and the world) or depth; sometimes in addition to color and
-    sometimes in lieu of color.</p>
+    <p>传统相机——我们通常将其视为一种以某个帧率输出彩色图像的传感器——发挥着重要作用。但机器人领域大量使用能够显式测量距离（相机与世界之间的距离）或深度的传感器；有时它们会同时提供颜色信息，有时则用深度信息替代颜色。</p>
 
-    <subsection><h1>Depth sensors</h1>
+    <subsection><h1>深度传感器</h1>
     
-      <p>Primarily RGB-D (ToF vs projected texture stereo vs ...) cameras and Lidar</p>
+      <p>主要包括 RGB-D（ToF、投影纹理立体视觉等）相机以及激光雷达（Lidar）</p>
 
-      <p>The cameras we are using in this course are Intel RealSense D415.</p>
+      <p>本课程中我们使用的相机是 Intel RealSense D415。</p>
 
-      <p>Monocular depth.</p>
+      <p>单目深度。</p>
 
-      <p>Learned stereo <elib>Shankar22</elib>.</p>
+      <p>基于学习的立体视觉 <elib>Shankar22</elib>。</p>
 
-      <todo>How the kinect works in 2 minutes: https://www.youtube.com/watch?v=uq9SEJxZiUg</todo>
+      <todo>Kinect 工作原理的两分钟介绍：https://www.youtube.com/watch?v=uq9SEJxZiUg</todo>
 
     </subsection>
 
-    <subsection><h1>Simulation</h1>
+    <subsection><h1>仿真</h1>
     
-      <p>There are a number of levels of fidelity at which one can simulate a
-      camera like the D415.  We'll start our discussion here using an "ideal"
-      RGB-D camera simulation -- the pixels returned in the depth image
-      represent the true geometric depth in the direction of each pixel
-      coordinate.  In <drake></drake> that is represented by the
-      <code>RgbdSensor</code> system, which can be wired up directly to the
-      <code>SceneGraph</code>.</p>
+      <p>对于像 D415 这样的相机，可以在多个不同保真度层级上进行仿真。我们将在这里从一种“理想”的 RGB-D 相机仿真开始讨论——深度图像中返回的像素表示沿着每个像素坐标方向上的真实几何深度。在 <drake></drake> 中，这由 <code>RgbdSensor</code> 系统表示，它可以直接连接到 <code>SceneGraph</code>。</p>
 
       <div>
         <script src="htmlbook/js-yaml.min.js"></script>
@@ -157,141 +110,61 @@ output_ports:
         </script>
       </div>
 
-      <p>The signals and systems abstraction here is encapsulating a lot of
-      complexity.  Inside the implementation of that system is a complete
-      rendering engine, like one that you will find in high-end computer games.
-      Drake actually supports multiple <a
-      href="https://drake.mit.edu/doxygen_cxx/group__render__engines.html">rendering
-      engines</a>; for the purposes of this class we will primarily use an
-      OpenGL-based renderer (built on <a href="https://vtk.org/">VTK</a>) that
-      is suitable for real-time simulation. Drake can also connect to high-end
-      <a
-      href="https://en.wikipedia.org/wiki/Physically_based_rendering">physically-based
-      rendering (PBR)</a> engines which use ray tracing, such as the <a
-      href="https://www.blender.org/features/rendering/">Cycles renderer
-      provided by Blender</a> (see the <a
-      href="https://github.com/RobotLocomotion/drake-blender">Drake-Blender
-      project</a>). These are potentially useful for rendering higher quality
-      images e.g. to <i>train</i> a deep perception system or make a beautiful
-      presentation.</p>
+      <p>这里的信号与系统抽象封装了大量复杂性。在该系统的实现内部，包含了一个完整的渲染引擎，就像你在高端电脑游戏中见到的那种。Drake 实际上支持多种<a
+      href="https://drake.mit.edu/doxygen_cxx/group__render__engines.html">渲染引擎</a>；在本课程中，我们主要使用基于 OpenGL 的渲染器（构建于 <a href="https://vtk.org/">VTK</a> 之上），它适用于实时仿真。Drake 还能够连接高端的<a
+      href="https://en.wikipedia.org/wiki/Physically_based_rendering">基于物理的渲染（PBR）</a>引擎，这些引擎使用光线追踪技术，例如 <a
+      href="https://www.blender.org/features/rendering/">Blender 提供的 Cycles 渲染器</a>（参见 <a
+      href="https://github.com/RobotLocomotion/drake-blender">Drake-Blender 项目</a>）。这些工具可能有助于渲染更高质量的图像，例如用于<i>训练</i>深度感知系统或制作精美演示。</p>
 
-      <example class="drake"><h1>Simulating an RGB-D camera</h1>
+      <example class="drake"><h1>仿真 RGB-D 相机</h1>
 
         <script>document.write(notebook_link('pose', notebook="camera_sim"))</script>
 
-        <p>As a simple example of depth cameras in drake, I've constructed a
-        scene with a single object (the mustard bottle from the <a
+        <p>作为 drake 中深度相机的一个简单示例，我构建了一个包含单个物体的场景（来自 <a
         href="https://github.com/RobotLocomotion/models/tree/master/ycb">YCB
-        dataset</a>), and added an <code>RgbdSensor</code> to the diagram.  Once
-        this is wired up, we can simply evaluate the output ports in order to
-        obtain the color and depth images:</p>
+        数据集</a>中的芥末瓶），并向图中添加了一个 <code>RgbdSensor</code>。完成连接后，我们只需评估输出端口，就能获得彩色图像和深度图像：</p>
 
         <figure><img src="data/mustard.svg"/></figure>
     
         <p><img style="height:200px;float:right;margin-left:10px"
-        src="data/mustard_meshcat.png"/> Please make sure you spend a minute
-        with the MeshCat visualization (<a href="data/mustard.html">available
-        here</a>).  You'll see a camera and the camera frame, and you'll see the
-        mustard bottle as always... but it might look a little funny.  That's
-        because I'm displaying both the ground truth mustard bottle model
-        <i>and</i> the point cloud rendered from the cameras.  You can use the
-        MeshCat GUI to uncheck the ground truth visualization (image right), and you'll be able to see just the point cloud.</p>
+        src="data/mustard_meshcat.png"/> 请务必花一分钟查看 MeshCat 可视化（<a href="data/mustard.html">可在此处访问</a>）。你会看到一台相机和相机坐标系，也会像往常一样看到芥末瓶……但它可能看起来有点奇怪。这是因为我同时显示了真实的芥末瓶模型<i>以及</i>由相机渲染出的点云。你可以使用 MeshCat GUI 取消勾选真实模型可视化（右图），这样就只能看到点云。</p>
 
-        <p>Remember that, in addition to looking at the source code if you like,
-        you can always inspect the block diagram to understand what is happening
-        at the "systems level".  <a href="data/depth_camera_diagram.svg">Here is the diagram</a> used in this example.</p>
+        <p>请记住，除了在需要时查看源代码之外，你也始终可以检查框图，以理解“系统层面”上正在发生什么。<a href="data/depth_camera_diagram.svg">这里是本示例使用的框图</a>。</p>
 
       </example>
     
-      <p>In the <code>HardwareStation</code> workflow, if cameras are declared
-      in the scenario data (e.g. Yaml description), then the
-      <code>RgbdSensors</code> are added automatically inside the
-      <code>HardwareStation</code> diagram, and their output ports exposed as
-      outputs (in order to match the true interface that we have with the
-      hardware).</p>
+      <p>在 <code>HardwareStation</code> 工作流中，如果在场景数据（例如 Yaml 描述）中声明了相机，那么 <code>RgbdSensors</code> 会被自动添加到 <code>HardwareStation</code> 图内部，并且它们的输出端口会作为输出暴露出来（以匹配我们与真实硬件之间的实际接口）。</p>
 
-      <subsection><h1>Sensor noise and depth dropouts</h1>
+      <subsection><h1>传感器噪声与深度丢失</h1>
 
-        <p>Real depth sensors, of course, are far from ideal -- and errors in
-        depth returns are not simple Gaussian noise, but rather are dependent
-        on the lighting conditions, the surface normals of the object, and the
-        visual material properties of the object, among other things.  The
-        color channels are an approximation, too.  Even our high-end renderers
-        can only do well if we add sufficiently accurate geometries, materials
-        and lighting sources to our scene, and it is very hard to capture all
-        of the nuances of a real environment.  We will examine real sensor
-        data, and the gaps between modeled sensors and real sensors, after we
-        start understanding some of the basic operations.</p>
+        <p>当然，真实的深度传感器远非理想——而且深度返回中的误差并不是简单的高斯噪声，而是取决于光照条件、物体的表面法线、物体的视觉材料属性以及其他因素。颜色通道同样也只是一种近似。即使是我们的高端渲染器，也只有在向场景中加入足够准确的几何体、材料和光源时才能表现良好，而要捕捉真实环境的所有细微差别非常困难。在我们开始理解一些基本操作之后，我们将考察真实传感器数据，以及建模传感器与真实传感器之间的差距。</p>
 
         <figure><img style="width:95%"
-        src="data/Sweeney18a_fig3.png"/><figcaption>Real depth sensors are
-        messy.  The red pixels in the far right image are missed returns -- the
-        depth sensor returned "maximum depth".  Missed returns, especially on
-        the edges of objects (or on reflective objects) are a common sighting in
-        raw depth data.  This figure is reproduced from
-        <elib>Sweeney18a</elib>.</figcaption></figure>
+        src="data/Sweeney18a_fig3.png"/><figcaption>真实深度传感器的数据很杂乱。最右侧图像中的红色像素表示未返回测量值——深度传感器返回了“最大深度”。未返回测量值，尤其是在物体边缘（或反光物体上），在原始深度数据中很常见。本图转载自
+        <elib>Sweeney18a</elib>。</figcaption></figure>
 
       </subsection>
-      <subsection id="partial_views"><h1>Occlusions and partial views</h1>
+      <subsection id="partial_views"><h1>遮挡与局部视图</h1>
     
-      <p>The view of the mustard bottle in the example above makes one primary
-      challenge of working with cameras very clear. Cameras don't get to see
-      everything!  They only get line of sight.  If you want to get points from
-      the back of the mustard bottle, you'll need to move the camera.  And if
-      the mustard bottle is sitting on the table, you'll have to pick it up if
-      you ever want to see the bottom.  This situation gets even worse in
-      cluttered scenes, where we have our views of the bottle <i>occluded</i> by
-      other objects.  Even when the scene is not cluttered, a head-mounted or
-      table-mounted camera is often blocked by the robot's hand when it goes to
-      do manipulation -- the moments when you would like the sensors to be at
-      their best is often when they give no information!</p>
+      <p>上面示例中芥末瓶的视图非常清楚地展示了使用相机时的一个主要挑战。相机并不能看到所有东西！它们只能看到视线范围内的内容。如果你想获得芥末瓶背面的点，就需要移动相机。而如果芥末瓶放在桌子上，那么如果你想看到底部，就必须把它拿起来。在杂乱场景中，这种情况会变得更糟，因为我们对瓶子的视图会被其他物体<i>遮挡</i>。即使场景并不杂乱，当机器人准备进行操作时，安装在头部或桌面上的相机也常常会被机器人的手挡住——你最希望传感器表现最佳的时刻，往往正是它们无法提供信息的时候！</p>
 
-      <p>It is quite common to mount a depth camera on the robot's wrist in
-      order to help with the partial views.  But it doesn't completely resolve
-      the problem.  All of our depth sensors have both a maximum range and a
-      minimum range.  The RealSense D415 returns matches from about 0.3m to
-      1.5m.  That means for the last 30cm of the approach to the object --
-      again, where we might like our cameras to be at their best -- the object
-      effectively disappears!</p>
+      <p>为了缓解局部视图问题，将深度相机安装在机器人手腕上是相当常见的做法。但这并不能完全解决问题。我们所有的深度传感器都有最大量程和最小量程。RealSense D415 的匹配返回范围大约是 0.3m 到 1.5m。这意味着在接近物体的最后 30cm 内——同样也是我们希望相机表现最佳的地方——物体实际上会消失！</p>
 
       <figure id="tri_dishloading"><img style="width:80%" src="data/dishloading_cameras.svg">
-      <figcaption>When luxury permits, we try to put as many cameras as we can
-      into the robot's environment.  In this dish-loading testbed at <a
+      <figcaption>在条件允许的情况下，我们会尽可能在机器人的环境中放置更多相机。在 <a
       href="https://www.tri.global/news/tri-taking-on-the-hard-problems-in-manipulation-re-2019-6-27">TRI</a>
-      where we put a total of eight cameras into the scene (it still doesn't
-      resolve the occlusion problem).</figcaption></figure>
+      的这个装盘测试平台中，我们总共在场景中放置了八台相机（但这仍然不能解决遮挡问题）。</figcaption></figure>
 
     </subsection>
   </section>
 
-  <section><h1>Representations for geometry</h1>
+  <section><h1>几何的表示方法</h1>
 
-    <p>There are many different representations for 3D geometry, each of which
-    can be more or less suitable for different computations. Often we can
-    convert between these representations; though sometimes that conversion can
-    be lossy. Examples include triangulated surface meshes and tetrahedral
-    volumetric meshes, voxel/occupancy grids, and implicit representations of
-    geometry like the signed distance functions and Neural Radiance Fields
-    (NeRFs), which have become very popular again recently as representations
-    in deep learning for 3D vision<elib>Park19+Mildenhall21</elib>. But the
-    representations that we will start with here are <i>depth images</i> and
-    <i>point clouds</i>.</p>
+    <p>3D 几何有许多不同的表示方法，每一种都可能更适合某些不同的计算。我们通常可以在这些表示之间进行转换；不过有时这种转换会带来信息损失。例子包括三角化表面网格和四面体体积网格、体素/占据栅格，以及几何的隐式表示，例如有符号距离函数和神经辐射场（NeRF），它们最近又作为 3D 视觉深度学习中的表示方法变得非常流行<elib>Park19+Mildenhall21</elib>。但我们在这里将首先使用的表示是<i>深度图像</i>和<i>点云</i>。</p>
 
-    <p>The data returned by a depth camera takes the form of an image, where
-    each pixel value is a single number that represents the distance between the
-    camera and the nearest object in the environment along the pixel direction.
-    If we combine this with the basic information about the camera's intrinsic
-    parameters (e.g. lens parameters, stored in the <a
+    <p>深度相机返回的数据采用图像的形式，其中每个像素值都是一个数字，表示沿该像素方向，相机与环境中最近物体之间的距离。如果我们将其与相机内参的基本信息（例如镜头参数，在 Drake 中存储于 <a
     href="https://drake.mit.edu/doxygen_cxx/classdrake_1_1systems_1_1sensors_1_1_camera_info.html"><code>CameraInfo</code></a>
-    class in Drake) then we can transform this depth image representation into a
-    collection of 3D points, $s_i$.  I use $s$ here because they are commonly referred
-    to as the "scene points" in the algorithms we will present below.  These points are
-    expressed in some reference frame described by a rigid transform and (optionally) a
-    color value or other information attached; this is the <i>point cloud</i>
-    representation. In the <code>DepthImageToPointCloud</code> system in Drake, the
-    default frame is the camera frame, $^CX^{s_i}$, but the system also accepts $^PX^C$
-    on a (optional) input port to make it easy to transform them into another frame
-    (such as the world frame).</p>  
+    类中）结合起来，那么就可以将这种深度图像表示转换为一组 3D 点 $s_i$。我在这里使用 $s$，是因为在下面将介绍的算法中，它们通常被称为“场景点”。这些点表示在某个由刚体变换描述的参考坐标系中，并且（可选地）附带颜色值或其他信息；这就是<i>点云</i>表示。在 Drake 的 <code>DepthImageToPointCloud</code> 系统中，默认坐标系是相机坐标系 $^CX^{s_i}$，但该系统也在一个（可选）输入端口上接受 $^PX^C$，以便轻松地将它们变换到另一个坐标系中（例如世界坐标系）。</p>  
     
     <div>
       <script src="htmlbook/js-yaml.min.js"></script>
@@ -308,34 +181,18 @@ output_ports:
       </script>
     </div>
     
-    <p>As depth sensors have become so pervasive the field has built up
-    libraries of tools for performing basic geometric operations on point
-    clouds, and that can be used to transform back and forth between
-    representations.  We implement many of of the basic operations directly in
-    Drake.  There are also open-source tools like the <a
-    href="http://www.open3d.org/">Open3D</a> library that are available if you
-    need more. Many older projects used the <a
-    href="http://pointclouds.org/">Point Cloud Library (PCL)</a>, which is now
-    defunct but still has some very useful documentation.</p>
+    <p>随着深度传感器变得如此普及，该领域已经积累了许多工具库，用于对点云执行基本几何操作，并可用于在不同表示之间来回转换。我们在 Drake 中直接实现了许多基本操作。如果你需要更多功能，也可以使用诸如 <a
+    href="http://www.open3d.org/">Open3D</a> 这样的开源工具库。许多较早的项目使用 <a
+    href="http://pointclouds.org/">点云库（Point Cloud Library，PCL）</a>，它现在已经停止维护，但仍然有一些非常有用的文档。</p>
 
-    <p>It's important to realize that the conversion of a depth image into a
-    point cloud does lose some information -- specifically the information
-    about the ray that was cast from the camera to arrive at that point.  In
-    addition to declaring "there is geometry at this point", the depth image
-    combined with the camera pose also implies that "there is no geometry in the
-    straight line path between camera and this point".  We will make use of this
-    information in some of our algorithms, so don't discard the depth images
-    completely!  More generally, we will find that each of the different
-    geometry representations have strengths and weaknesses -- it is very common
-    to keep multiple representations around and to convert back and forth
-    between them.</p>
+    <p>需要认识到的是，将深度图像转换为点云确实会丢失一些信息——具体来说，就是从相机投射射线并到达该点的相关信息。除了声明“这个点处存在几何体”之外，深度图像结合相机位姿还意味着“在相机与该点之间的直线路径上不存在几何体”。我们会在某些算法中使用这一信息，所以不要完全丢弃深度图像！更一般地说，我们会发现每种不同的几何表示都有其优点和缺点——保留多种表示并在它们之间来回转换是非常常见的做法。</p>
 
   </section>
 
-  <!--
-  <section><h1>Working with point clouds</h1>
 
-    <p>First, let us get a few simulated point clouds to work with.  We can use either <drake></drake> or Open3d to convert the depth image into a point cloud; we'll use Drake for this step here simply because we already have the camera parameters in the Drake format.  Although we can call the conversion functions directly, we can also add a system that does the conversion for us in the systems framework:</p>
+  <section><h1>处理点云</h1>
+
+    <p>首先，让我们获取几个用于处理的仿真点云。我们可以使用 <drake></drake> 或 Open3D 将深度图像转换为点云；这里我们在这一步使用 Drake，只是因为我们已经拥有 Drake 格式的相机参数。虽然我们可以直接调用转换函数，但也可以在系统框架中添加一个系统，由它为我们完成转换：</p>
 
     <table align="center" cellpadding="0" cellspacing="0">
       <tr align="center">
@@ -343,1317 +200,704 @@ output_ports:
       <tr>
       <td align="right" style="padding:5px 0px 5px 0px">depth_image &rarr; </td></tr>
       <tr>
-      <td align="right" style="padding:5px 0px 5px 0px">color_image (optional) &rarr; </td></tr>
+      <td align="right" style="padding:5px 0px 5px 0px">color_image（可选）&rarr; </td></tr>
       <tr>
-      <td align="right" style="padding:5px 0px 5px 0px">camera_pose (optional) &rarr;</td></tr>
+      <td align="right" style="padding:5px 0px 5px 0px">camera_pose（可选）&rarr;</td></tr>
       </table>
-      </td><td align="center" style="border:solid;padding-left:20px;padding-right:20px" bgcolor="#F0F0F0"><a class="el" href="http://drake.mit.edu/doxygen_cxx/classdrake_1_1perception_1_1_depth_image_to_point_cloud.html" title="Converts a depth image to a point cloud.">DepthImageToPointCloud</a></td><td><table cellspacing="0" cellpadding="0">
+      </td><td align="center" style="border:solid;padding-left:20px;padding-right:20px" bgcolor="#F0F0F0"><a class="el" href="http://drake.mit.edu/doxygen_cxx/classdrake_1_1perception_1_1_depth_image_to_point_cloud.html" title="将深度图像转换为点云。">DepthImageToPointCloud</a></td><td><table cellspacing="0" cellpadding="0">
       <tr>
       <td align="left" style="padding:5px 0px 5px 0px">&rarr; point_cloud </td></tr>
       </table>
       </td></tr>
     </table>
 
-    <p>You can infer from the optional input ports on this system that point cloud representations can potentially include color values for each of the Cartesian points.  The following example will get us a few point clouds to work with.</p>
+    <p>从该系统的可选输入端口可以推断出，点云表示可以为每个笛卡尔点包含颜色值。下面的示例将为我们获取几个可供处理的点云。</p>
 
-    <todo>Combine all point clouds via https://drake.mit.edu/pydrake/pydrake.systems.perception.html?highlight=pointcloud#pydrake.systems.perception.PointCloudConcatenation</todo>
+    <todo>通过 https://drake.mit.edu/pydrake/pydrake.systems.perception.html?highlight=pointcloud#pydrake.systems.perception.PointCloudConcatenation 合并所有点云</todo>
 
-    There are a number of basic operations that one can do on point clouds.  I'll give just a few examples here.  
+    可以对点云执行许多基本操作。这里我只给出几个例子。
 
-    <subsection><h1>Surface normal estimation</h1>
+    <subsection><h1>表面法线估计</h1>
     
-      <p>The simplest and most straight-forward algorithm for estimating the normals of a point cloud surface is to find the $k$ nearest neighbors, and fit a plane through those points using least-squares.  Let's denote the nominal point (about which we are estimating the normal) $p_0$, and its $k$ nearest neighboard $p_i, i\in[1,k].$  Let us form the $k \times 3$ data matrix: $$X = [ p_1 - p_0, p_2 - p_0, ..., p_k - p_0 ].$$  Then the principal components of this data matrix are given by the <a href="https://en.wikipedia.org/wiki/Singular_value_decomposition">singular value decomposition</a> of $X$ (or the eigenvectors of $X^T X$); if $X = U\Sigma V^T$, then the columns of $V$ are the principal directions, with the last column (associated with the smallest singular value) representing the normal direction.  The length can be normalized to one; but keep in mind that the sign of this vector is ambiguous -- the $k$ nearest points don't give any information about what direction might be into the object or out of the object.  This is a case where knowing the original camera direction can help -- for example, PCL offers a method <code>flipNormalTowardsViewpoint</code> that post-processes the normals.</p>
+      <p>估计点云表面法线的最简单、最直接算法，是找到 $k$ 个最近邻，并使用最小二乘法通过这些点拟合一个平面。我们将名义点（即我们要围绕其估计法线的点）记为 $p_0$，并将它的 $k$ 个最近邻记为 $p_i, i\in[1,k].$ 令我们构造 $k \times 3$ 的数据矩阵：$$X = [ p_1 - p_0, p_2 - p_0, ..., p_k - p_0 ].$$ 那么该数据矩阵的主成分由 $X$ 的<a href="https://en.wikipedia.org/wiki/Singular_value_decomposition">奇异值分解</a>给出（或由 $X^T X$ 的特征向量给出）；如果 $X = U\Sigma V^T$，那么 $V$ 的各列就是主方向，其中最后一列（对应最小奇异值）表示法线方向。长度可以归一化为一；但请记住，该向量的符号是不确定的——这 $k$ 个最近点无法提供关于哪个方向进入物体、哪个方向离开物体的信息。这种情况下，知道原始相机方向会有所帮助——例如，PCL 提供了一个 <code>flipNormalTowardsViewpoint</code> 方法，用于对法线进行后处理。</p>
 
       <figure>
         <img src="http://www.pointclouds.org/assets/images/contents/documentation/features_normal.png" />
 
-        <figcaption>Normal estimation using $k$ nearest neighbords (image linked from the <a href="http://docs.pointclouds.org/trunk/group__features.html"></a>PCL documentation</a>)</figcaption>
+        <figcaption>使用 $k$ 个最近邻进行法线估计（图片链接自 <a href="http://docs.pointclouds.org/trunk/group__features.html"></a>PCL 文档</a>）</figcaption>
       </figure>
 
-      <todo>Add an example; or even support normals in the DepthImageToPointCloud.  Example could be as simple as grabbing one point from the mustard point cloud, and finding its normal (with everything plotted in matplotlib).</todo>
+      <todo>添加一个示例；或者甚至在 DepthImageToPointCloud 中支持法线。示例可以简单到从芥末点云中取一个点，并找到它的法线（所有内容都用 matplotlib 绘制）。</todo>
 
-      <p>What was interesting and surprising (to me) about this is not that the least-squares solution works.  What is surprising is that this operation is considered commonplace and cheap -- for every point in the point cloud, we find $k$ nearest neighbors and do the normal estimation... even for very large point clouds.  Making this performant typically requires data structures like the <a href="https://en.wikipedia.org/wiki/K-d_tree">k-d tree</a> to make the nearest neighbor queries efficient.</p>
+      <p>关于这一点，让我觉得有趣且惊讶的并不是最小二乘解有效。真正令人惊讶的是，这个操作被认为是常规且廉价的——对于点云中的每一个点，我们都找到 $k$ 个最近邻并进行法线估计……即使点云非常大。要让这一过程高效，通常需要使用 <a href="https://en.wikipedia.org/wiki/K-d_tree">k-d 树</a> 这样的数据结构，以提高最近邻查询的效率。</p>
 
-      <p>Another standard feature that can be extracted from the $k$ nearest neighbors is the local curvature.  The math is quite similar.  <todo>add it here</todo></p>
+      <p>另一个可以从 $k$ 个最近邻中提取的标准特征是局部曲率。其数学形式非常相似。<todo>在此处添加它</todo></p>
 
     </subsection>
 
-    <subsection><h1>Plane segmentation</h1>
+    <subsection><h1>平面分割</h1>
     
-      <p>Moving beyond local properties like surface normals and local curvature, we might choose to process a point cloud into primitive shapes -- like boxes or spheres.  Another practical and natural segmentation is segmenting surfaces into planes... which we can accomplish with heuristic algorithms which group neighboring points with similar surface normals.  We used this effectively in the DARPA Robotics Challenge.</p>
+      <p>除了表面法线和局部曲率这样的局部属性之外，我们还可以选择将点云处理成基本形状——例如盒子或球体。另一种实用且自然的分割方式是将表面分割成平面……这可以通过一些启发式算法来完成，这些算法会将具有相似表面法线的相邻点分组。我们曾在 DARPA 机器人挑战赛中有效地使用过这一方法。</p>
 
-      <todo>Insert DRC plane segmentation videos here, from https://drive.google.com/drive/folders/1gYMJ0djBXbevWDBpekkK58pcbtZFr0A0 </todo>
+      <todo>在此处插入 DRC 平面分割视频，来自 https://drive.google.com/drive/folders/1gYMJ0djBXbevWDBpekkK58pcbtZFr0A0 </todo>
 
     </subsection>
 
   </section>
-  -->
 
-  <section id="registration"><h1>Point cloud registration with known
-  correspondences</h1>
+
+  <section id="registration"><h1>具有已知对应关系的点云配准</h1>
     
-    <p>Let us begin to address the primary objective of the chapter -- we have a
-    known object somewhere in the robot's workspace, we've obtained a point
-    cloud from our depth cameras.  How do we estimate the pose of the object,
-    $X^O$?</p>
+    <p>让我们开始处理本章的主要目标——机器人工作空间中的某处有一个已知物体，我们已经从深度相机获得了一个点云。我们如何估计该物体的位姿 $X^O$？</p>
 
     <p><img style="height:90px;float:left;margin-right:10px"
-    src="data/icp_model_points_sketch.png"/>One very natural and well-studied
-    formulation of this problem comes from the literature on <a
-    href="https://en.wikipedia.org/wiki/Point_set_registration">point cloud
-    registration</a> (also known as point set registration or scan matching).
-    Given two point clouds, point cloud registration aims to find a rigid
-    transform that optimally aligns the two point clouds.  For our purposes,
-    that suggests that our "model" for the object should also take the form of a
-    point cloud (at least for now).  We'll describe that object with a list of
-    <i>model points</i>, $m_i$, with their pose described in the object frame:
+    src="data/icp_model_points_sketch.png"/>这一问题的一种非常自然且经过充分研究的表述，来自关于<a
+    href="https://en.wikipedia.org/wiki/Point_set_registration">点云配准</a>（也称为点集配准或扫描匹配）的文献。给定两个点云，点云配准的目标是找到一个刚体变换，使这两个点云达到最优对齐。就我们的目的而言，这意味着物体的“模型”也应当采用点云的形式（至少目前如此）。我们将用一组<i>模型点</i> $m_i$ 来描述该物体，它们的位姿在物体坐标系中表示为：
     $^OX^{m_i}.$ </p>
 
-    <todo>The hypothes.is comment is right, I should add a diagram w/ model and scene points.</todo>
+    <todo>hypothes.is 的评论是对的，我应该添加一张包含模型点和场景点的示意图。</todo>
 
-    <p>Our second point cloud will be the <i>scene points</i>, $s_i$, that we
-    obtain from our depth camera, transformed (via the camera intrinsics) into
-    the camera coordinates, $^CX^{s_i}$.  I'll use $N_m$ and $N_s$ for the
-    number of model and scene points, respectively.</p>  
+    <p>我们的第二个点云将是从深度相机获得的<i>场景点</i> $s_i$，并通过相机内参将其变换到相机坐标中，即 $^CX^{s_i}$。我将分别使用 $N_m$ 和 $N_s$ 表示模型点和场景点的数量。</p>  
       
-    <p>Let us assume, for now, that we also know $X^C.$  Is this reasonable? In
-    the case of a wrist-mounted camera, this would amount to solving the
-    forward kinematics of the arm.  In an environment-mounted camera, this is
-    about knowing the pose of the cameras in the world.  Small errors in
-    estimating those poses, though, can lead to large artifacts in the
-    estimated point clouds.  We therefore take great care to perform <a
-    href="http://www.mathworks.com/help/vision/ug/camera-calibration.html">camera
-    extrinsics calibration</a>; I've linked to our calibration code in the <a
-    href="station.html">appendix</a>.  Note that if you have a mobile
-    manipulation platform (an arm mounted on a moving base), then all of these
-    discussions still apply, but you likely will perform all of your
-    registration in the robot's frame instead of the world frame.</p>
+    <p>现在让我们假设，我们也知道 $X^C.$ 这合理吗？对于腕部安装的相机来说，这相当于求解机械臂的正向运动学。对于安装在环境中的相机来说，这意味着需要知道相机在世界中的位姿。不过，这些位姿估计中的小误差可能会在估计出的点云中造成很大的伪影。因此，我们会非常谨慎地进行<a
+    href="http://www.mathworks.com/help/vision/ug/camera-calibration.html">相机外参标定</a>；我已经在<a
+    href="station.html">附录</a>中链接了我们的标定代码。请注意，如果你拥有一个移动操作平台（安装在移动底盘上的机械臂），那么所有这些讨论仍然适用，但你很可能会在机器人坐标系中而不是世界坐标系中执行所有配准。</p>
 
-    <p>The second <b>major assumption</b> that we will make in this section is
-    "known correspondences". When I say "correspondence" here, I mean that for
-    each point in the scene point cloud, we can pair it with a specific
-    point in the model point cloud; for instance, this might be the case if
-    each point had a unique color that we could perceive reliably through the
-    camera. This is <i>not</i> a reasonable assumption in practice, but it
-    helps us get started.  To represent this mapping in our equations, I'll use
-    a correspondence vector $c \in [1,N_m]^{N_s}$, where $c_i = j$ denotes that
-    scene point $s_i$ corresponds with model point $m_j$.  Note that we do not
-    assume that these correspondences are one-to-one.  Every scene point
-    corresponds to some model point, but the converse is not true, and multiple
-    scene points may correspond to the same model point.</p>
+    <p>我们将在本节中做出的第二个<b>主要假设</b>是“已知对应关系”。当我在这里说“对应关系”时，我的意思是，对于场景点云中的每个点，我们都可以将它与模型点云中的某个具体点配对；例如，如果每个点都有一种唯一颜色，并且我们能够通过相机可靠地感知到这种颜色，那么就可能出现这种情况。这在实践中<i>并不是</i>一个合理假设，但它有助于我们入门。为了在方程中表示这种映射，我将使用一个对应向量 $c \in [1,N_m]^{N_s}$，其中 $c_i = j$ 表示场景点 $s_i$ 对应于模型点 $m_j$。请注意，我们并不假设这些对应关系是一一对应的。每个场景点都对应某个模型点，但反过来并不成立，而且多个场景点可能对应同一个模型点。</p>
 
-    <p>As a result, the point-cloud registration problem is simply an (inverse)
-    kinematics problem.  We can write the model points and the scene points in a
-    common frame (here the world frame), $${}^W p^{m_{c_i}} = {}^W X^O \: {}^Op^{m_{c_i}}
-    = {}^W X^C \: {}^Cp^{s_i},$$ leaving a single unknown transform, $X^O$, for which
-    we must solve.  In the previous chapter I argued for using differential
-    kinematics instead of inverse kinematics; why is my story different here?
-    Differential kinematics can still be useful for perception, for example if
-    we want to track the pose of an object after we acquire its initial pose.
-    But unlike the robot case, where we can read the joint sensors to get our
-    current state, in perception we need to solve this harder problem at least
-    once.</p>
+    <p>因此，点云配准问题其实只是一个（逆）运动学问题。我们可以在一个公共坐标系中（这里是世界坐标系）写出模型点和场景点，$${}^W p^{m_{c_i}} = {}^W X^O \: {}^Op^{m_{c_i}}
+    = {}^W X^C \: {}^Cp^{s_i},$$ 其中只留下一个未知变换 $X^O$ 需要求解。在上一章中，我主张使用微分运动学而不是逆运动学；为什么这里我的说法不同呢？微分运动学对感知仍然可能有用，例如当我们在获得物体初始位姿之后想要跟踪其位姿时。但与机器人情形不同，在机器人中我们可以读取关节传感器来得到当前状态，而在感知中，我们至少需要求解一次这个更困难的问题。</p>
 
-    <p>What does a solution for $X^O$ look like?  Each model point gives us
-    three constraints, when $p^{s_i} \in \Re^3.$  The exact number of unknowns
-    depends on the particular representation we choose for the pose, but almost
-    always this problem is dramatically over-constrained.  Treating each point
-    as hard constraints on the relative pose would also be very susceptible to
-    measurement noise.  As a result, it will serve us better to try to find a
-    pose that describes the data, e.g., in a least-squares sense: $$\min_{X
+    <p>$X^O$ 的解是什么样的？当 $p^{s_i} \in \Re^3.$ 时，每个模型点都会给出三个约束。未知量的确切数量取决于我们为位姿选择的具体表示方式，但几乎总是这个问题会被严重过约束。将每个点都视为相对位姿上的硬约束，也会非常容易受到测量噪声影响。因此，更好的做法是尝试找到一个能够描述数据的位姿，例如在最小二乘意义下：$$\min_{X
     \in \mathrm{SE}(3)} \sum_{i=1}^{N_s} \| X \: {}^Op^{m_{c_i}} - X^C \:
-    {}^Cp^{s_i}\|^2.$$  Here I have used the notation $\mathrm{SE}(3)$ for the
-    "<a href="http://lavalle.pl/planning/node147.html">special Euclidean
-    group</a>," which is the standard notation saying the $X$ must be a valid
-    rigid transform.</p>
+    {}^Cp^{s_i}\|^2.$$ 这里我使用 $\mathrm{SE}(3)$ 这个符号表示“<a href="http://lavalle.pl/planning/node147.html">特殊欧几里得群</a>”，这是表示 $X$ 必须是一个有效刚体变换的标准记号。</p>
 
-    <p>To proceed, let's pick a particular representation for the pose to work
-    with.  I will use 3x3 rotation matrices here; the approach I'll describe
-    below also has an equivalent in quaternion form<elib>Horn87</elib>.  To
-    write the optimization above using the coefficients of the rotation matrix
-    and the translation as decision variables, I have: \begin{align} \min_{p,
+    <p>为了继续，让我们选择一种具体的位姿表示来处理。我将在这里使用 3x3 旋转矩阵；下面要描述的方法也有等价的四元数形式<elib>Horn87</elib>。为了使用旋转矩阵的系数和平移作为决策变量来写出上面的优化问题，我有：\begin{align} \min_{p,
     R} \quad& \sum_{i=1}^{N_s} \| p + R \: {}^Op^{m_{c_i}} - X^C
     \: {}^Cp^{s_i} \|^2, \\ \subjto \quad& R^T = R^{-1}, \quad \det(R) = +1.
-    \nonumber \end{align}  The constraints are needed because not every 3x3
-    matrix is a valid rotation matrix; satisfying these constraints ensures that
-    $R$ <i>is</i> a valid rotation matrix.  In fact, the constraint $R^T =
-    R^{-1}$ is almost enough by itself; it implies that $\det(R) = \pm 1.$ But a
-    matrix that satisfies that constraint with $\det(R) = -1$ is called an "<a
-    href="https://en.wikipedia.org/wiki/Improper_rotation">improper
-    rotation</a>", or a rotation plus a reflection across the axis of
-    rotation.</p>
+    \nonumber \end{align} 这些约束是必要的，因为并不是每个 3x3 矩阵都是有效的旋转矩阵；满足这些约束可以确保 $R$ <i>是</i>一个有效的旋转矩阵。事实上，约束 $R^T =
+    R^{-1}$ 本身几乎就足够了；它意味着 $\det(R) = \pm 1.$ 但满足该约束且 $\det(R) = -1$ 的矩阵称为“<a
+    href="https://en.wikipedia.org/wiki/Improper_rotation">非正常旋转</a>”，也就是一次旋转再加上关于旋转轴的反射。</p>
 
-    <p>Let's think about the type of optimization problem we've formulated so
-    far.  Given our decision to use rotation matrices, the term $p +
-    R{}^Op^{m_{c_i}} - X^C {^Cp^{s_i}}$ is linear in the decision variables
-    (think $Ax \approx b$), making the objective a convex quadratic.  How about
-    the constraints?  The first constraint is a quadratic equality constraint
-    (to see it, rewrite it as $RR^T=I$ which gives 9 constraints, each quadratic
-    in the elements of $R$).  The determinant constraint is cubic in the
-    elements of $R$.</p>
+    <p>让我们思考一下目前所建立的优化问题类型。鉴于我们决定使用旋转矩阵，项 $p +
+    R{}^Op^{m_{c_i}} - X^C {^Cp^{s_i}}$ 关于决策变量是线性的（可以类比为 $Ax \approx b$），因此目标函数是一个凸二次函数。那么约束条件呢？第一个约束是一个二次等式约束（为了看清这一点，可以将其重写为 $RR^T=I$，这样会得到 9 个约束，每一个都关于 $R$ 的元素是二次的）。行列式约束则关于 $R$ 的元素是三次的。</p>
 
-    <example id="2D_rotation_only"><h1>Rotation-only point registration in 2D</h1>
+    <example id="2D_rotation_only"><h1>二维中的纯旋转点配准</h1>
         
-      <p>I would like you to have a graphical sense for this optimization
-      problem, but it's hard to plot the objective function with 9+3 decision
-      variables.  To whittle it down to the essentials that I can plot, let's
-      consider the case where the scene points are known to differ from the
-      model points by a rotation only (this is famously known as <a
-      href="https://en.wikipedia.org/wiki/Wahba%27s_problem">the Wahba
-      problem</a>).  To further simplify, let's consider the problem in 2D
-      instead of 3D.</p>
+      <p>我希望你能对这个优化问题有一种图形化的直观理解，但由于它有 9+3 个决策变量，因此很难绘制其目标函数。为了将问题简化到可以绘图的核心部分，我们考虑这样一种情况：场景点与模型点之间只相差一个旋转（这就是著名的<a
+      href="https://en.wikipedia.org/wiki/Wahba%27s_problem">Wahba 问题</a>）。为了进一步简化，我们考虑二维问题而不是三维问题。</p>
 
-      <p>In 2D, we can actually linearly parameterize a rotation matrix with
-      just two variables:  $$R = \begin{bmatrix} a & -b \\ b & a\end{bmatrix}.$$
-      With this parameterization, the constraints $RR^T=I$ and the determinant
-      constraints are identical; they both require that $a^2 + b^2 = 1.$</p>
+      <p>在二维中，我们实际上可以只用两个变量对旋转矩阵进行线性参数化：$$R = \begin{bmatrix} a & -b \\ b & a\end{bmatrix}.$$ 使用这种参数化时，约束 $RR^T=I$ 和行列式约束是等价的；它们都要求 $a^2 + b^2 = 1.$</p>
 
       <figure><img style="width:80%"
-      src="data/wahba2d.png"/></figure><figcaption>The $x$ and $y$ axes of this
-      plot correspond to the parameters $a$, and $b$, respectively, that define
-      the 2D rotation matrix, $R$.  The green quadratic bowl is the objective
-      $\sum_i \| R \: {}^O p^{m_{c_i}} - p^{s_i}\|^2,$ and the red open cylinder is
-      the rotation matrix constraint.  <a
-      href="https://www.geogebra.org/3d/pn628maw">Click here for the interactive
-      version.</a></figcaption>
+      src="data/wahba2d.png"/></figure><figcaption>该图的 $x$ 轴和 $y$ 轴分别对应定义二维旋转矩阵 $R$ 的参数 $a$ 和 $b$。绿色的二次碗面是目标函数 $\sum_i \| R \: {}^O p^{m_{c_i}} - p^{s_i}\|^2,$，红色的开口圆柱是旋转矩阵约束。<a
+      href="https://www.geogebra.org/3d/pn628maw">点击这里查看交互版本。</a></figcaption>
 
-      <p>Is that what you expected?  I generated this plot using just two
-      model/scene points, but adding more will only change the shape of the
-      quadratic, but not its minimum.  And on the <a
-      href="https://www.geogebra.org/3d/pn628maw">interactive version</a> of the
-      plot, I've added a slider so that you control the parameter, $\theta$,
-      that represents the ground truth rotation described by $R$. Try it
-      out!</p>
+      <p>这和你预期的一样吗？我生成这张图时只使用了两个模型点/场景点，但增加更多点只会改变二次函数的形状，而不会改变其最小值。而且在该图的<a
+      href="https://www.geogebra.org/3d/pn628maw">交互版本</a>中，我添加了一个滑块，让你可以控制参数 $\theta$，它表示由 $R$ 描述的真实旋转。试试看吧！</p>
 
-      <p>In the case with no noise in the measurements (e.g. the scene points
-      are exactly the model points modified by a rotation matrix), then the
-      minimum of the objective function already satisfies the constraint.  But
-      if you add just a little noise to the points, then this is no longer
-      true, and the constraint starts to play an important role.</p>
+      <p>在测量没有噪声的情况下（例如场景点正好是经过旋转矩阵变换后的模型点），目标函数的最小值本身就已经满足约束。但如果只给点添加一点点噪声，这种情况就不再成立，此时约束便开始发挥重要作用。</p>
     </example>
 
-    <p>The geometry should be roughly the same in 3D, though clearly in much
-    higher dimensions.  But I hope that the plot makes it perhaps a little less
-    surprising that this problem has an elegant numerical solution based on the
-    singular value decomposition (SVD).</p>
+    <p>在三维情况下，其几何结构应该大致相同，只是维度显然要高得多。不过，我希望这个图能让你觉得：基于奇异值分解（SVD）的优雅数值解法，或许没有那么令人意外。</p>
     
-    <p>What about translations?  There is a super important insight that allows
-    us to decouple the optimization of rotations from the optimization of
-    translations.  The insight is this: <i>the <b>relative</b> position between
-    points is affected by rotation, but not by translation</i>. Therefore, if we
-    write the points relative to some canonical point on the object, we can
-    solve for rotations alone.  Once we have the rotation, then we can back out
-    the translations easily.  For our least squares objective, there is even a
-    "correct" canonical point to use -- the <i>central point</i> (like the
-    center of mass if all points have equal mass) under the Euclidean
-    metric.</p>
+    <p>那么平移呢？这里有一个极其重要的洞见，它使我们能够将旋转优化与平移优化解耦。这个洞见是：<i>点与点之间的<b>相对</b>位置会受到旋转影响，但不会受到平移影响</i>。因此，如果我们将点写成相对于物体上某个规范点的位置，那么就可以单独求解旋转。一旦得到旋转，就可以轻松反推出平移。对于我们的最小二乘目标函数来说，甚至存在一个“正确”的规范点——在欧氏度量下的<i>中心点</i>（类似于当所有点质量相等时的质心）。</p>
 
-    <p>Therefore, to obtain the solution to the problem, \begin{align}
+    <p>因此，为了得到如下问题的解，\begin{align}
     \min_{p\in\Re^3,R\in\Re^{3\times3}} \quad & \sum_{i=1}^{N_s} \| p + R
     \: {}^Op^{m_{c_i}} - p^{s_i}\|^2, \\ \subjto \quad & RR^T =
-    I,\end{align} first we define the central model and scene points, $\bar{m}$
-    and $\bar{s}$, with positions given by $${}^Op^\bar{m} = \frac{1}{N_s}
+    I,\end{align} 我们首先定义模型点与场景点的中心点 $\bar{m}$
+    和 $\bar{s}$，其位置定义为 $${}^Op^\bar{m} = \frac{1}{N_s}
     \sum_{i=1}^{N_s} {}^Op^{m_{c_i}}, \qquad p^\bar{s} = \frac{1}{N_s}
-    \sum_{i=1}^{N_s} p^{s_i}.$$  If you are curious, these come from taking the
-    gradient of the <a
-    href="https://en.wikipedia.org/wiki/Lagrange_multiplier">Lagrangian</a>
-    with respect to $p$, and setting it equal to zero: $$\sum_{i=1}^{N_s} 2 (p +
+    \sum_{i=1}^{N_s} p^{s_i}.$$  如果你好奇，这些结果来自于对<a
+    href="https://en.wikipedia.org/wiki/Lagrange_multiplier">拉格朗日函数</a>
+    关于 $p$ 求梯度并令其等于零：$$\sum_{i=1}^{N_s} 2 (p +
     R \: {}^Op^{m_{c_i}} - p^{s_i}) = 0 \Rightarrow p^* = \frac{1}{N_s}
     \sum_{i=1}^{N_s} p^{s_i} - R^*\left(\frac{1}{N_s} \sum_{i=1}^{N_s}
-    {}^Op^{m_{c_i}}\right),$$ but don't forget the geometric interpretation
-    above.  This is just another way to see that we can substitute the
-    right-hand side in for $p$ in our objective and solve for $R$ by itself.</p>
+    {}^Op^{m_{c_i}}\right),$$ 但不要忘记上面的几何解释。这只是另一种说明：我们可以将右侧表达式代入目标函数中的 $p$，然后只对 $R$ 进行求解。</p>
     
       
-    <p>To find $R$, compose the data matrix $$W = \sum_{i=1}^{N_s} (p^{s_i} -
-    p^\bar{s}) ({}^Op^{m_{c_i}} - {}^Op^\bar{m})^T, $$ and use SVD to compute $W
-    = U \Sigma V^T$.  The optimal solution is \begin{gather*} R^* = U D V^T,\\
-    p^* = p^\bar{s} - R^* {}^Op^\bar{m},\end{gather*} where $D$ is the diagonal
-    matrix with entries $[1, 1, \det(UV^T)]$ <elib>Myronenko09</elib>.  This may
-    seem like magic, but replacing the singular values in SVD with ones gives
-    the optimal projection back onto the orthonormal matrices, and the diagonal
-    matrix ensures that we do not get an improper rotation. There are many
-    derivations available in the literature, but many of them drop the
-    determinant constraint instead of handling the improper rotation. See
-    <elib>Haralick89</elib> (section 3) for one of my early favorites.</p>  
+    <p>为了求解 $R$，构造数据矩阵 $$W = \sum_{i=1}^{N_s} (p^{s_i} -
+    p^\bar{s}) ({}^Op^{m_{c_i}} - {}^Op^\bar{m})^T, $$ 并使用 SVD 计算 $W
+    = U \Sigma V^T$. 最优解为 \begin{gather*} R^* = U D V^T,\\
+    p^* = p^\bar{s} - R^* {}^Op^\bar{m},\end{gather*} 其中 $D$ 是对角矩阵，其对角元素为 $[1, 1, \det(UV^T)]$ <elib>Myronenko09</elib>。这看起来可能像魔法，但在 SVD 中将奇异值替换为 1，会得到回投到正交矩阵集合上的最优投影，而这个对角矩阵则确保我们不会得到非正常旋转。文献中有许多关于这一结果的推导，但很多推导会直接忽略行列式约束，而不是处理非正常旋转的问题。参见 <elib>Haralick89</elib>（第 3 节），这是我早期最喜欢的推导之一。</p>
       
-    <example class="drake"><h1>Point cloud registration with known
-    correspondences</h1>
+    <example class="drake"><h1>具有已知对应关系的点云配准</h1>
 
       <figure><img style="width:70%; margin-top:-20px; margin-bottom:-20px"
       src="data/pose_from_known_correspondences.svg"/> </figure>
 
-      <p>In the example code, I've made a random object (based on a random set
-      of points in the $x$-$y$ plane), and perturbed it by a random 2D
-      transform.  The blue points are the model points in the model coordinates,
-      and the red points are the scene points.  The green dashed lines represent
-      the (perfect) correspondences.  On the right, I've plotted both points
-      again, but this time using the estimated pose to put them both in the
-      world frame.  As expected, the algorithm perfectly recovers the ground
-      truth transformation.</p>
+      <p>在示例代码中，我创建了一个随机物体（基于 $x$-$y$ 平面中的一组随机点），并用一个随机二维变换对其进行了扰动。蓝色点是模型坐标系中的模型点，红色点是场景点。绿色虚线表示（完美的）对应关系。在右侧，我再次绘制了这两组点，但这一次使用估计出的位姿将它们都放到世界坐标系中。正如预期，该算法完美恢复了真实变换。</p>
 
       <script>document.write(notebook_link('pose', notebook="icp"))</script>
 
     </example>
 
-    <todo>Add exercise on the reflection case.</todo>
+    <todo>添加关于反射情形的练习。</todo>
 
-    <todo>Confirm or disprove: i think that this is just the least squares
-    solution to the unconstrained problem, then projected back to the
-    orthonormal matrices (with the SVD).</todo>
+    <todo>确认或反驳：我认为这只是无约束问题的最小二乘解，然后（通过 SVD）投影回正交矩阵集合。</todo>
 
-    <p>What is important to understand is that once the correspondences are
-    given we have an efficient and robust numerical solution to estimating the
-    pose.</p>
+    <p>需要理解的重要一点是，一旦给定对应关系，我们就有一种高效且鲁棒的数值方法来估计位姿。</p>
 
   </section>
 
-  <section id="icp"><h1>Iterative Closest Point (ICP)</h1>
+  <section id="icp"><h1>迭代最近点（ICP）</h1>
 
-    <p>So how do we get the correspondences?  In fact, if we were given the pose
-    of the object, then figuring out the correspondences is actually easy: the
-    corresponding point on the model is just the nearest neighbor / closest
-    point to the scene point when they are transformed into a common frame.</p>
+    <p>那么我们如何获得对应关系呢？事实上，如果我们已知物体的位姿，那么找出对应关系其实很容易：当它们被变换到同一个坐标系中时，模型上对应的点就是离场景点最近的近邻点/最近点。</p>
 
-    <p>This observation suggests a natural iterative scheme, where we start with
-    some initial guess of the object pose and compute the correspondences via
-    closest points, then use those correspondences to update the estimated pose.
-    This is one of the famous and often used (despite its well-known
-    limitations) algorithms for point cloud registration: the iterative closest
-    point (ICP) algorithm.</p>
+    <p>这一观察自然引出了一种迭代方案：我们从物体位姿的某个初始猜测开始，通过最近点计算对应关系，然后利用这些对应关系更新估计出的位姿。这就是点云配准中一种著名且经常使用的算法（尽管它有众所周知的局限性）：迭代最近点（ICP）算法。</p>
 
-    <p>To be precise, let's use $\hat{X}^O$ to denote our estimate of the object
-    pose, and $\hat{c}$ to denote our estimated correspondences.  The
-    "closest-point" step is given by $$\forall i, \hat{c}_i = \argmin_{j \in
-    N_m}\| \hat{X}^O \: {}^Op^{m_j} - p^{s_i} \|^2.$$  In words, we want to
-    find the point in the model that is the closest in Euclidean distance to the
-    transformed scene points.  This is the famous "nearest neighbor" problem,
-    and we have good numerical solutions (using optimized data structures) for
-    it.  For instance, Open3D uses <a
-    href="https://github.com/mariusmuja/flann">FLANN</a><elib>Muja09</elib>.</p>
+    <p>准确地说，我们用 $\hat{X}^O$ 表示对物体位姿的估计，用 $\hat{c}$ 表示估计出的对应关系。“最近点”步骤为 $$\forall i, \hat{c}_i = \argmin_{j \in
+    N_m}\| \hat{X}^O \: {}^Op^{m_j} - p^{s_i} \|^2.$$ 换句话说，我们希望找到模型中与变换后的场景点在欧氏距离上最近的点。这就是著名的“最近邻”问题，并且我们有很好的数值解法（使用优化的数据结构）来解决它。例如，Open3D 使用 <a
+    href="https://github.com/mariusmuja/flann">FLANN</a><elib>Muja09</elib>。</p>
 
-    <p>Although solving for the pose and the correspondences jointly is very
-    difficult, ICP leverages the idea that if we solve for them independently,
-    then both parts have good solutions.  Iterative algorithms like this are a
-    common approach taken in optimization for e.g. bilinear optimization or
-    expectation maximization.  It is important to understand that this is a
-    local solution to a non-convex optimization problem.  So it is subject to
-    getting stuck in local minima.</p>
+    <p>虽然联合求解位姿和对应关系非常困难，但 ICP 利用了这样一个思想：如果我们将二者分开求解，那么两个部分都有很好的解。像这样的迭代算法，是优化中常见的方法，例如用于双线性优化或期望最大化。需要理解的是，这是一个非凸优化问题的局部解。因此，它可能会陷入局部最小值。</p>
 
-    <example class="drake"><h1>Iterative Closest Point</h1>
+    <example class="drake"><h1>迭代最近点</h1>
   
       <figure>
         <iframe style="border:0;height:300px;width:400px;" src="data/iterative_closest_point.html?height=240px" pdf="no"></iframe>
-        <p pdf="only"><a href="data/iterative_closest_point.html">Click here for the animation.</a></p>
+        <p pdf="only"><a href="data/iterative_closest_point.html">点击这里查看动画。</a></p>
       </figure>
   
-      <p>Here is ICP running on the random 2D objects.  Blue are the model
-      points, red are the scene points, green dashed lines are the
-      correspondences.  I encourage you to run the code yourself.</p>  
+      <p>这里是在随机二维物体上运行的 ICP。蓝色是模型点，红色是场景点，绿色虚线是对应关系。我鼓励你自己运行代码。</p>  
             
-      <p>I've included one of the animation where it happens to converge to the
-      true optimal solution.  But it gets stuck in a local minima more often
-      than not!  I hope that stepping through will help your intuition.
-      Remember that once the correspondences are correct, the pose estimation
-      will recover the exact solution.  So every one of those steps before
-      convergence has at least a few bad correspondences.  Look closely!</p>
+      <p>我包含了其中一个动画，在该动画中它恰好收敛到了真正的最优解。但它更多时候会陷入局部最小值！我希望逐步查看这个过程能帮助你建立直觉。请记住，一旦对应关系正确，位姿估计就会恢复出精确解。因此，在收敛之前的每一步中，至少都有一些错误对应关系。仔细观察！</p>
   
       <script>document.write(notebook_link('pose', notebook="icp"))</script>
   
-    </example>      
+    </example>
       
     <!--<todo>Thanks to the geometric nature of the problem, many of these local
       minima are graphical and intuitive.  (Will insert a few examples
       here).</todo> -->
 
-    <p>Intuition about these local minima has motivated a number of ICP
-    variants, including point-to-plane ICP, normal ICP, ICP that use color
-    information, feature-based ICP, etc.  A particular variant based on
-    "point-pair features" has been highly effective in a (nearly) annual
-    object pose estimation challenge<elib>Drost10+Hodan20</elib>.</p>
+    <p>对这些局部最小值的直觉，推动了许多 ICP 变体的发展，包括点到平面 ICP、法线 ICP、使用颜色信息的 ICP、基于特征的 ICP 等等。一种基于“点对特征”的特定变体，在一项（近乎）年度的物体位姿估计挑战赛中表现非常有效<elib>Drost10+Hodan20</elib>。</p>
 
- <!---     
-      <p>Maybe more fundamental, though, is the fact that I don't think the ICP objective, even if we could optimize it perfectly is quite right.  (TODO: add the example of a long thin book).  And there is information that we have, which should aid in estimating the pose, which is not present in the point cloud (like the location of the cameras).</p>
--->
+
+    <p>不过，也许更根本的是，我认为即使我们能够完美优化 ICP 目标函数，它本身也并不完全正确。（TODO：添加一本又长又薄的书的示例）。而且，我们拥有一些本应有助于位姿估计的信息，但这些信息并不存在于点云中（例如相机的位置）。</p>
+
 
   </section>
 
   <!--
-  <section><h1>Pairwise distance</h1>
+  <section><h1>成对距离</h1>
     
   </section>
 -->
 
-  <section><h1>Dealing with partial views and outliers</h1>
+  <section><h1>处理局部视图和离群点</h1>
 
-    <p>The example above is sufficient to demonstrate the problems that ICP can
-    have with local minima.  But we have so far been dealing with unreasonably
-    perfect point clouds.  Point cloud registration is an important topic in
-    many fields, and not all of the approaches you will find in the literature
-    are well suited to dealing with the messy point clouds we have to deal with
-    in robotics.</p>
+    <p>上面的例子足以展示 ICP 可能遇到的局部最小值问题。但到目前为止，我们一直在处理过于完美的点云。点云配准是许多领域中的一个重要主题，而你在文献中看到的并非所有方法都适合处理我们在机器人中必须面对的杂乱点云。</p>
 
-    <example class="drake"><h1>ICP with messy point clouds</h1>
+    <example class="drake"><h1>带有杂乱点云的 ICP</h1>
   
-      <p>I've added a number of parameters for you to play with in the notebook
-      to add outliers (scene points that do not actually correspond to any model
-      point), to add noise, and/or to restrict the points to a partial view.
-      Please try them by themselves and in combination.</p>
+      <p>我在 notebook 中添加了许多参数供你尝试，用来添加离群点（实际上不对应任何模型点的场景点）、添加噪声，和/或将点限制为局部视图。请分别尝试它们，也尝试组合使用它们。</p>
 
       <script>document.write(notebook_link('pose', notebook="icp"))</script>
   
       <figure style="margin-top:-40px;">
         <iframe style="border:0;height:300px;width:400px;" src="data/icp_outliers.html?height=240px" pdf="no"></iframe>
-        <p pdf="only"><a href="data/icp_outliers.html">Click here for the animation.</a></p>
-        <figcaption>A sample run of ICP with outliers (modeled as additional
-        points drawn from a uniform distribution over the
-        workspace).</figcaption>
+        <p pdf="only"><a href="data/icp_outliers.html">点击这里查看动画。</a></p>
+        <figcaption>带有离群点的 ICP 的一次示例运行（离群点建模为从工作空间上的均匀分布中额外抽取的点）。</figcaption>
       </figure>
   
       <figure>
         <iframe style="border:0;height:300px;width:400px;" src="data/icp_noise.html?height=240px" pdf="no"></iframe>
-        <p pdf="only"><a href="data/icp_noise.html">Click here for the animation.</a></p>
-        <figcaption>A sample run of ICP with Gaussian noise added to the positions of the scene points.</figcaption>
+        <p pdf="only"><a href="data/icp_noise.html">点击这里查看动画。</a></p>
+        <figcaption>在场景点位置中添加高斯噪声后，ICP 的一次示例运行。</figcaption>
       </figure>
 
       <figure>
         <iframe style="border:0;height:300px;width:400px;" src="data/icp_partial_view.html?height=240px" pdf="no"></iframe>
-        <p pdf="only"><a href="data/icp_partial_view.html">Click here for the animation.</a></p>
-        <figcaption>A sample run of ICP with scene points limited to a partial view.  They aren't all this bad, but when I saw that one, I couldn't resist using it as the example!</figcaption>
+        <p pdf="only"><a href="data/icp_partial_view.html">点击这里查看动画。</a></p>
+        <figcaption>场景点被限制为局部视图时，ICP 的一次示例运行。它们并不全都这么糟糕，但当我看到这个例子时，实在忍不住把它用作示例！</figcaption>
       </figure>
   
     </example>      
 
-    <subsection><h1>Detecting outliers</h1>
+    <subsection><h1>检测离群点</h1>
     
-      <p>Once we have a reasonable estimate, $X^O$, then detecting outliers is
-      straight-forward.  Each scene point contributes a term to the objective
-      function according to the (squared) distance between the scene point and
-      its corresponding model point.  Scene points that have a large distance
-      can be labeled as outliers and removed from the point cloud, allowing us
-      to refine the pose estimate without these distractors.  You will find that
-      many ICP implementations, such as <a
-      href="http://www.open3d.org/docs/release/python_api/open3d.pipelines.registration.registration_icp.html">this
-      one from Open3d</a> include a "maximum correspondence distance" parameter
-      for this purpose.</p>
+      <p>一旦我们有了一个合理的估计 $X^O$，检测离群点就很直接了。每个场景点都会根据该场景点与其对应模型点之间的（平方）距离，为目标函数贡献一项。距离较大的场景点可以被标记为离群点并从点云中移除，使我们能够在没有这些干扰项的情况下细化位姿估计。你会发现许多 ICP 实现，例如 <a
+      href="http://www.open3d.org/docs/release/python_api/open3d.pipelines.registration.registration_icp.html">Open3D 中的这个实现</a>，都包含一个用于此目的的“最大对应距离”参数。</p>
 
-      <p>This leaves us with a "chicken or the egg" problem -- we need a
-      reasonable estimate of the pose to detect outliers, but for very messy
-      point clouds it may be hard to get a reasonable estimate in the presence
-      of those outliers.  So where do we begin?  One common approach that was
-      traditionally used with ICP is an algorithm called RANdom SAmple Consensus
-      (RANSAC) <elib>Fischler81</elib>.  In RANSAC, we select a number of random
-      (typically quite small) subsets of "seed" points, and compute a pose
-      estimate for each.  The subset with the largest number of "inliers" --
-      points that are below the maximum correspondence distance -- is considered
-      the winning set and can be used to start the ICP algorithm.
+      <p>这给我们留下了一个“先有鸡还是先有蛋”的问题——我们需要一个合理的位姿估计来检测离群点，但对于非常杂乱的点云，在这些离群点存在的情况下，可能很难得到合理的估计。那么我们该从哪里开始呢？一种传统上常与 ICP 一起使用的常见方法，是一种名为随机采样一致性（RANdom SAmple Consensus，RANSAC）的算法 <elib>Fischler81</elib>。在 RANSAC 中，我们选择若干个随机的（通常相当小的）“种子”点子集，并为每个子集计算一个位姿估计。具有最多“内点”的子集——即低于最大对应距离的点——被认为是获胜集合，并可用于启动 ICP 算法。
       </p>
 
-      <todo>RANSAC example</todo>
+      <todo>RANSAC 示例</todo>
 
-      <p>There is another important and clever idea to know.  Remember the
-      important observation that we can decouple the solution for rotation and
-      translation by exploiting the fact that the <i>relative</i> position
-      between points depends on the rotation but is invariant to translation.
-      We can take that idea one step further and note that the <i>relative
-      <b>distance</b></i> between points is actually invariant to both rotation
-      <i>and</i> translation.  This has traditionally been used to separate the
-      estimation of scale from the estimation of translation and rotation (I've
-      decided to ignore scaling throughout this chapter, since it doesn't make
-      immediate sense for our proposed problem). In <elib>Yang20a</elib> they
-      proposed that this can also be used to prune outliers even before we have
-      an initial pose estimate.  If the distance between a <i>pair</i> of
-      points in the scene is unlike any distance between any pair of points in
-      the model, then one of those two points is an outlier.  Finding the
-      maximum set of inliers by this metric would correspond to finding the
-      maximum clique in a graph; one can make strong assumptions to guarantee
-      that the maximum clique is the best match, or simply admit that this
-      could be a useful heuristic.  If finding maximum cliques is too expensive
-      for large point clouds, conservative approximations may be used
-      instead.</p>
+      <p>还有另一个重要且巧妙的思想需要了解。请记住前面那个重要观察：利用点与点之间的<i>相对</i>位置依赖于旋转但对平移不变这一事实，我们可以将旋转和平移的求解解耦。我们可以将这个思想再推进一步，并注意到点与点之间的<i>相对<b>距离</b></i>实际上同时对旋转<i>和</i>平移都不变。传统上，这一性质被用于将尺度估计与平移和旋转估计分离（在本章中，我决定始终忽略尺度，因为它对于我们提出的问题并没有直接意义）。在 <elib>Yang20a</elib> 中，他们提出，这一性质也可以在我们还没有初始位姿估计之前，用来剔除离群点。如果场景中一<i>对</i>点之间的距离，不像模型中任意一对点之间的任何距离，那么这两个点中就有一个是离群点。按照这一度量寻找最大的内点集合，将对应于在图中寻找最大团；人们可以做出强假设来保证最大团就是最佳匹配，或者简单地承认这可能是一种有用的启发式方法。如果对于大型点云来说寻找最大团代价太高，也可以改用保守近似。</p>
 
-      <example id="max_clique"><h1>Maximum cliques in correspondence graphs</h1>
+      <example id="max_clique"><h1>对应图中的最大团</h1>
 
-        <p>Here is a simple example of the maximum-clique idea from
-        <elib>Yang20a</elib> that I worked through with the author, Hank, to
-        make sure I understood his idea.</p>
+        <p>这里是来自 <elib>Yang20a</elib> 的最大团思想的一个简单示例，我与作者 Hank 一起推演了这个例子，以确保自己理解了他的想法。</p>
 
         <figure><img width="80%"
         src="figures/max-clique-example-points.svg"/></figure>
-        <!-- original figures in
+        <!-- 原始图位于
         Dropbox/from-collaborators/hank-yang/max-clique-example.key -->
         
-        <p>The model (on the left) is a simple triangle with vertex points
-        labeled [$A$, $B$, $C$].  The scene (on the right) has the same
-        triangle, with points labeled [$a$, $b$, $c$] which will have exactly
-        three pairwise distances.  But it also has a pyramid that will create a
-        total of six pairwise distance matches (three of length 3 and three of
-        length 4). Will the spurious correspondences on the pyramid cause a
-        larger clique that the ground truth correspondences [$A-a$, $B-b$,
-        $C-c$] triangle?</p>
+        <p>模型（左侧）是一个简单三角形，其顶点标记为 [$A$, $B$, $C$]。场景（右侧）中有相同的三角形，点标记为 [$a$, $b$, $c$]，它们将恰好具有三个成对距离。但场景中还有一个金字塔，它会产生总共六个成对距离匹配（三个长度为 3，三个长度为 4）。金字塔上的虚假对应关系，会不会造成一个比真实对应关系三角形 [$A-a$, $B-b$,
+        $C-c$] 更大的团？</p>
 
-        <p>Let's construct the pairwise distance graph using all-to-all
-        correspondences as the initial guess.  We'll get a node in that graph
-        for every possible correspondence, e.g. I've used the label $A-e$ to
-        denote a possible correspondence of model point $A$ with scene point
-        $e$. Then we make an edge in the graph between $(A-e)$ and $(B-f)$ iff
-        the distance between $A$ and $B$ equals the distance between $e$ and
-        $f$.</p>
+        <p>让我们使用“全对全”对应关系作为初始猜测，来构造这个成对距离图。在该图中，每一个可能的对应关系都会对应一个节点，例如我使用标签 $A-e$ 表示模型点 $A$ 与场景点 $e$ 之间的一种可能对应关系。然后，当且仅当 $A$ 与 $B$ 之间的距离等于 $e$ 与 $f$ 之间的距离时，我们就在图中于 $(A-e)$ 与 $(B-f)$ 之间建立一条边。</p>
 
         <figure><img width="80%" src="figures/max-clique-example-graph.svg"/></figure>
 
-        <p>Now the value of checking for a clique becomes clear.  The largest
-        clique involving correspondences with the pyramid is only size 2, but
-        the largest clique for the scene triangle is size 3 (I've colored it
-        red).  So for this example, the maximum clique <i>does</i>, in fact,
-        recover the ground-truth correspondences.</p>
+        <p>现在，检查团（clique）的价值就变得清晰了。涉及金字塔对应关系的最大团大小只有 2，而场景三角形对应的最大团大小则为 3（我已将其标为红色）。因此，对于这个例子来说，最大团<i>确实</i>恢复了真实对应关系。</p>
       </example>
 
-      <p>These are two examples of a zoo of algorithms / heuristics for
-      removing outliers. One more example to mention is <elib>Drost10</elib>,
-      which uses an optimized voting/clustering scheme based on the point-pair
-      features, which they have made highly efficient, and which has performed
-      very well for years in the online pose estimation benchmarks.</p>
+      <p>以上只是用于移除离群点的大量算法/启发式方法中的两个例子。另一个值得一提的例子是 <elib>Drost10</elib>，它使用了一种基于点对特征的优化投票/聚类方案。他们将其实现得非常高效，并且多年来在在线位姿估计基准测试中表现非常出色。</p>
 
     </subsection>
 
-    <subsection><h1>Point cloud segmentation</h1>
+    <subsection><h1>点云分割</h1>
     
-      <p>Not all outliers are due to bad returns from the depth camera, very
-      often they are due to other objects in the scene.  Even in the most basic
-      case, our object of interest will be resting on a table or in a bin.  If
-      we know the geometry of the table/bin a priori, then we can subtract away
-      points from that region.  Alternatively, we can <a
-      href="https://drake.mit.edu/doxygen_cxx/classdrake_1_1perception_1_1_point_cloud.html#aa3e3e56ca9276b5caf4c6422154616ca"><code>Crop</code></a>
-      the point cloud to a region of interest.  This can be sufficient for very
-      simple or uncluttered scenes, and will be just enough for us to accomplish
-      our goal for this chapter.</p>
+      <p>并非所有离群点都来自深度相机的错误返回，它们很多时候其实来自场景中的其他物体。即使在最基本的情况下，我们感兴趣的物体也会放在桌子上或箱子里。如果我们预先知道桌子/箱子的几何形状，那么就可以减去该区域中的点。另一种方法是将点云<a
+      href="https://drake.mit.edu/doxygen_cxx/classdrake_1_1perception_1_1_point_cloud.html#aa3e3e56ca9276b5caf4c6422154616ca"><code>裁剪（Crop）</code></a>
+      到一个感兴趣区域。这对于非常简单或不杂乱的场景已经足够，也足以让我们完成本章的目标。</p>
 
-      <p>More generally, if we have multiple objects in the scene, we may still
-      want to find the object of interest (mustard bottle?).  If we had truly
-      robust point cloud registration algorithms, then one could imagine that
-      the optimal registration would allow us to correspond the model points
-      with just a subset of the scene points; point cloud registration could
-      solve the object detection problem!  Unfortunately, our algorithms aren't
-      strong enough.</p>
+      <p>更一般地说，如果场景中存在多个物体，我们可能仍然希望找到感兴趣的物体（比如芥末瓶？）。如果我们拥有真正鲁棒的点云配准算法，那么人们可以设想：最优配准将允许模型点仅与场景点中的一个子集对应；点云配准本身就能解决目标检测问题！遗憾的是，我们的算法还没有强大到这种程度。</p>
 
       <figure><img src="data/labelfusion_multi_object_scenes.png"/>
-        <figcaption>A multi-object scene from <a
+        <figcaption>来自 <a
         href="http://labelfusion.csail.mit.edu/">LabelFusion</a>
-        <elib>Marion17</elib>.</figcaption>
+        的多物体场景 <elib>Marion17</elib>。</figcaption>
       </figure>
 
-      <p>As a result, we almost always use some other algorithm to "segment" the
-      scene in a number of possible objects, and run registration independently
-      on each segment.  There are numerous geometric approaches to
-      segmentation<elib>Nguyen13</elib>.  But these days we tend to use neural
-      networks for segmentation, so I won't go into those details here.</p>
+      <p>因此，我们几乎总是使用某种其他算法将场景“分割”为若干个可能的物体，然后在每个分割片段上独立运行配准。有许多几何方法可用于分割<elib>Nguyen13</elib>。但如今我们往往使用神经网络进行分割，所以我在这里不会深入这些细节。</p>
       
-      <todo> normal estimation, plane fitting, etc.</todo>
+      <todo>法线估计、平面拟合等。</todo>
 
     </subsection>
 
-    <subsection><h1>Generalizing correspondence</h1>
+    <subsection><h1>推广对应关系</h1>
     
-      <p>The problem of outliers or multiple objects in the scene challenges our
-      current approach to correspondences.  So far, we've used the notation $c_i
-      = j$ to represent the correspondence of <i>every</i> scene point to a
-      model point. But note the asymmetry in our algorithm so far (scene
-      $\Rightarrow$ model). I chose this direction because of the motivation of
-      partial views from the mustard bottle example from the chapter opening.
-      Once we start thinking about tables and other objects in the scene,
-      though, maybe we should have done model $\Rightarrow$ scene?  You should
-      verify for yourself that this would be a minor change to the ICP
-      algorithm.  But what if we have multiple objects <i>and</i> partial
-      views?</p>
+      <p>场景中的离群点或多个物体问题，对我们当前的对应关系处理方式提出了挑战。到目前为止，我们一直使用记号 $c_i
+      = j$ 来表示<i>每一个</i>场景点到某个模型点的对应关系。但请注意，到目前为止我们的算法存在不对称性（场景
+      $\Rightarrow$ 模型）。我选择这个方向，是因为本章开头芥末瓶示例中的局部视图问题给了我这样的动机。不过，一旦我们开始考虑桌子以及场景中的其他物体，也许我们本该使用模型 $\Rightarrow$ 场景？你应该自己验证一下，这对 ICP 算法来说只是一个很小的改动。但如果我们同时有多个物体<i>以及</i>局部视图呢？</p>
 
-      <p>It would be simple enough to allow $c_i$ to take a special value for
-      "no correspondence", and indeed that helps.  In that case, we would hope
-      that, at the optimum, the scene points corresponding to the model of
-      interest would be mapped to their respective model points, and the scene
-      points from outliers and other objects get labelled as "no
-      correspondence".  The model points that are from the occluded parts of the
-      object would simply not have any correspondences associated with them.</p>
+      <p>允许 $c_i$ 取一个表示“无对应关系”的特殊值是很简单的，而且这确实有所帮助。在这种情况下，我们希望在最优解处，对应于感兴趣模型的场景点会被映射到各自的模型点，而来自离群点和其他物体的场景点会被标记为“无对应关系”。来自物体被遮挡部分的模型点，则 simply 不会有任何与之关联的对应关系。</p>
       
-      <p>There is an alternative notation that we can use which is slightly more
-      general.  Let's denote the correspondence matrix $C\in \{0,1\}^{N_s \times
-      N_m}$, with $C_{ij} = 1$ iff scene point $i$ corresponds with model point
-      $j$.  Using this notation, we can write our estimation step (given known
-      correspondences) as: $$\min_{X\in \mathrm{SE}(3)} \sum_{i=1}^{N_s}
-      \sum_{j=1}^{N_m} C_{ij} \|X \: {}^Op^{m_j} - p^{s_i}\|^2.$$ This
-      subsumes our previous approach: if $c_i = j$ then set $C_{ij} = 1$ and the
-      rest of the row equal to zero.  If the scene point $i$ is an outlier, then
-      set the entire row to zero.  The previous notation was a more compact
-      representation for the true asymmetry in the "closest point" computation
-      that we did above, and made it clear that we only needed to compute $N_s$
-      distances.  But this more general notation will take us to the next
-      round.</p>
+      <p>我们可以使用一种稍微更一般的替代记号。令对应矩阵为 $C\in \{0,1\}^{N_s \times
+      N_m}$，其中当且仅当场景点 $i$ 对应于模型点
+      $j$ 时，$C_{ij} = 1$。使用这一记号，我们可以将估计步骤（在已知对应关系的情况下）写为：$$\min_{X\in \mathrm{SE}(3)} \sum_{i=1}^{N_s}
+      \sum_{j=1}^{N_m} C_{ij} \|X \: {}^Op^{m_j} - p^{s_i}\|^2.$$ 这涵盖了我们之前的方法：如果 $c_i = j$，则令 $C_{ij} = 1$，并将该行其余元素设为零。如果场景点 $i$ 是离群点，则将整行设为零。之前的记号是对我们上面所做“最近点”计算中真实不对称性的一种更紧凑表示，并且清楚地表明我们只需要计算 $N_s$ 个距离。但这种更一般的记号将带我们进入下一轮讨论。</p>
     
     </subsection>
 
-    <subsection><h1>Soft correspondences</h1>
+    <subsection><h1>软对应关系</h1>
 
-      <p>What if we relax our strict binary notion of correspondences, and think
-      of them instead as correspondence weights $C_{ij} \in [0,1]$ instead of
-      $C_{ij} \in \{0, 1\}$?  This is the main idea behind the "coherent point
-      drift" (CPD) algorithm <elib>Myronenko10</elib>.  If you read the CPD
-      literature you will be immersed in a probabilistic exposition using a
-      Gaussian Mixture Model (GMM) as the representation.  The probabilistic
-      interpretation is useful, but don't let it confuse you; trust me that it's
-      the same thing.  To maximize the likelihood on a Gaussian, step one is
-      almost always to take the $\log$ because it is a monotonic function, which
-      gets you right back to our quadratic objective.</p>
+      <p>如果我们放松对对应关系的严格二元定义，不再将其视为 $C_{ij} \in \{0, 1\}$，而是将其看作对应权重 $C_{ij} \in [0,1]$，会怎样？这正是“相干点漂移”（coherent point drift，CPD）算法 <elib>Myronenko10</elib> 背后的主要思想。如果你阅读 CPD 文献，会看到大量使用高斯混合模型（Gaussian Mixture Model，GMM）作为表示的概率论阐述。概率解释很有用，但不要让它把你弄糊涂；相信我，它本质上是同一件事。为了最大化高斯分布上的似然，第一步几乎总是取 $\log$，因为它是单调函数，而这会让你直接回到我们的二次目标函数。</p>
 
-      <div>The probabilistic interpretation does give a natural mechanism for
-      setting the correspondence weights on each iteration of the algorithm, by
-      thinking of them as the probability of the scene points given the model
-      points: \begin{equation} C_{ij} = \frac{1}{a_i} \exp^{\frac{-\left\|X^O
-      \: {}^Op^{m_j} - p^{s_i}\right\|^2}{2\sigma^2}},\end{equation} which is
-      the standard density function for a Gaussian, $\sigma$ is the standard
-      deviation and $a_i$ is the proper normalization constant to make the
-      probabilities sum to one.  It is also natural to encode the probability
-      of an outlier in this formulation (it simply modifies the normalization
-      constant).  <details><summary>Click to see the normalization constant,
-      but it's really an implementation detail.</summary> The normalization
-      works out to be \begin{equation}a_i = (2\pi \sigma^2)^\frac{D}{2} \left[
+      <div>概率解释确实为算法每次迭代中设置对应权重提供了一种自然机制，即将它们视为给定模型点时场景点的概率：\begin{equation} C_{ij} = \frac{1}{a_i} \exp^{\frac{-\left\|X^O
+      \: {}^Op^{m_j} - p^{s_i}\right\|^2}{2\sigma^2}},\end{equation} 这就是高斯分布的标准密度函数，其中 $\sigma$ 是标准差，$a_i$ 是适当的归一化常数，用于使概率之和为一。在这种表述中编码离群点的概率也很自然（它只是修改归一化常数）。<details><summary>点击查看归一化常数，但它其实只是一个实现细节。</summary> 归一化结果为 \begin{equation}a_i = (2\pi \sigma^2)^\frac{D}{2} \left[
       \sum_{j=1}^{N_m} \exp^{\frac{-\left\|X^O \: {}^Op^{m_j} -
       p^{s_i}\right\|^2}{2\sigma^2}} + \frac{w}{1-w}\frac{N_m}{N_s} \right],
-      \end{equation} with $D=3$ being the dimension of the Euclidean space and
-      $0 \le w \le 1$ the probability of a sample point being an outlier
-      <elib>Myronenko10</elib>.
-      <todo>My coefficient is slightly different than the paper, which looks
-      wrong to me; I should verify it yet again (perhaps even with code).
-      Wei's derivation looks buggy to me, too.</todo>
+      \end{equation} 其中 $D=3$ 是欧氏空间的维度，$0 \le w \le 1$ 是一个样本点为离群点的概率 <elib>Myronenko10</elib>。
+      <todo>我的系数与论文略有不同，在我看来论文中的写法似乎不对；我应该再次验证它（也许甚至用代码验证）。Wei 的推导在我看来也有问题。</todo>
       </details></div>
 
-      <p>The CPD algorithm is now very similar to ICP, alternating between
-      assigning the correspondence weights and updating the pose estimate.  The
-      pose estimation step is almost identical to the procedure above, with the
-      "central" points now $${^Op^{\bar{m}}} = \frac{1}{N_C} \sum_{i,j} C_{ij}
+      <p>CPD 算法现在与 ICP 非常相似，会在分配对应权重和更新位姿估计之间交替进行。位姿估计步骤几乎与上面的过程完全相同，只是“中心”点现在变为 $${^Op^{\bar{m}}} = \frac{1}{N_C} \sum_{i,j} C_{ij}
       \: {}^Op^{m_j}, \quad p^{\bar{s}} = \frac{1}{N_C} \sum_{i,j} C_{ij}
-      p^{s_i}, \quad N_C = \sum_{i,j} C_{ij},$$ and the data matrix now: $$W =
+      p^{s_i}, \quad N_C = \sum_{i,j} C_{ij},$$ 而数据矩阵现在为：$$W =
       \sum_{i,j} C_{ij} \left(p^{s_i} - p^{\bar{s}}\right) \left({}^Op^{m_j} -
-      {}^Op^{\bar{m}}\right)^T.$$  The rest of the updates, for extracting $R$
-      using SVD and solving for $p$ given $R$, are the same.  You won't see the
-      sums explicitly in the code, because each of those steps has a
-      particularly nice matrix form if we collect the points into a matrix with
-      one point per column.</p>
+      {}^Op^{\bar{m}}\right)^T.$$ 其余更新步骤，包括使用 SVD 提取 $R$，以及在给定 $R$ 的情况下求解 $p$，都是相同的。你不会在代码中明确看到这些求和，因为如果我们把点收集到一个每列对应一个点的矩阵中，每一步都有特别漂亮的矩阵形式。</p>
 
-      <p>The probabilistic interpretation also gives us a strategy for
-      determining the covariance of the Gaussians on each iteration.
-      <elib>Myronenko10</elib> derives the $\sigma$ estimate as: (TODO: finish
-      converting this part of the derivation)<!-- $$\sigma^2 = \frac{1}{3 N_C}
+      <p>概率解释还为我们提供了一种策略，用于在每次迭代中确定高斯分布的协方差。
+      <elib>Myronenko10</elib> 将 $\sigma$ 的估计推导为：（TODO：完成这部分推导的转换）<!-- $$\sigma^2 = \frac{1}{3 N_C}
       \sum_{i,j} C_{ij} \left[\left(p^{s_i} - p^{\bar{s}}\right)^T \left(p^{s_i}
       - p^{\bar{s}}\right) +  \right].$$ --> </p>
 
-      <todo>Example with CPD</todo>
+      <todo>CPD 示例</todo>
 
-      <p>The word on the street is the CPD is considerably more robust than ICP
-      with its hard correspondences and quadratic objective; the Gaussian model
-      mitigates the effect of outliers by setting their correspondence weight
-      to nearly zero.  But it is also more expensive to compute all of the
-      pairwise distances for large point clouds.  In <elib>Gao18a</elib>, we
-      point out that a small reformulation (thinking of the scene points as
-      being distributed via a Gaussian in space, instead of a Gaussian around
-      the model points) can get us back to summing over the scene points only.
-      It enjoys many of the robustness benefits of CPD, but also the
-      performance of algorithms like ICP.</p>
+      <p>坊间说法是，与使用硬对应关系和二次目标函数的 ICP 相比，CPD 要鲁棒得多；高斯模型通过将离群点的对应权重设为接近零，来减轻离群点的影响。但对于大型点云来说，计算所有成对距离的代价也更高。在 <elib>Gao18a</elib> 中，我们指出，一个小的重构（将场景点看作在空间中按高斯分布分布，而不是围绕模型点呈高斯分布）可以让我们回到只对场景点求和的形式。它享有 CPD 的许多鲁棒性优势，同时也具有类似 ICP 这类算法的性能。</p>
 
-      <todo>Example with FilterReg</todo>
+      <todo>FilterReg 示例</todo>
 
     </subsection>
 
-    <subsection><h1>Nonlinear optimization</h1>
+    <subsection><h1>非线性优化</h1>
 
-      <p>All of the algorithms we've discussed so far have exploited the SVD
-      solution to the pose estimate given correspondences, and alternate between
-      estimating the correspondences and estimating the pose.  There is another
-      important class of algorithms that attempt to solve for both
-      simultaneously.  This makes the optimization problem nonconvex, which
-      suggests they will still suffer from local minima like we saw in the
-      iterative algorithms.  But many authors argue that the solution times
-      using nonlinear solvers can be on par with the iterative algorithms (e.g.
-      <elib>Fitzgibbon03</elib>).</p>
+      <p>到目前为止，我们讨论的所有算法都利用了在给定对应关系时通过 SVD 求解位姿估计的方法，并在估计对应关系和估计位姿之间交替进行。还有另一类重要算法试图同时求解二者。这会使优化问题变成非凸问题，这意味着它们仍然会像我们在迭代算法中看到的那样受到局部最小值的影响。但许多作者认为，使用非线性求解器的求解时间可以与迭代算法相当（例如 <elib>Fitzgibbon03</elib>）。</p>
 
       <figure><img style="width:80%" src="data/robust_kernels.png"><figcaption>A
         variety of objective functions for robust registration.  <a
         href="https://www.geogebra.org/calculator/hcgacefe">Click here for the
         interactive version</a>.</figcaption></figure>
 
-      <p>Another major advantage of using nonlinear optimization is that these
-      solvers can accommodate a wide variety of objective functions to achieve
-      the same sort of robustness to outliers that we saw from CPD.  I've
-      plotted a few of the popular objective functions above.  The primary
-      characteristic of these functions is that they taper, so that larger
-      distances eventually do not result in higher cost.  Importantly, like in
-      CPD, this means that we can consider all pairwise distances in our
-      objective, because if outliers add a constant value (e.g. 1) to the cost,
-      then they have no gradient with respect to the decision variables and no
-      impact on the optimal solution.  We can therefore write, for our favorite
-      loss function, $l(x)$, an objective of the form, e.g. $$\min \sum_{i,j}
-      \left[ l\left(\| X^O \: {}^Op^{m_j} - p^{s_i} \|\right)\right].$$ And what
-      are the decision variables?  We can also exploit the additional
-      flexibility of the solvers to use minimal parameterizations -- e.g.
-      $\theta$ for rotations in 2D, or Euler angles for rotations in 3D.  The
-      objective function is more complicated but we can get rid of the
-      constraints.</p>
+      <p>使用非线性优化的另一个主要优势是，这些求解器可以容纳各种各样的目标函数，从而实现类似我们在 CPD 中看到的那种对离群点的鲁棒性。我在上面绘制了几种常用的目标函数。这些函数的主要特征是它们会逐渐变平，因此更大的距离最终不会导致更高的代价。重要的是，和 CPD 中一样，这意味着我们可以在目标函数中考虑所有成对距离，因为如果离群点只是向代价中添加一个常数值（例如 1），那么它们相对于决策变量就没有梯度，也不会影响最优解。因此，对于我们喜欢的损失函数 $l(x)$，可以写出如下形式的目标函数，例如：$$\min \sum_{i,j}
+      \left[ l\left(\| X^O \: {}^Op^{m_j} - p^{s_i} \|\right)\right].$$ 那么决策变量是什么？我们还可以利用求解器的额外灵活性，使用最小参数化——例如在二维旋转中使用 $\theta$，或在三维旋转中使用欧拉角。目标函数会更复杂，但我们可以去掉约束。</p>
 
-      <example><h1>Nonlinear pose estimation with known correspondences</h1>
+      <example><h1>具有已知对应关系的非线性位姿估计</h1>
 
-        <p>To understand precisely what we are giving up, let's consider a
-        warm-up problem where we use nonlinear optimization on the minimal
-        parameterizations for the pose estimation problem.  As long as we don't
-        add any constraints, we can still separate the solutions for rotation
-        from the solutions from translation.  So consider the problem:
+        <p>为了准确理解我们放弃了什么，让我们考虑一个热身问题：在位姿估计问题中，对最小参数化使用非线性优化。只要我们不添加任何约束，仍然可以将旋转的解与平移的解分离。因此考虑如下问题：
         $$\min_\theta \sum_{j} \left\| \begin{bmatrix} \cos\theta & -\sin\theta
         \\ \sin\theta & \cos\theta \end{bmatrix} \left({}^Op^{m_{c_i}} -
         {}^Op^{\bar{m}}\right) - \left( p^{s_i} -
-        p^{\bar{s}}\right)\right\|^2.$$ We now have a complicated, nonlinear
-        objective function.  Have we introduced local minima into the
-        problem?</p>
+        p^{\bar{s}}\right)\right\|^2.$$ 现在我们有了一个复杂的非线性目标函数。我们是否因此在问题中引入了局部最小值？</p>
 
         <p><img
         style="height:100px;float:right;margin-left:10px;margin-right:10px"
-        src="data/model_points_circle.png"/> As a thought experiment, consider
-        the problem where all of our model points lie on a perfect circle.  For
-        any one scene point $i$, in the rotation-only optimization, the worst
-        case is when our estimate $\theta$ is 180 degrees ($\pi$ radians) away
-        from the optimal solution.  The cost for that point would be $4r^2$,
-        where $r$ is the radius of the circle.  In fact, using the law of
-        cosines, we can actually write the squared distance for the point for
-        any error, $\theta_{err} = \theta - \theta^*,$ as $$\text{distance}^2 =
-        r^2 + r^2 - 2 r^2 \cos\theta_{err}.$$  And in the case of the circle,
-        every other model point contributes the same cost. This is not a convex
-        function, but every minima is a globally optimal solution (just wrapped
-        around by $2\pi$).</p>
+        src="data/model_points_circle.png"/> 作为一个思想实验，考虑这样一个问题：我们所有的模型点都位于一个完美圆周上。对于任意一个场景点 $i$，在仅旋转优化中，最坏情况是我们的估计 $\theta$ 与最优解相差 180 度（$\pi$ 弧度）。此时该点的代价为 $4r^2$，其中 $r$ 是圆的半径。事实上，利用余弦定理，我们可以把任意误差 $\theta_{err} = \theta - \theta^*,$ 下该点的平方距离写为 $$\text{distance}^2 =
+        r^2 + r^2 - 2 r^2 \cos\theta_{err}.$$ 而在圆的情况下，每个其他模型点都会贡献相同的代价。这不是一个凸函数，但每一个最小值都是全局最优解（只是以 $2\pi$ 为周期重复）。</p>
         
-        <p>In fact, even if we have a more complicated, non-circular, geometry,
-        then this same argument holds.  Every point will incur an error as it
-        rotates around the circle, but may have a different radius.  The error
-        for all of the model points will decrease as $\cos\theta_{err}$ goes to
-        one.  So every minima is a globally optimal solution.  We haven't
-        actually introduced local minima (yet)!</p>
+        <p>事实上，即使我们拥有更复杂、非圆形的几何结构，这个论证仍然成立。每个点在绕圆旋转时都会产生误差，但可能具有不同的半径。对于所有模型点而言，当 $\cos\theta_{err}$ 趋近于 1 时，其误差都会减小。因此，每一个最小值都是全局最优解。我们实际上（还）没有引入局部最小值！</p>
 
-        <!-- TODO: Is this still true in 3D? -->
+        <!-- TODO: 在 3D 中这一点仍然成立吗？ -->
 
-        <p>It is the correspondences, and other constraints that we might add to
-        the problem, that really introduce local minima.</p>
+        <p>真正引入局部最小值的是对应关系，以及我们可能向问题中添加的其他约束。</p>
 
       </example>
 <!--
-      <example><h1>Nonlinear optimization for pose estimation</h1>
+      <example><h1>用于位姿估计的非线性优化</h1>
 
       </example>
 -->
-      <subsubsection><h1>Precomputing distance functions</h1>
+      <subsubsection><h1>预计算距离函数</h1>
       
-        <p>There is an exceptionally nice trick for speeding up the computation
-        in these nonlinear optimizations, but it does require us to go back to
-        thinking about the minimum distance from a scene point to the model, as
-        opposed to the pairwise distance between points.  This, I think, is not
-        a big sacrifice now that we have stopped enumerating correspondences
-        explicitly.  Let's slightly modify our objective above to be of the
-        form $$\min \sum_{i} \left[ l\left( \min_j \| X^O \: {}^Op^{m_j} -
-        p^{s_i} \|\right)\right].$$  In words, we can an apply arbitrary robust
-        loss function, but we will only apply it to the minimum distance
-        between the scene point and the model.</p>
+        <p>这里有一个特别巧妙的技巧，可以加速这些非线性优化中的计算，但它要求我们重新回到“场景点到模型的最小距离”这一思路，而不是考虑点与点之间的成对距离。我认为这并不是一个很大的牺牲，因为我们现在已经不再显式枚举对应关系了。让我们稍微修改上面的目标函数，使其形式为 $$\min \sum_{i} \left[ l\left( \min_j \| X^O \: {}^Op^{m_j} -
+        p^{s_i} \|\right)\right].$$ 换句话说，我们可以应用任意鲁棒损失函数，但只将其应用于场景点与模型之间的最小距离。</p>
 
-        <p>The nested $\min$ functions look a little intimidating from a
-        computational perspective.  But this form, coupled with the fact that
-        in our application the model points are fixed, actually enables us to
-        do some pre-computation to make the online step fast.  First, let's move
-        our optimization into the model frame by changing the inner term to
-        $$\min_j \|{}^Op^{m_j} - {}^OX^W p^{s_i}\|.$$  Now realize that for any
-        3D point $x$, we can precompute the minimum distance from $x$ to any
-        point on our model, call it $\phi(x).$  The term above is just
-        $\phi({^OX^Wp^{s_i}}).$ This function of 3D space, sometimes called a
-        <a href="https://en.wikipedia.org/wiki/Distance_transform">distance
-        field</a>, and the closely related signed distance function (SDF) and
-        <a href="https://en.wikipedia.org/wiki/Level-set_method">level sets</a>
-        are a common representation in geometric modeling.  And they are
-        precisely what we need to quickly compute the cost from many scene
-        points.</p>
+        <p>从计算角度来看，这种嵌套的 $\min$ 函数看起来有些吓人。但这种形式，再结合我们应用中模型点是固定这一事实，实际上使我们能够进行一些预计算，从而让在线步骤运行得很快。首先，让我们通过将内部项改写为
+        $$\min_j \|{}^Op^{m_j} - {}^OX^W p^{s_i}\|.$$ 
+        来把优化移到模型坐标系中。现在注意到，对于任意三维点 $x$，我们都可以预先计算从 $x$ 到模型上任意点的最小距离，记为 $\phi(x).$ 那么上面的项其实就是
+        $\phi({^OX^Wp^{s_i}}).$ 这种定义在三维空间上的函数，有时被称为<a href="https://en.wikipedia.org/wiki/Distance_transform">距离场（distance
+        field）</a>，以及与其密切相关的有符号距离函数（SDF）和<a href="https://en.wikipedia.org/wiki/Level-set_method">水平集（level
+        sets）</a>，都是几何建模中的常见表示方式。而它们恰恰是我们快速计算大量场景点代价所需要的工具。</p>
 
         <figure><img width="48%" src="data/rectangle_points_distance.svg"/><img
         width="48%"
-        src="data/rectangle_signed_distance.svg"/><figcaption>Contour plot of
-        the distance function for our point-based representation of the rectange
-        (left), and the <i>signed</i> distance function for our "mesh-based" 2D
-        rectangle.  The smoother distance contours in the mesh-based
-        representation can help alleviate some of the local minima problems we
-        observed above.</figcaption></figure>
+        src="data/rectangle_signed_distance.svg"/><figcaption>矩形点表示的距离函数等高线图（左），以及基于“网格”的二维矩形的<i>有符号</i>距离函数（右）。在基于网格的表示中，更平滑的距离等高线有助于缓解我们上面观察到的一些局部最小值问题。</figcaption></figure>
 
-        <figure><img width="60%" src="data/deep_sdf_bunny.png"><figcaption>A
-        visualization of a "signed distance function" (SDF) representation of 3D
-        geometry.  Reproduced with permissions from
-        <elib>Park19</elib>.</figcaption></figure>
+        <figure><img width="60%" src="data/deep_sdf_bunny.png"><figcaption>三维几何的“有符号距离函数”（SDF）表示的可视化。经授权转载自
+        <elib>Park19</elib>。</figcaption></figure>
       
-        <p>As the figure I've included above suggests, we can use the
-        precomputed distance functions to represent the minimum distance to a
-        mesh model instead of just a point cloud.  And with some care, we can
-        define alternative distance-like functions in 3D space that have smooth
-        subgradients which can work better with nonlinear optimization.  There
-        is a rich literature on this topic; see <elib>Osher03</elib> for a nice
-        reference.</p>
+        <p>正如我上面给出的图所暗示的那样，我们可以使用预计算的距离函数来表示到网格模型的最小距离，而不仅仅是点云。并且经过适当处理，我们还可以在三维空间中定义替代性的“类距离”函数，它们具有平滑的次梯度，从而能更好地配合非线性优化。关于这一主题已有丰富的研究文献；参见 <elib>Osher03</elib>，这是一个很好的参考资料。</p>
 
       </subsubsection>
 
     </subsection>
 
 
-    <subsection><h1>Global optimization</h1>
+    <subsection><h1>全局优化</h1>
 
-      <p>Is there any hope of exploiting the beautiful structure that we found
-      in the pose estimation with known correspondences with an algorithm that
-      searches for correspondences and pose simultaneously?</p>
+      <p>是否有希望利用我们在“已知对应关系的位姿估计”中发现的优美结构，同时使用一种能够联合搜索对应关系与位姿的算法呢？</p>
 
-      <p>There are some algorithms that claim global optimality for the ICP
-      objective, typically using a branch and bound strategy
-      <elib>Gelfand05+Mellado14+Yang15</elib>, but we have been disappointed
-      with the performance of these on real point clouds.  We proposed another,
-      using branch and bound to explicitly enumerate the correspondences with a
-      truncated least-squares objective, and a tight relaxation of the SE(3)
-      constraints<elib>Izatt17b</elib>, but this method is still limited to
-      relatively small problems.</p>
+      <p>有一些算法声称能够对 ICP 目标达到全局最优性，通常使用分支定界（branch and bound）策略
+      <elib>Gelfand05+Mellado14+Yang15</elib>，但我们对它们在真实点云上的表现感到失望。我们还提出了另一种方法，它使用分支定界来显式枚举对应关系，并结合截断最小二乘目标以及对 SE(3) 约束的紧松弛<elib>Izatt17b</elib>，但该方法仍然仅限于相对较小的问题。</p>
 
-      <p>In recent work, TEASER <elib>Yang20a</elib> takes a different
-      approach, using the observation that truncated least squares can be
-      optimized efficiently for the case of scale and translation.  For
-      rotations, they solve a semidefinite (SDP) relaxation of the truncated
-      least-squares objective. This relaxation is not guaranteed to be tight,
-      but (like all of the convex relaxations we describe in this chapter), it
-      is easy to certify after the fact whether the optimal solution satisfied
-      the original constraints. And the SDP relaxation of the quadratic
-      rotation matrix constraints <a
-      href="https://underactuated.csail.mit.edu/optimization.html#sdp_unit_circle">can
-      be surprisingly effective</a> <elib>Saunderson15</elib>!</p>
+      <p>在最近的工作中，TEASER <elib>Yang20a</elib> 采用了不同的方法，利用这样一个观察：对于尺度和平移，截断最小二乘可以被高效优化。对于旋转，他们求解了截断最小二乘目标的一个半定规划（SDP）松弛。这个松弛并不能保证是紧的，但（和本章中描述的所有凸松弛一样），事后很容易验证最优解是否满足原始约束。而且，对二次旋转矩阵约束的 SDP 松弛 <a
+      href="https://underactuated.csail.mit.edu/optimization.html#sdp_unit_circle">可能会出人意料地有效</a>
+      <elib>Saunderson15</elib>！</p>
 
     </subsection>
     
   </section>
 
-  <section><h1>Non-penetration and "free-space" constraints</h1>
+  <section><h1>非穿透与“自由空间”约束</h1>
   
-    <p>We've explored two main lineages of algorithms for the pose estimation
-    -- one based on the beautiful SVD solutions and the other based on
-    nonlinear optimization.  As we will see, non-penetration and free-space
-    constraints are, in most cases, non-convex constraints, so are a better
-    match for the nonlinear optimization approach.  But there are some examples
-    of convex non-penetration constraints (e.g., when points must not penetrate
-    a half-plane) and it <i>is</i> possible to include these in our convex
-    optimization approach.  I'll illustrate both versions here with a simple
-    example.</p>
+    <p>我们已经探讨了两大类位姿估计算法——一类基于优美的 SVD 解法，另一类基于非线性优化。正如我们将看到的那样，非穿透和自由空间约束在大多数情况下属于非凸约束，因此更适合采用非线性优化方法。但也存在一些凸的非穿透约束例子（例如点不能穿透半平面），并且<i>确实</i>可以将这些约束纳入我们的凸优化方法中。下面我将通过一个简单示例来展示这两种版本。</p>
 
-    <example id="nonpenetration_nonconvex"><h1>Non-penetration via nonlinear
-    optimization</h1>
+    <example id="nonpenetration_nonconvex"><h1>通过非线性优化实现非穿透约束</h1>
 
-      <p>For simplicity, I will restrict this example to 2D, where we can
-      parameterize the rotation matrices: $$R(\theta) = \begin{bmatrix}
+      <p>为了简单起见，我将这个示例限制在二维空间中，在这里我们可以对旋转矩阵进行参数化：$$R(\theta) = \begin{bmatrix}
       \cos(\theta) & -\sin(\theta) \\ \sin(\theta) & \cos(\theta)
-      \end{bmatrix},$$ and will solve the problem with known correspondences.
-      Please do remember, though, that we can also include the correspondence
-      search in the nonlinear optimization framework. </p>
+      \end{bmatrix},$$ 并求解一个已知对应关系的问题。不过请记住，我们同样也可以在非线性优化框架中加入对应关系搜索。</p>
   
-      <p>Let's solve the following optimization: \begin{align*} \min_{p,\theta}
+      <p>让我们求解如下优化问题：\begin{align*} \min_{p,\theta}
       \quad & \sum_i \| p + R(\theta) \: {}^Op^{m_{c_i}} - p^{s_i} \|^2, \\
       \subjto \quad & {}^W p^{m_i} \ge 0, \quad \forall i \in [1, N_m].
-      \end{align*} In order to add the nonlinear costs and constraints, we use
-      pass a python function and the decision variables to be bound with that
-      function to the <code>MathematicalProgram</code> <code>AddCost</code> and
-      <code>AddConstraint</code> methods. I've provided an implementation in
-      this notebook: </p>
+      \end{align*} 为了添加非线性代价和约束，我们将一个 Python 函数以及需要与该函数绑定的决策变量传递给 <code>MathematicalProgram</code> 的 <code>AddCost</code> 和 <code>AddConstraint</code> 方法。我已经在这个 notebook 中提供了一个实现：</p>
   
       <script>document.write(notebook_link('pose', notebook="icp"))</script>
         
       <figure style="margin-top:-20px"><img style="width:70%"
-      src="data/constrained_nonlinear_pose.svg"/><figcaption>The solution to
-      the constrained pose estimation problem with known correspondences.  I
-      have added constraints that both the $x$ and $y$ positions of all of the
-      points in the estimated pose must be greater than $0$ in the world frame
-      (as illustrated by the green lines).  The red scene points are in
-      penetration, but the solver returns the pose illusutrated by the blue,
-      which satisfies the constraints.  </figcaption></figure>
+      src="data/constrained_nonlinear_pose.svg"/><figcaption>具有已知对应关系的受约束位姿估计问题的解。我添加了约束，要求估计位姿中所有点在世界坐标系中的 $x$ 和 $y$ 位置都必须大于 $0$（如绿色线所示）。红色场景点处于穿透状态，但求解器返回了蓝色所示的位姿，它满足这些约束。</figcaption></figure>
         
     </example>
 
-    <example><h1>Non-penetration via convex optimization</h1>
+    <example><h1>通过凸优化实现非穿透约束</h1>
     
-      <p>For a convex parameterization of the rotation matrices in this 2D
-      example, we can leverage our convenient form of the rotation matrices:
-      $$R = \begin{bmatrix} a & -b \\ b & a \end{bmatrix}.$$  Recall that the
-      rotation matrix constraints for this form reduce to $a^2+b^2=1$.  These
-      are non-convex constraints, but we can relax them to $a^2 + b^2 \le 1.$
-      This is almost exactly the problem we visualized in <a
-      href="#2D_rotation_only">this earlier example</a>, except that we will
-      add translations here.  The relaxation is exactly changing the non-convex
-      unit circle constraint into the convex unit disk constraint.  Based on
-      that visualization, we have reason to be optimistic that the unit disk
-      relaxation could be tight.</p>
+      <p>对于这个二维示例中的旋转矩阵凸参数化，我们可以利用旋转矩阵的这种便利形式：
+      $$R = \begin{bmatrix} a & -b \\ b & a \end{bmatrix}.$$ 请回忆一下，这种形式下的旋转矩阵约束可简化为 $a^2+b^2=1$. 这些是非凸约束，但我们可以将其松弛为 $a^2 + b^2 \le 1.$ 这几乎与我们在<a
+      href="#2D_rotation_only">之前的示例</a>中可视化的问题完全相同，只不过这里我们还会加入平移。这个松弛本质上就是把非凸的单位圆约束变成凸的单位圆盘约束。根据之前的可视化，我们有理由对这种单位圆盘松弛可能是紧的保持乐观。</p>
 
-      <p>Let's solve the following optimization: \begin{align*} \min_{p,a,b}
+      <p>让我们求解如下优化问题：\begin{align*} \min_{p,a,b}
       \quad & \sum_i \| p + R \: {}^Op^{m_{c_i}} - p^{s_i} \|^2, \\ \subjto
       \quad & a^2 + b^2 \le 1, \\ & {}^W p^{m_i} \ge 0, \quad \forall i \in [1,
-      N_m], \end{align*} where $R$ depends on $a, b$ as above. Just as the
-      addition of constraints forced us to move from the pseudo-inverse solution
-      to a numerical optimization-based solution in the last chapter, the
-      solution to this problem is no longer given simply by SVD.  As formulated,
-      this optimization falls under the category of a Second-Order Cone Program
-      (SOCP), though we need to use a slack variable to put it into the standard
-      form with a linear objective.</p>
+      N_m], \end{align*} 其中 $R$ 如上所述依赖于 $a, b$。正如上一章中添加约束迫使我们从伪逆解转向基于数值优化的解一样，这个问题的解也不再简单地由 SVD 给出。按照这里的形式，该优化属于二阶锥规划（Second-Order Cone Program，SOCP）类别，不过我们需要使用一个松弛变量，将其转换为具有线性目标的标准形式。</p>
 
       <script>document.write(notebook_link('pose', notebook="icp"))</script>
       
-      <p>Please be careful.  Now that we have a constraint that depends on $p$,
-      our original approach to solving for $R$ independently is no longer valid
-      (at least not without modification).  I've provided a simple implementation in the notebook.</p>
+      <p>请小心。现在我们有了一个依赖于 $p$ 的约束，原先独立求解 $R$ 的方法就不再有效了（至少在不作修改的情况下无效）。我在 notebook 中提供了一个简单实现。</p>
       
-      <!--To add the objective efficiently in
-      code, we'll use properties of the matrix trace and $R^TR=I$ to observe
-      that \begin{equation} \sum_i \| p + R \: {}^Op^{m_{c_i}} - p^{s_i} \|^2 =
-      \| P + R M - S\|_F^2,\end{equation} where $P$, $M$, and $S$, are 2xN
-      matrices formed by horizontally stacking $p$, ${}^Op^{m_{c_i}}$, and
-      $p^{s_i}$, respectively.-->
+      <!--为了在代码中高效地添加目标函数，我们将使用矩阵迹的性质和 $R^TR=I$ 来观察到
+      \begin{equation} \sum_i \| p + R \: {}^Op^{m_{c_i}} - p^{s_i} \|^2 =
+      \| P + R M - S\|_F^2,\end{equation} 其中 $P$、$M$ 和 $S$ 是通过水平堆叠 $p$、${}^Op^{m_{c_i}}$ 和
+      $p^{s_i}$ 分别形成的 2xN 矩阵。-->
 
       <figure style="margin-top:-20px"><img style="width:70%"
-      src="data/constrained_convex_pose.svg"/><figcaption>The convex
-      approximation to the constrained pose estimation problem with known
-      correspondences.  I have added constraints that both the $x$ and $y$
-      positions of all of the points in the estimated pose must be greater than
-      $0$ in the world frame (as illustrated by the green
-      lines).</figcaption></figure>
+      src="data/constrained_convex_pose.svg"/><figcaption>具有已知对应关系的受约束位姿估计问题的凸近似。我添加了约束，要求估计位姿中所有点在世界坐标系中的 $x$ 和 $y$ 位置都必须大于
+      $0$（如绿色线所示）。</figcaption></figure>
       
-      <p>This is a slightly exaggerated case, where the scene points are really
-      pulling the box into the constraints.  We can see that the relaxation is
-      <i>not</i> tight in this situation; the box is being shrunk slightly to
-      explain the data.</p>
+      <p>这是一个稍微夸张的情形，其中场景点确实在将盒子拉入约束区域。我们可以看到，在这种情况下该松弛<i>不是</i>紧的；盒子被略微缩小以解释数据。</p>
       
-      <p>Constrained optimizations like this can be made relatively efficient,
-      and are suitable for use in an ICP loop for modest-sized point clouds. But
-      the major limitation is that we can only take this approach for convex
-      non-penetration constraints (or convex approximations of the constraints),
-      like the "half-plane" constraints we used here.  It is probably not very
-      suitable for non-penetration between two objects in the scene.</p>
+      <p>像这样的受约束优化可以做得相对高效，并且适合在中等规模点云的 ICP 循环中使用。但主要限制在于，我们只能将这种方法用于凸的非穿透约束（或约束的凸近似），例如这里使用的“半平面”约束。对于场景中两个物体之间的非穿透问题，它可能并不太适合。</p>
 
-      <p>For the record, the fact that I was able to easily add this example
-      here is actually pretty special.  I don't know of another toolbox that
-      brings together the advanced optimization algorithms with the geometry /
-      physics / dynamical systems in the way that Drake does.</p>
+      <p>顺便说一句，我能够轻松地在这里添加这个示例，其实是相当特别的。我不知道还有哪个工具箱能像 Drake 这样，把高级优化算法与几何 / 物理 / 动力系统结合在一起。</p>
 
     </example>
 
-    <subsection><h1>Free space constraints as non-penetration constraints</h1>
+    <subsection><h1>作为非穿透约束的自由空间约束</h1>
 
-      <p>There is another beautiful idea that I first saw in
-      <elib>Schmidt15</elib>...</p>
+      <p>还有另一个优美的思想，我最早是在
+      <elib>Schmidt15</elib> 中看到的……</p>
     </p>
 
-      <figure><img width="60%" src="data/free_space.svg"/><figcaption>The rays
-      cast from the camera to the depth returns define a "free space obstacle"
-      that other objects should not penetrate.</figcaption></figure>
+      <figure><img width="60%" src="data/free_space.svg"/><figcaption>从相机投射到深度返回点的射线定义了一个“自由空间障碍物”，其他物体不应穿透它。</figcaption></figure>
     
     </subsection>
   
-    <p>Ultimately, as much as I prefer the convex formulations with their
-    potential for deeper understanding (by us) and for stronger guarantees (for
-    the algorithms), the ability to add non-penetration constraints and
-    free-space constraints is simply too valuable to ignore.  Deep learning
-    methods can now often provide a good initial guess, which can mitigate some
-    of the concerns about local minima. I hope that, if you come back to these
-    notes in a year or two, I will be able to report that we have strong
-    results for these more complex formulations.  But for now, in most
-    applications, I will steer you towards the nonlinear optimization
-    approaches and taking advantage of these constraints.</p>
+    <p>最终，尽管我非常偏爱凸形式，因为它们有可能让我们获得更深入的理解，并让算法获得更强的保证，但添加非穿透约束和自由空间约束的能力实在太有价值，不能忽视。如今，深度学习方法往往能够提供一个不错的初始猜测，这可以缓解一些关于局部最小值的担忧。我希望，如果你在一两年后回来看这些笔记，我能够报告我们已经在这些更复杂的形式上取得了强有力的结果。但就目前而言，在大多数应用中，我会引导你采用非线性优化方法，并充分利用这些约束。</p>
 
   </section>
 
-  <section><h1>Tracking</h1>
+  <section><h1>跟踪</h1>
   
   </section>
 
-  <section><h1>Putting it all together</h1>
+  <section><h1>整合所有内容</h1>
   
-    <p>Now we can put all of the pieces together.  In the notebook, I've
-    created an example with the mustard bottle in one bin.  First, I use ICP to
-    localize its pose.  Then, I plan a simple trajectory like we did in the
-    last chapter to pick it up and place it in the second bin.  Finally, I use
-    differential inverse kinematics to execute it.  Very satisfying!</p>
+    <p>现在我们可以把所有部分整合起来。在 notebook 中，我创建了一个芥末瓶位于一个箱子中的示例。首先，我使用 ICP 来定位它的位姿。然后，像上一章中那样，我规划一条简单轨迹，将它拿起并放入第二个箱子中。最后，我使用微分逆运动学来执行这条轨迹。非常令人满足！</p>
 
     <script>document.write(notebook_link('pose', notebook="pose"))</script>
 
   </section>
   
-  <section><h1>Looking ahead</h1>
+  <section><h1>展望未来</h1>
   
-    <p>Although I very much appreciate the ability to think rigorously about
-    these geometric approaches, we need to think critically about whether we are
-    solving for the right objectives.</p>
+    <p>尽管我非常欣赏能够严谨地思考这些几何方法的能力，但我们也需要批判性地思考：我们求解的目标是否真的是正确的。</p>
     
-    <p>Even if we stay in the realm of pure geometry, it is not clear that a
-    least-squares objective with equal weights on the points is correct. Imagine
-    a tall skinny book laying flat on the table -- we might only get a very
-    small number of returns from the edges of the book, but those returns
-    contain proportionally much more information than the slew of returns we
-    might get from the book cover.  It is no problem to include relative weights
-    in the estimation objectives we have formulated here, but we don't yet have
-    very successful geometry-based algorithms for deciding what those weights
-    should be in any general way.  (There has been a lot of research in this
-    direction, but it's a hard problem.)</p>
+    <p>即使我们停留在纯几何领域，也并不清楚对所有点赋予相同权重的最小二乘目标就是正确的。想象一本又高又薄的书平放在桌子上——我们可能只能从书的边缘获得非常少量的返回点，但这些返回点按比例包含的信息量，远远超过我们可能从书封面获得的大量返回点。在我们这里建立的估计目标中加入相对权重并不困难，但我们还没有非常成功的基于几何的算法，能够以一种通用方式决定这些权重应该是什么。（这个方向已经有大量研究，但它是一个困难问题。）</p>
 
-    <p>Please realize, though, that as beautiful as geometry is, we are so far
-    all but ignoring the most important information that we have: the color
-    values!  While it is possible to put color and other features into an
-    ICP-style pipeline, it is very hard to write a simple distance metric in
-    color space (the raw color values for a single object might be very
-    different in different lighting conditions, and the color values of
-    different objects can look very similar).  Advances in computer vision,
-    especially those based on deep learning over the last few years, have
-    brought new life to this problem.  When I asked my students recently "If
-    you had to give up one of the channels, either depth or color, which would
-    you give up?" the answer was a resounding "I'd give up depth; don't take
-    away my color!"  That's a big change from just a few years ago. As recently
-    as 2019, in the Benchmark for 6D Object Pose Estimation (a nearly annual
-    competition), geometric pose estimation was still outperforming
-    deep-learning based approaches<elib>Hodan20</elib>. But by the 2020
-    version of the challenge, deep learning had caught up.</p>
+    <p>不过请认识到，尽管几何非常优美，但到目前为止，我们几乎完全忽略了我们拥有的最重要信息：颜色值！虽然可以将颜色和其他特征放入 ICP 风格的流程中，但要在颜色空间中写出一个简单的距离度量非常困难（同一个物体的原始颜色值在不同光照条件下可能会非常不同，而不同物体的颜色值又可能看起来非常相似）。计算机视觉的进展，尤其是过去几年中基于深度学习的进展，为这个问题带来了新的活力。最近当我问学生“如果你必须放弃一个通道，深度或颜色，你会放弃哪个？”时，答案非常响亮：“我会放弃深度；不要拿走我的颜色！”这与仅仅几年前相比已经是一个很大的变化。直到 2019 年，在 6D 物体位姿估计基准测试（一项近乎每年举办的竞赛）中，几何位姿估计仍然优于基于深度学习的方法<elib>Hodan20</elib>。但到了 2020 年版本的挑战赛，深度学习已经追上来了。</p>
 
-    <p>But deep learning and geometry can (should?) work nicely together. The
-    winners in the 2020 version of the object pose estimation challenge used
-    deep learning to make the initial guess at the pose, but still used
-    geometry perception (a variant of ICP) and the depth channel for refining
-    the estimate<elib>Hodan20</elib>.For another example, identifying
-    correspondences between point clouds has been a major theme in this chapter
-    -- and we haven't completely solved it.  This is one of the many places
-    where the color values and deep learning have a lot to offer
-    <elib>Florence18a</elib>.  We'll turn our attention to them soon!</p>
+    <p>但深度学习和几何可以（也应该？）很好地协同工作。2020 年物体位姿估计挑战赛的获胜者使用深度学习来生成位姿的初始猜测，但仍然使用几何感知（一种 ICP 变体）和深度通道来细化估计<elib>Hodan20</elib>。再举一个例子，识别点云之间的对应关系一直是本章的一个主要主题——而我们还没有完全解决它。这正是颜色值和深度学习大有可为的众多地方之一
+    <elib>Florence18a</elib>。我们很快就会将注意力转向它们！</p>
 
   </section>
   
-  <section id="exercises"><h1>Exercises</h1>
+  <section id="exercises"><h1>练习</h1>
   
-    <exercise><h1>How many points do you need?</h1>
+    <exercise><h1>你需要多少个点？</h1>
     
-      <p>Consider the problem of point cloud registration with known
-      correspondences.  Points can be directly mapped to corresponding model points to 
-      specify the position and orientation of an object in the scene.  In most cases, we have far more points 
-      than we have decision variables on the object's pose.  Therefore, treating each point 
-      correspondence as an equality constraint would make the problem over-constrained.  
-      This raises a natural question: 
+      <p>考虑具有已知对应关系的点云配准问题。点可以被直接映射到对应的模型点，从而指定场景中物体的位置和方向。在大多数情况下，我们拥有的点数远多于物体位姿中的决策变量数量。因此，如果将每个点对应关系都视为一个等式约束，就会使问题变得过约束。这自然引出了一个问题：
 
       <ol type="a">
-          <li>What is the minimum number of points that can uniquely
-      specify the pose of an object in 2D?  Provide a brief justification.</li> 
-          <li>What is the minimum number of points that can uniquely
-      specify the pose of an object in 3D?  Provide a brief justification.</li>   
+          <li>在二维中，能够唯一指定物体位姿所需的最少点数是多少？请给出简要理由。</li> 
+          <li>在三维中，能够唯一指定物体位姿所需的最少点数是多少？请给出简要理由。</li>   
       </ol></p>
 
-      (HINT: How might your answers change if point correspondences were unknown?)
+      （提示：如果点对应关系未知，你的答案可能会如何变化？）
     
     </exercise>
 
-    <exercise><h1>Rotational symmetries</h1>
+    <exercise><h1>旋转对称性</h1>
 
-      <p>We have a beautiful formulation for the point cloud registration
-      problem with known correspondences -- it has a quadratic objective and
-      (with the determinant constraint relaxed) a quadratic equality constraint.
-      Sometimes we have objects that are rotationally symmetric -- think of box
-      that is a perfect cube.  How can the quadratic objective capture a problem
-      where there should be equally good solutions at rotations that are 90
-      degrees apart?</p>
+      <p>对于具有已知对应关系的点云配准问题，我们有一个优美的表述——它具有二次目标函数，并且（在放松行列式约束后）具有二次等式约束。有时我们会遇到具有旋转对称性的物体——想象一个完美立方体形状的盒子。对于一个在相差 90 度的旋转处都应当具有同样好解的问题，二次目标函数如何捕捉这种情况？</p>
 
-      <!-- Answer:  It can't!  And this can't happen in our formulation, because
-      there is no such thing as rotational symmetry when we've assumed known and
-      one-to-one correspondences. -->
+      <!-- 答案：它不能！而且这在我们的表述中不会发生，因为当我们假设已知且一一对应的对应关系时，旋转对称性并不存在。 -->
 
     </exercise>
 
-    <exercise><h1>ICP with random initializations</h1>
+    <exercise><h1>具有随机初始化的 ICP</h1>
 
-      <p>If you run the ICP example code which has randomized object geometry
-      and ground truth object pose, you can't help but notice that the algorithm
-      does a quite reasonable job of estimating translation, but (at least for
-      the geometries I've generated here) does a fairly lousy job with rotation.
-      One mitigation is to run ICP multiple times with different initial
-      estimates of the rotation.  This is a reasonable strategy for any
-      nonconvex optimization problem with local minima, but is particularly
-      useful here since even when the point clouds are quite complex, the
-      dimensionality of the search space is low.  In particular, we can generate
-      a reasonable coverage of 2D or even 3D rotations with a modest number of
-      samples (for 3D, consider using
-      <code>UniformlyRandomRotationMatrix</code>).  Furthermore, running ICP
-      from multiple initial conditions can be done in parallel.</p>
+      <p>如果你运行具有随机物体几何形状和真实物体位姿的 ICP 示例代码，你很难不注意到：该算法在估计平移方面做得相当合理，但（至少对于我这里生成的几何形状而言）在旋转方面表现相当糟糕。一种缓解方法是使用不同的旋转初始估计，多次运行 ICP。对于任何存在局部最小值的非凸优化问题来说，这都是一种合理策略，但在这里尤其有用，因为即使点云相当复杂，搜索空间的维度也很低。特别是，我们可以用适中数量的样本，对二维甚至三维旋转进行合理覆盖（对于三维，可考虑使用 <code>UniformlyRandomRotationMatrix</code>）。此外，从多个初始条件运行 ICP 可以并行完成。</p>
 
-      <p>Try implementing ICP from multiple initial estimates $\hat{X}^O$,
-      sampling only in rotation.  If you only keep the best one (lowest
-      estimation error), then how much does it improve the performance over a
-      single ICP run?</p>
+      <p>请尝试从多个初始估计 $\hat{X}^O$ 实现 ICP，并且只在旋转上进行采样。如果你只保留其中最佳的结果（估计误差最低），那么与单次 ICP 运行相比，它能在多大程度上提升性能？</p>
 
     </exercise>
 
-    <exercise><h1>Point Registration with Fixed Rotation</h1>
-      <p>Consider the case of point registration where the rotation component
-      of $X^O$ is known, but not the translation. (In other words, the opposite
-      of Example 4.2.)
+    <exercise><h1>固定旋转的点配准</h1>
+      <p>考虑这样一种点配准情况：$X^O$ 的旋转部分已知，但平移部分未知。（换句话说，这是示例 4.2 的相反情况。）
       </p>
-      <p>Specifically, say your scene points ${}^WX^C{}^Cp^{s_i}={}^Wp^{s_i}$
-      are defined as follows:</p>
+      <p>具体来说，假设你的场景点 ${}^WX^C{}^Cp^{s_i}={}^Wp^{s_i}$
+      定义如下：</p>
         $$ \begin{aligned} {}^Wp^{s_0}&=(1,5) \\ {}^Wp^{s_1}&=(3,10) \\
-        {}^Wp^{s_2}&=(5,10) \end{aligned} $$ Which can be plotted as follows:
+        {}^Wp^{s_2}&=(5,10) \end{aligned} $$ 可以绘制如下：
       <figure>
           <img style="width:50%", src="figures/exercises/scene_triangle.png"/>
       </figure>
-      <p>And your model points are defined as follows:</p>
+      <p>而你的模型点定义如下：</p>
         $$ \begin{aligned} {}^Op^{m_0}&=(-2,-5) \\ {}^Op^{m_1}&=(0,0) \\
-        {}^Op^{m_2}&=(2,0) \end{aligned} $$ Which can be plotted as follows:
+        {}^Op^{m_2}&=(2,0) \end{aligned} $$ 可以绘制如下：
         <figure>
             <img style="width:50%",
             src="figures/exercises/model_triangle.png"/>
         </figure>
 
-        <p>As you can see, both triangles are in the same orientation, so $R^O=
-        \begin{bmatrix} 1 & 0 \\ 0 & 1 \end{bmatrix}$. However, we still need
-        to solve for the translation component of $X^O$.</p>
+        <p>正如你所见，两个三角形具有相同的朝向，因此 $R^O=
+        \begin{bmatrix} 1 & 0 \\ 0 & 1 \end{bmatrix}$。不过，我们仍然需要求解 $X^O$ 的平移部分。</p>
 
-        <p>(In this example, we can easily separate translation and rotation
-        because the orientation of the model already matches the scene, but
-        this decoupling actually works in the general case as well. See the
-        explanation following Example 4.2 in the textbook.)</p>
+        <p>（在这个例子中，我们可以很容易地分离平移和旋转，因为模型的朝向已经与场景匹配，但这种解耦实际上在一般情况下同样成立。参见教材中示例 4.2 之后的解释。）</p>
 
       <ol type="a">
-        <li> What are the decision variables in this optimization problem? Be
-        specific. </li>
-        <li>What is the value of the objective function for $p^O = (0,0)$? What
-        about (3,10)? And (6,12)?</li>
-        <li>If you plotted the objective function as a function
-        of your decision variables, what shape would it be? Explain the
-        significance of this.</li>
-       <li> Consider the general case where rotation is fixed with an equal number of scene and model points. 
-        We only need to find the translational component. Solving this optimization problem,
-        what quantity do we find for each decision variable? Your solution should be correct even when the model and scene points cannot be perfectly aligned (e.g. noise).
-        (HINT: We want to minimize the squared distance of all the transformed scene points compared to their corresponding model points.) </li>
+        <li>这个优化问题中的决策变量是什么？请具体说明。</li>
+        <li>当 $p^O = (0,0)$ 时，目标函数的值是多少？当它为 (3,10) 时呢？当它为 (6,12) 时呢？</li>
+        <li>如果你将目标函数绘制为决策变量的函数，它会是什么形状？请解释这一点的重要意义。</li>
+        <li>考虑旋转固定且场景点和模型点数量相等的一般情况。我们只需要寻找平移分量。求解这个优化问题时，我们会为每个决策变量找到什么量？你的解应该在模型点和场景点无法完美对齐时（例如存在噪声）仍然正确。
+        （提示：我们希望最小化所有变换后的场景点与其对应模型点之间的平方距离。）</li>
       </ol>
     </exercise>
 
 
-    <exercise><h1>Planar Two-Point ICP</h1>
-      <p>We saw that ICP has many local minima. But what are these local
-      minimas, and can we say something about how wrong our initial guess has
-      to be until we arrive at one of these local minima? Although the analysis
-      can get complicated for general geometry, let's start by analyzing a
-      simple example of a planar two-point ICP.</p> 
+    <exercise><h1>平面两点 ICP</h1>
+      <p>我们已经看到 ICP 有许多局部最小值。但这些局部最小值是什么？在到达这些局部最小值之前，我们的初始猜测需要错到什么程度？虽然对于一般几何形状而言，分析可能会变得复杂，但让我们先从分析一个简单的平面两点 ICP 示例开始。</p> 
 
       <figure><img style="width:90%",
       src="figures/exercises/icp_correspondence.png"/>
       </figure>
 
         
-      <p>The model points and the scene points in their corresponding frame are given as:</p>
+      <p>模型点和场景点在其对应坐标系中给定为：</p>
 
       $${}^Op^{m_1}=\begin{pmatrix} 1 \\ 0 \end{pmatrix} \qquad
       {}^Op^{m_2}=\begin{pmatrix} -1 \\ 0 \end{pmatrix} \qquad
       {}^Wp^{s_1}=\begin{pmatrix} 1 \\ 0 \end{pmatrix} \qquad
       {}^Wp^{s_2}=\begin{pmatrix} -1 \\ 0 \end{pmatrix}.$$
 
-      <p>The true correspondence is given by their numbering, but note that we
-      don't know the true correspondence - ICP simply determines it based on
-      nearest neighbors. Given our vanilla-ICP cost (sum of pairwise distances
-      squared), we can parametrize the 2D pose $X^O$ with $p_x,p_y,a,b$ and
-      write down the resulting optimization as:</p>
+      <p>真实对应关系由它们的编号给出，但请注意，我们并不知道真实对应关系——ICP 只是根据最近邻来确定它。给定我们的普通 ICP 代价（成对距离平方和），我们可以用 $p_x,p_y,a,b$ 对二维位姿 $X^O$ 进行参数化，并写出所得优化问题如下：</p>
       $$\begin{aligned} \min_{p_x,p_y,a,b} \quad & \sum_i \bigg\|
       \begin{pmatrix} p_x \\ p_y \end{pmatrix} + \begin{pmatrix} a & -b \\ b &
       a \end{pmatrix} {}^Op^{m_{c_i}} - {}^Wp^{s_i} \bigg\|^2 \\ \text{s.t.} \quad &
       a^2 + b^2 = 1. \end{aligned}$$
 
       <ol type="a">
-        <li> When the initial guess for the pose results in the correct
-        correspondences based on nearest-neighbors, show that the ICP cost is
-        minimum when $p_x,p_y,b=0$ and  $a=1$. Describe the set of initial
-        poses that results in convergence to the true solution. </li>
-        <li> When the initial guess results in a flipped correspondence, show
-        that ICP cost is minimum when $p_x,p_y,b=0$ and $a=-1$. Describe the
-        set of initial poses that results in convergence to this incorrect
-        solution.</li>
-        <li> Remember that correspondence need not be one-to-one. In fact they
-        are often not when computed based on nearest-neighbors. By constructing
-        the data matrix $W$, show that when both scene points correspond to one
-        model point, ICP gets stuck and does not achieve zero-cost. What happens on the next iteration of ICP?
-        (HINT: You may assume that doing SVD on a zero matrix leads to identity matrices
-        for $U$ and $V$).</li>
+        <li>当位姿的初始猜测基于最近邻产生了正确对应关系时，证明 ICP 代价在 $p_x,p_y,b=0$ 且 $a=1$ 时达到最小。描述会收敛到真实解的初始位姿集合。</li>
+        <li>当初始猜测产生了翻转的对应关系时，证明 ICP 代价在 $p_x,p_y,b=0$ 且 $a=-1$ 时达到最小。描述会收敛到这个错误解的初始位姿集合。</li>
+        <li>请记住，对应关系不需要是一一对应的。事实上，当基于最近邻计算时，它们常常不是一一对应的。通过构造数据矩阵 $W$，证明当两个场景点都对应到同一个模型点时，ICP 会卡住并且无法达到零代价。ICP 的下一次迭代会发生什么？
+        （提示：你可以假设对零矩阵进行 SVD 会得到单位矩阵形式的 $U$ 和 $V$。）</li>
       </ol>
     </exercise>
 
     <exercise><h1>Bunny ICP</h1>
-      <p>For this exercise, you will implement the ICP algorithm to match
-      pointclouds of two Stanford bunnies. You will work exclusively in <script>document.write(notebook_link('pose', notebook='bunny_icp',  link_text='this notebook'))</script>. You will be asked to complete the
-      following steps:</p>
+      <p>在本练习中，你将实现 ICP 算法，用于匹配两个 Stanford bunny 的点云。你将完全在 <script>document.write(notebook_link('pose', notebook='bunny_icp',  link_text='这个 notebook'))</script> 中完成。你需要完成以下步骤：</p>
       <ol type="a">
-        <li> Implement a method to compute the least-squares transform given
-        the correspondences. </li>
-        <li> Implement the ICP algorithm using the least square transform
-        method from part a. </li>
+        <li>实现一种方法，用于在给定对应关系的情况下计算最小二乘变换。</li>
+        <li>使用第 a 部分中的最小二乘变换方法实现 ICP 算法。</li>
       </ol>    
     </exercise>
 
     <exercise><h1>RANSAC</h1>
-      <p>For this exercise, you will remove the environmental background from
-      the Stanford bunny pointcloud using the RANSAC algorithm. You will work
-      exclusively in <script>document.write(notebook_link('pose', notebook='ransac', link_text='this notebook'))</script>. You will be asked to complete the
-      following steps:</p>
+      <p>在本练习中，你将使用 RANSAC 算法从 Stanford bunny 点云中移除环境背景。你将完全在 <script>document.write(notebook_link('pose', notebook='ransac', link_text='这个 notebook'))</script> 中完成。你需要完成以下步骤：</p>
       <ol type="a">
-        <li> Implement the RANSAC algorithm. </li>
-        <li> Use the RANSAC algorithm to remove the planar surface from the
-        scene point cloud.</li>
+        <li>实现 RANSAC 算法。</li>
+        <li>使用 RANSAC 算法从场景点云中移除平面表面。</li>
       </ol>    
     </exercise>
 
-    <exercise><h1>Outliers in ICP</h1>
-      <p>In this question you'll explore a technique for handling outliers in
-      ICP and think through how the distance metric impacts the robustness of
-      ICP to outliers. There are two parts to this question and each part has
-      three subquestions. </p> 
-
+    <exercise><h1>ICP 中的离群点</h1>
+      <p>在这个问题中，你将探索一种处理 ICP 中离群点的技术，并思考距离度量如何影响 ICP 对离群点的鲁棒性。这个问题有两个部分，每个部分都有三个小问。</p> 
 
       <ol type="a">
-          <li>Consider the setting visualized below. Here the model points are
-          given in black and labeled as $b_{i}$ and the scene points are given
-          in red and labeled as $r_{j}$. 
-          <figure><img style="width:60%",
+          <li>考虑下面可视化的设置。这里模型点用黑色给出，并标记为 $b_{i}$；场景点用红色给出，并标记为 $r_{j}$。
+          <figure><img style="width:60%"
           src="figures/exercises/icp_trimmed.png"/></figure>
 
-          Let's consider a possible algorithm for handling the outliers in the
-          scene. 
+          让我们考虑一种处理场景中离群点的可能算法。
           <ol>
-            <li>First, write down each of the correspondence, i.e the ($b_{i},
-            r_{j}$) pairs. Next, compute the ICP error, the sum of the pairwise squared
-            distances between each of these correspondences. </li>
-            <li>Suppose that you are told that $\frac{1}{3}$ of the scene
-            points are outliers. Using the pairwise distances between each
-            $b_{i}$ and $r_{j}$, which two scene points $r_{j}$ could you
-            detect as the most likely outliers?</li>
-            <li>Discarding the two proposed outlier scene points, compute the
-            new ICP error.</li>
-          </ol><br/> This is the basic intuition behind the Trimmed ICP
-          algorithm! 
+            <li>首先，写出每一个对应关系，即 ($b_{i},
+            r_{j}$) 对。接下来，计算 ICP 误差，即这些对应关系之间成对平方距离的总和。</li>
+            <li>假设你被告知场景点中有 $\frac{1}{3}$ 是离群点。使用每个
+            $b_{i}$ 和 $r_{j}$ 之间的成对距离，你可以检测出哪两个场景点 $r_{j}$ 最可能是离群点？</li>
+            <li>丢弃这两个被提出的离群场景点后，计算新的 ICP 误差。</li>
+          </ol><br/> 这就是 Trimmed ICP 算法背后的基本直觉！
           </li><br/><br/>
 
-          <li>The optimization in ICP captures the distance between two sets of
-          points as the sum of pairwise Euclidean squared distances. As a thought
-          experiment: another possible distance metric (which isn't as
-          optimization friendly) is the one-way Hausdorff distance. Stated
-          simply, given that an adversary picks a point on one shape, the <a
+          <li>ICP 中的优化使用成对欧氏平方距离之和来刻画两组点之间的距离。作为一个思想实验：另一种可能的距离度量（虽然不太适合优化）是单向 Hausdorff 距离。简单来说，假设对手在一个形状上选择一个点，<a
           href="https://en.wikipedia.org/wiki/Hausdorff_distance"
-          target="_blank">one-way Hausdorff distance</a> is the distance you
-          are  forced to travel to get to the closest point on the other shape.
-          We could consider two schemes:<br/>
-          <u>Scheme 1)</u> The adversary picks the scene point and thus you
-          pick the model point that is closest to this scene point.<br />
-          <u>Scheme 2)</u> The adversary picks the model point and thus you
-          pick the scene point that is closest to this model point.<br /><br />
-          Which is more robust to outliers? Let's explore through a 2D example.
-          Again, the model points are given in black and labeled as $b_{i}$ and
-          the scene points are given in red and labeled as $r_{j}$.
+          target="_blank">单向 Hausdorff 距离</a>就是你被迫前往另一个形状上最近点所需经过的距离。
+          我们可以考虑两种方案：<br/>
+          <u>方案 1）</u> 对手选择场景点，因此你选择距离该场景点最近的模型点。<br />
+          <u>方案 2）</u> 对手选择模型点，因此你选择距离该模型点最近的场景点。<br /><br />
+          哪一种对离群点更鲁棒？让我们通过一个二维示例来探索。同样，模型点用黑色给出，并标记为 $b_{i}$；场景点用红色给出，并标记为 $r_{j}$。
 
-          <figure><img style="width:50%",
+          <figure><img style="width:50%"
           src="figures/exercises/icp_hausdorff.png"/></figure>
           <ol>
-            <li>Lets consider scheme 1. I, as the adversary, pick the scene
-            point $r_{5}$. Whats the nearest model point $b_{i}$ you can pick?
-            Whats the distance to this model point? </li>
-            <li>Now in scheme 2, I pick the model point $b_{1}$. What's the
-            nearest scene point $r_{j}$ that you can pick? What's the distance
-            to this scene point? </li>
-            <li>From this, which scheme was more robust to the outlier?</li>
+            <li>让我们考虑方案 1。作为对手，我选择场景点 $r_{5}$。你能选择的最近模型点 $b_{i}$ 是哪个？到这个模型点的距离是多少？</li>
+            <li>现在在方案 2 中，我选择模型点 $b_{1}$。你能选择的最近场景点 $r_{j}$ 是哪个？到这个场景点的距离是多少？</li>
+            <li>由此来看，哪种方案对离群点更鲁棒？</li>
           </ol>
           </li>
       </ol>
     </exercise>
 
-    <exercise><h1>Pose Estimation</h1>
-      <p>Let's go back to the example from Chapter 3, but relax the assumption
-      that we have the pose of the red foam brick. You will be given a
-      simulated raw pointcloud from our previous setup from a depth camera.
-      Your task is to perform segmentation on this raw pointcloud data, and
-      perform ICP to estimate the pose of the brick. You will work exclusively
-      in <script>document.write(notebook_link('pose', notebook='pose_estimation_icp', link_text = 'this notebook'))</script>
-      . You will be asked to complete the
-      following steps:</p>
+    <exercise><h1>位姿估计</h1>
+      <p>让我们回到第 3 章中的例子，但放宽“我们已知红色泡沫砖位姿”的假设。你将得到一个来自深度相机的仿真原始点云，该点云来自我们之前的设置。你的任务是对这些原始点云数据进行分割，并执行 ICP 来估计砖块的位姿。你将完全在 <script>document.write(notebook_link('pose', notebook='pose_estimation_icp', link_text = '这个 notebook'))</script>
+      中完成。你需要完成以下步骤：</p>
       <ol type="a">
-        <li> Perform segmentation on the raw pointcloud to remove the
-        background. </li>
-        <li> Use our class ICP implementation to correctly estimate the pose of
-        the red foam brick.</li>
+        <li>对原始点云进行分割，以移除背景。</li>
+        <li>使用我们的课堂 ICP 实现，正确估计红色泡沫砖的位姿。</li>
       </ol>    
     </exercise>
 
-  <exercise id="sdf"><h1>Composing Signed Distance Functions (SDFs)</h1>
+  <exercise id="sdf"><h1>组合有符号距离函数（SDF）</h1>
 
-    <p>In this problem we will explore signed distance functions and their composition! As a reminder, the signed distance function of a set gives the minimum distance of a point $p$ to the boundary of that set, where the sign of the value is based on whether the point $p$ is inside or outside the boundary. Points that are on the interior of the boundary are negative. and points that are on the exterior of the boundary are positive.</p>
+    <p>在本题中，我们将探索有符号距离函数及其组合！提醒一下，一个集合的有符号距离函数给出点 $p$ 到该集合边界的最小距离，其符号取决于点 $p$ 位于边界内部还是外部。位于边界内部的点为负值。位于边界外部的点为正值。</p>
 
-       <p>For a 2D example, consider the green box visualized below. The center of the box, at the origin, has a signed distance value of -1, since it is distance one from any of the edges of the box and it lies on the interior of the box. Points along the perimeter of the box have a signed distance value of 0. Any points outside the box have a signed distance value of $+d$ where $d$ is the smallest distance between that point and the perimeter of the box.</p>
+       <p>对于一个二维示例，考虑下面可视化的绿色盒子。盒子的中心位于原点，其有符号距离值为 -1，因为它到盒子任意边的距离为 1，并且位于盒子内部。盒子周界上的点的有符号距离值为 0。盒子外部的任意点的有符号距离值为 $+d$，其中 $d$ 是该点与盒子周界之间的最小距离。</p>
 
     <figure>
-      <img style="width:25%", src="figures/exercises/sdf_box.png"/>
+      <img style="width:25%" src="figures/exercises/sdf_box.png"/>
     </figure>
 
-    <p>In the figure below we draw two objects: a shaded red object and a shaded blue object (the purple region is two objects overlapping and the objects should be treated as infinite half planes). Let $\phi_r(p)$ be the signed distance value of a point $p$ to boundary of the red object and $\phi_b(p)$ be the signed distance value of point $p$ to the boundary blue object. As an example $\phi_b(p_0) = -3, \phi_b(p_1) = +2$.</p>
+    <p>在下图中，我们绘制了两个物体：一个带阴影的红色物体和一个带阴影的蓝色物体（紫色区域是两个物体重叠的区域，并且这些物体应被视为无限半平面）。令 $\phi_r(p)$ 表示点 $p$ 到红色物体边界的有符号距离值，令 $\phi_b(p)$ 表示点 $p$ 到蓝色物体边界的有符号距离值。例如，$\phi_b(p_0) = -3, \phi_b(p_1) = +2$。</p>
 
     <figure>
       <img style="width:100%", src="figures/exercises/sdf_compose.png"/>
     </figure>
 
     <ol type="a">
-      <li> First, lets consider a new region defined as the union of red object and the blue object. Let $\phi_{r \cup b}(p)$ be the signed distance value of a point $p$ to this new boundary. Compute: $\phi_{r \cup b}(p_{0}), \phi_{r \cup b}(p_{1}), \phi_{r \cup b}(p_{2})$. </li>
+      <li>首先，让我们考虑一个新区域，它被定义为红色物体和蓝色物体的并集。令 $\phi_{r \cup b}(p)$ 表示点 $p$ 到这个新边界的有符号距离值。计算：$\phi_{r \cup b}(p_{0}), \phi_{r \cup b}(p_{1}), \phi_{r \cup b}(p_{2})$。</li>
 
-      <li> Next, lets consider a new region defined as the intersection of the red object and the blue object (hence the purple object). Let $\phi_{r \cap b}(p)$ be the signed distance value of a point $p$ to this new boundary. Compute: $\phi_{r \cap b}(p_{0}), \phi_{r \cap b}(p_{1}), \phi_{r \cap b}(p_{2})$. </li>
+      <li>接下来，让我们考虑一个新区域，它被定义为红色物体和蓝色物体的交集（也就是紫色物体）。令 $\phi_{r \cap b}(p)$ 表示点 $p$ 到这个新边界的有符号距离值。计算：$\phi_{r \cap b}(p_{0}), \phi_{r \cap b}(p_{1}), \phi_{r \cap b}(p_{2})$。</li>
 
-      <li> Using your experience from part (a), write an expression for computing the signed distance value for any point $p$ in our 2D space to the <b>union</b> of the red and blue objects. Your expression should be in terms of $\phi_r(p)$ and $\phi_b(p)$. We encourage you to think in terms of cases based on what region the point is in. HINT: Write a case statement that cases on the 4 regions, then try to reduce it to 2 cases with a clean math expression.</li>
+      <li>利用你在第 (a) 部分中的经验，写出一个表达式，用于计算我们二维空间中任意点 $p$ 到红色和蓝色物体<b>并集</b>的有符号距离值。你的表达式应以 $\phi_r(p)$ 和 $\phi_b(p)$ 表示。我们鼓励你根据该点所在区域分情况思考。提示：写一个按 4 个区域分类的分段表达式，然后尝试将其化简为只含 2 种情况的简洁数学表达式。</li>
 
-      <li> Using your experience from part (b), write an analogous expression for computing the signed distance value for any point $p$ to the <b>intersection</b> of the red and blue objects (i.e. the purple region). Your expression should be in terms of $\phi_r(p)$ and $\phi_b(p)$, and it can be written considering only 2 cases.</li>
+      <li>利用你在第 (b) 部分中的经验，写出一个类似表达式，用于计算任意点 $p$ 到红色和蓝色物体<b>交集</b>（即紫色区域）的有符号距离值。你的表达式应以 $\phi_r(p)$ 和 $\phi_b(p)$ 表示，并且可以只考虑 2 种情况来写出。</li>
     </ol>
 
-    <p>One incorrect method to compute the SDF value for the union of two objects is to simply take the minimum of the SDF value for each of the objects. (It is worth taking a minute to convince yourself why this method is incorrect!). While this method can produce the incorrect distance, it will produce a value with the correct sign (again, convince yourself this is true!). <br/>
-    Therefore, this "incorrect" method can tell us if we are in penetration or out of penetration for the union of our set of objects. This makes it useful for computing a non-penetration constraint! We'll refer to the SDF generated by this "incorrect-but-useful" method as Penetration-Constraint-SDF. <br/>
-    Let's see how we can use this!</p>     
+    <p>一种用于计算两个物体并集 SDF 值的错误方法，是简单地取每个物体 SDF 值中的最小值。（值得花一分钟说服自己为什么这种方法是错误的！）虽然这种方法可能产生错误的距离，但它会产生具有正确符号的值（同样，请说服自己这是真的！）。<br/>
+    因此，这种“错误”的方法可以告诉我们，对于物体集合的并集而言，我们是否处于穿透状态或非穿透状态。这使它对于计算非穿透约束很有用！我们将这种由“错误但有用”的方法生成的 SDF 称为穿透约束 SDF（Penetration-Constraint-SDF）。<br/>
+    让我们看看如何使用它！</p>     
 
     <ol type="a" start=5>
-      <li>  As discussed in class, for rigid objects, we can precompute the SDF
-      for the object, which enables us to greatly speed up computations.
-      However, if we are dealing with an articulated body, such as a robot arm,
-      where the configuration of the arm is dependent on the joint values, we
-      can no longer precompute the SDF. Recomputing this "global" SDF every
-      time the robot's configuration changes gets very expensive. (By global we
-      mean an SDF of the entire articulated body.)<br/>
+      <li>如课堂上所讨论的，对于刚体物体，我们可以预先计算该物体的 SDF，这使我们能够极大加快计算速度。然而，如果我们处理的是一个关节式物体，例如机器人手臂，其手臂构型取决于关节值，那么我们就不能再预计算 SDF。每当机器人构型发生变化时，重新计算这个“全局” SDF 会非常昂贵。（这里的全局是指整个关节式物体的 SDF。）<br/>
 
-      Instead, the DART (Dense Articulated Real-Time Tracking)
-      <elib>Schmidt15</elib> algorithm considers that for each link in the
-      articulated body, we have a "local" SDF. A local SDF gives the signed
-      distance value to a point in the link's coordinate frame. Because we are
-      operating in the link's coordinate frame, we can precompute these local
-      SDFs. Consider that we have our favorite, planar two-link arm, picture
-      below. Given $q_{0}, q_{1}$ and the precomputed local SDFS for each of
-      the links (link AB, link BC), briefly describe how you could compute the
-      value of the global Penetration-Constraint-SDF for a point $(^{W}x_{p},
-      ^{W}y_{p})$. </li>
+      相反，DART（Dense Articulated Real-Time Tracking，稠密关节式实时跟踪）
+      <elib>Schmidt15</elib> 算法认为，对于关节式物体中的每个连杆，我们都有一个“局部” SDF。局部 SDF 给出的是连杆坐标系中某个点的有符号距离值。因为我们是在连杆坐标系中操作，所以可以预先计算这些局部 SDF。考虑我们最喜欢的平面二连杆机械臂，如下图所示。给定 $q_{0}, q_{1}$ 以及每个连杆（连杆 AB、连杆 BC）的预计算局部 SDF，请简要描述如何计算点 $(^{W}x_{p},
+      ^{W}y_{p})$ 的全局穿透约束 SDF 值。</li>
 
     <figure>,
-      <img style="width:65%", src="figures/exercises/planar_two_link_sdf.png"/>
+      <img style="width:65%" src="figures/exercises/planar_two_link_sdf.png"/>
     </figure>
     </ol>
 
 
-
   </exercise>
-  <exercise id="geometry-initials"><h1>Manipulating Assets In The Wild With Geometric Sensing</h1>
+  <exercise id="geometry-initials"><h1>使用几何感知在真实环境中操作资产</h1>
 
-   In this exercise, we will build upon <a href="pick.html#pick_place_initials">Exercise 3.14</a> from the previous chapter. This time,
-   you will program the robot to pick and place letter assets from your initials <strong>without</strong> assuming that you know the initial pose of the assets by using depth
-   cameras and geometric sensing. You will work exclusively in <script>document.write(notebook_link('pose', notebook='11_pickplace_initials_with_geometry', link_text = 'this notebook'))</script>.
-   You will be asked to complete the following steps:
+   在本练习中，我们将基于上一章中的 <a href="pick.html#pick_place_initials">练习 3.14</a> 继续展开。这一次，
+   你将通过使用深度相机和几何感知，编程让机器人拾取并放置来自你姓名首字母的字母资产，且<strong>不</strong>假设你知道这些资产的初始位姿。你将完全在 <script>document.write(notebook_link('pose', notebook='11_pickplace_initials_with_geometry', link_text = '这个 notebook'))</script> 中完成。
+   你需要完成以下步骤：
 
   <ol type="a">
-    <li> Create a scenario with the robot, table, your initials, and three RGB-D sensors. </li>
-    <li> Use the RGB-D sensors to get pointclouds of the initials. </li>
-    <li> Use ICP to estimate the pose of the initials in the world. </li>
-    <li> Use the estimated poses to pick and place the initials with your Differential IK controller from Exercise 3.14</li>
+    <li>创建一个包含机器人、桌子、你的姓名首字母以及三个 RGB-D 传感器的场景。</li>
+    <li>使用 RGB-D 传感器获取姓名首字母的点云。</li>
+    <li>使用 ICP 估计姓名首字母在世界坐标系中的位姿。</li>
+    <li>使用估计出的位姿，结合你在练习 3.14 中的微分 IK 控制器来拾取并放置姓名首字母。</li>
   </ol>
 
   </exercise>

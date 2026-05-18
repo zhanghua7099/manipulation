@@ -56,72 +56,83 @@ href="https://www.youtube.com/channel/UChfUOAhz7ynELF-s_1LPpWg">Lecture videos a
 <script type="text/javascript">document.write(notebook_header('tamp'))
 </script>
 <!-- EVERYTHING ABOVE THIS LINE IS OVERWRITTEN BY THE INSTALL SCRIPT -->
-<chapter style="counter-reset: chapter 100"><h1>Task and Motion Planning</h1>
+<chapter style="counter-reset: chapter 100"><h1>任务与运动规划</h1>
 
-<p>As we develop more and more sophisticated manipulation capabilities, we will
-need increasingly sophisticated programming strategies for the the high-level
-(aka "task-level") execution of the robot. For the relatively simple task of
-moving YCB objects between bins, a simple <a
-href="clutter.html#task">state-machine</a>-programming paradigm was sufficient.
-If the task is "make me a pizza", where we need to find and fetch all of the
-tools and ingredients from various places throughout the kitchen, it would be
-unwieldy to program a state machine that can work in any kitchen.</p>
+<p>随着我们开发出越来越复杂的操作能力，
+我们将需要越来越复杂的编程策略，
+用于机器人高层级（也称为“任务层级”）的执行。
+对于在箱体之间移动 YCB 物体这样相对简单的任务，
+一个简单的
+<a href="clutter.html#task">状态机</a>编程范式就已经足够。
+但如果任务是“给我做一个披萨”，
+其中我们需要在厨房的各个地方找到并取来所有工具和食材，
+那么要编写一个能够适用于任意厨房的状态机，
+就会变得非常笨重。</p>
 
-<p>In this chapter we'll look at the problem of programming the task-level
-using AI-style <i>symbolic</i> planning, which has advanced significantly over
-the last decades to the point where it can solve enormously complex problems.
-But to ground the symbols in our robot motions and constraints, we must tightly
-integrate the task-level planning with the lower-level motion planning; this
-integration is the object of study in <i>task and motion planning (TAMP)</i>.
-For an excellent review, see <elib>Garrett21</elib>.</p>
+<p>在本章中，
+我们将考察如何使用 AI 风格的<i>符号</i>规划
+来对任务层级进行编程。
+在过去几十年中，
+符号规划已经取得了显著进展，
+发展到能够解决极其复杂的问题。
+但为了将这些符号扎根到机器人的运动与约束之中，
+我们必须将任务层级规划与较低层级的运动规划紧密集成；
+这种集成正是<i>任务与运动规划（task and motion planning, TAMP）</i>
+所研究的对象。
+一篇很好的综述可参见 <elib>Garrett21</elib>。</p>
 
-<section><h1>A case study: Loading the dishwasher</h1>
+<section><h1>案例研究：装载洗碗机</h1>
 
 
 </section>
 
-<section><h1>Symbolic Planning</h1>
+<section><h1>符号规划</h1>
 
   <subsection><h1>STRIPS</h1></subsection>
   
   <subsection><h1>PDDL</h1></subsection>
   
-  <subsection><h1>Factorized planners</h1></subsection>
+  <subsection><h1>因子化规划器</h1></subsection>
 
-  <todo>Fastforward, fastdownward</todo>
+  <todo>Fastforward、fastdownward</todo>
 
 </section>
 
-<!--
-<section><h1>Task and Motion Planning</h1>
 
-  <p>We've seen powerful algorithms for motion planning, and now some powerful
-  algorithms for task planning. It's tempting to separate the two -- first we
-  construct a task plan, then we do motion planning to fill in the details.
-  Unfortunately, for many problems in robotics, these two levels cannot be
-  solved independently -- the symbolic predicates in the high-level planner
-  depend on the continuous variables that will be determined by the motion
-  planner, and the costs and constraints for the motion planner rely on the
-  task plan. In most cases, we need to solve the problem jointly.</p>
+<section><h1>任务与运动规划</h1>
+
+  <p>我们已经见过强大的运动规划算法，
+  现在也看到了一些强大的任务规划算法。
+  人们很容易想把二者分开——
+  先构造一个任务计划，
+  然后再进行运动规划来补全细节。
+  不幸的是，
+  对于机器人学中的许多问题，
+  这两个层级不能彼此独立地求解——
+  高层规划器中的符号谓词
+  依赖于将由运动规划器确定的连续变量，
+  而运动规划器的代价与约束
+  又依赖于任务计划。
+  在大多数情况下，
+  我们需要联合求解这个问题。</p>
 
   <example><h1></h1>
   
-    <todo>A simple example making the case that the task level and motion level
-    must be solved jointly.</todo>
+    <todo>一个简单示例，用来说明任务层级和运动层级必须联合求解。</todo>
 
   </example>
 
 </section>
--->
 
-<!--<section><h1>Multi-modal motion planning</h1>
-</section>-->
 
-<section><h1>Adding continuous variables to symbolic planners</h1></section>
+<section><h1>多模态运动规划</h1>
+</section>
 
-<section><h1>Adding discrete variables to motion planners</h1></section>
+<section><h1>向符号规划器中加入连续变量</h1></section>
 
-<section><h1>Graphs of Convex Sets</h1></section>
+<section><h1>向运动规划器中加入离散变量</h1></section>
+
+<section><h1>凸集图</h1></section>
 
 </chapter>
 <!-- EVERYTHING BELOW THIS LINE IS OVERWRITTEN BY THE INSTALL SCRIPT -->

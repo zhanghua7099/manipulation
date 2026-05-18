@@ -1,34 +1,40 @@
 <!-- EVERYTHING ABOVE THIS LINE IS OVERWRITTEN BY THE INSTALL SCRIPT -->
-<chapter style="counter-reset: chapter 9"><h1>Underactuated Manipulation</h1>
+<chapter style="counter-reset: chapter 9"><h1>欠驱动操作（Underactuated Manipulation）</h1>
     
-  <p>There is a lot more to manipulation than grasping!  The term
-  <i>nonprehensile manipulation</i> means "manipulation without grasping", and
-  humans do it often.  Pushing an object that is too big to grasp (e.g. an
-  office chair) is a nice example, but we will see more subtle examples in this
-  chapter, too.</p>
+  <p>操作（manipulation）远不止抓取这么简单！术语
+  <i>非抓取操作（nonprehensile manipulation）</i> 指的是“无需抓取的操作”，
+  而人类经常会这样做。例如，推动一个大到无法抓取的物体（比如办公椅）就是一个很好的例子，
+  但我们在本章中还会看到更多更微妙的例子。</p>
   
-  <p>For force-closure-grasping manipulation, it is possible to think of a
-  grasped object as effectively an extension of the distal links of the robot;
-  the geometry and inertia of the manipuland effect the kinematics and dynamics
-  of the robot, but as a control problem the manipuland does not contribute
-  additional degrees of freedom to the problem.  Nonprehensile manipulation
-  requires considering the additional (unactuated) degrees of freedom of the
-  object.  This makes the entire control problem (controlling the degrees of
-  freedom of the robot + the objects) an <a
-  href="http://underactuated.mit.edu/">underactuated</a> control problem.  This chapter will focus on this very interesting class of control problems in the context of manipulation.</p>
+  <p>对于力闭合抓取（force-closure-grasping）操作，
+  可以将被抓取的物体视为机器人末端连杆的有效延伸；
+  被操作物体（manipuland）的几何形状和惯性会影响机器人的运动学和动力学，
+  但从控制问题的角度来看，被操作物体不会给问题带来额外的自由度。
+  非抓取操作则需要考虑物体额外的（未驱动的）自由度。
+  这使得整个控制问题（控制机器人与物体的自由度）
+  成为一个<a
+  href="http://underactuated.mit.edu/">欠驱动（underactuated）</a>控制问题。
+  本章将聚焦于这一类在操作领域中非常有趣的控制问题。</p>
 
-  <p>Note that manipulation does not need to be nonprehensile to be underactuated.  As a nice example, Chavan-Dafle et al. considered the case were a two fingered gripper used external environmental contacts in order to perform in-hand re-orientation (see figure below), and referred to the task as "prehensile planar pushing"<elib>Chavan-Dafle20</elib>.  In this example, the grasp constrained the manipuland to the plane, but the external contacts were used to relocate and reorient the object within the grasp.</p>
+  <p>需要注意的是，操作任务并不一定非得是非抓取的才会属于欠驱动问题。
+  一个很好的例子是 Chavan-Dafle 等人研究的情况：双指夹爪利用外部环境接触来实现手内重定向（见下图），
+  他们将这一任务称为“抓取式平面推操作（prehensile planar pushing）”<elib>Chavan-Dafle20</elib>。
+  在这个例子中，抓取将被操作物体约束在一个平面内，
+  但外部接触被用于在抓取过程中重新定位和重新定向物体。</p>
     
   <figure>
     <img width="60%" src="data/chavan-dafle-prehensile-pushing.jpg"/>
-    <figcaption>Prehensile planar pushing from <elib>Chavan-Dafle20</elib>; the robot exploits environmental contact to perform in-hand reorientation.  Images used with permission from Chavan-Dafle.  <a href="data/chavan-dafle-prehensile-pushing.gif">Click here to see the animated version.</a></figcaption>
+    <figcaption>来自 <elib>Chavan-Dafle20</elib> 的抓取式平面推操作；
+    机器人利用环境接触来实现手内重定向。
+    图片经 Chavan-Dafle 授权使用。
+    <a href="data/chavan-dafle-prehensile-pushing.gif">点击此处查看动画版本。</a></figcaption>
   </figure>
 
-  <section><h1>Model problems</h1></section>
+  <section><h1>模型问题（Model problems）</h1></section>
 
-  <section><h1>Planning through contact</h1></section>
+  <section><h1>通过接触进行规划（Planning through contact）</h1></section>
   
-  <section><h1>Visuo-motor policies</h1></section>
+  <section><h1>视觉-运动策略（Visuo-motor policies）</h1></section>
 
 </chapter>
 <!-- EVERYTHING BELOW THIS LINE IS OVERWRITTEN BY THE INSTALL SCRIPT -->

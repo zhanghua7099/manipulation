@@ -22,8 +22,8 @@ Notes for MIT 6.421)._ Downloaded on [date] from <https://manipulation.mit.edu/>
 ```
 cd /home/zhy/LatexProject/manipulation/book
 
-NODE_PATH=/tmp/manip-pdf-node/node_modules \
+NODE_PATH=../.pdf-tools/node/node_modules \
 PUPPETEER_EXECUTABLE_PATH=/usr/bin/google-chrome \
-PATH=/tmp/prince-install/bin:$PATH \
+PATH=../.pdf-tools/prince-install/bin:$PATH \
 ../.venv/bin/python htmlbook/make_pdf.py
 ```

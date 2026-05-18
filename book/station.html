@@ -56,67 +56,64 @@ href="https://www.youtube.com/channel/UChfUOAhz7ynELF-s_1LPpWg">Lecture videos a
 <script type="text/javascript">document.write(notebook_header('station'))
 </script>
 <!-- EVERYTHING ABOVE THIS LINE IS OVERWRITTEN BY THE INSTALL SCRIPT -->
-<chapter class="appendix" style="counter-reset: chapter 3"><h1>Setting up your own "Manipulation Station"</h1>
+<chapter class="appendix" style="counter-reset: chapter 3"><h1>搭建你自己的“操作实验平台（Manipulation Station）”</h1>
 
-  <p>Simulation is an extremely powerful tool, and the fact that we can give it away freely makes it a powerful equalizer.  Just a few years ago, nobody believed that you could develop a manipulation system in simulation and expect it to work in reality.  Nowadays, though, we are seeing consistent evidence that our simulation fidelity is high enough that if can achieve <i>robust</i> performance in simulation, then we are optimistic that it can transfer to reality.</p>
+  <p>仿真是一种极其强大的工具，而我们能够免费提供它这一事实，使其成为一种强有力的技术平权手段。就在几年前，还没有人相信你能够在仿真中开发一个操作系统，并期望它在现实世界中正常工作。然而如今，我们已经持续看到证据表明，我们的仿真保真度已经足够高：只要能够在仿真中实现<i>鲁棒</i>的性能，我们就有理由乐观地认为它能够迁移到现实世界。</p>
 
-  <p>Of course, there is no substitute to watching your ideas/code bring life to a real physical robot.  The goal of this chapter is to help commoditize the robot hardware infrastructure, to the extent possible, by proving the bill of materials, the low-level drivers, and basic setup instructions to get you up and running with your very own manipulation station.</p>
+  <p>当然，没有什么能够替代亲眼看到自己的想法/代码在真实物理机器人上“活起来”。本章的目标，是尽可能推动机器人硬件基础设施的商品化与普及，包括提供物料清单（bill of materials）、底层驱动程序，以及基础配置说明，帮助你快速搭建并运行属于你自己的操作实验平台。</p>
 
-  <section><h1>Message Passing</h1>
+  <section><h1>消息传递</h1>
   
-    <p><drake></drake> supports multiple message passing subsystems (including ROS1), and for the most part I have no strong opinions about what you should use.  We use <a href="https://lcm-proj.github.io/">LCM</a> for this class because (1) it is lightweight as a dependency (it would be very painful/restrictive to have ROS as a mandatory dependency for <drake></drake>) and (2) we prefer multicast UDP to tcp/ip for the lowest level communications to/from the robot.</p>
+    <p><drake></drake> 支持多种消息传递子系统（包括 ROS1），总体来说，我对你应该使用哪一种并没有特别强烈的偏好。我们在这门课程中使用 <a href="https://lcm-proj.github.io/">LCM</a>，原因有两点：（1）它作为依赖项非常轻量（如果要求 <drake></drake> 强制依赖 ROS，将会非常痛苦且限制较多）；（2）对于机器人最低层级的通信，我们更偏好使用组播 UDP 而不是 TCP/IP。</p>
 
-    <p>As a result, the primary drivers we list/provide below are based on LCM.  I'll try to point to ROS equivalents when possible.  If you already have an established ROS workflow and still want to use our drivers, then it is also possible to use simple lcm2ros/ros2lcm "bridge" executables <todo>point to some code</todo>to e.g. publish the LCM messages on a ROS topic (for logging, etc).</p>
+    <p>因此，我们下面列出/提供的主要驱动程序都是基于 LCM 的。我会尽量在可能的情况下给出对应的 ROS 实现。如果你已经建立了成熟的 ROS 工作流，但仍希望使用我们的驱动程序，那么也可以使用简单的 lcm2ros/ros2lcm “桥接”可执行程序 <todo>添加一些代码链接</todo>，例如将 LCM 消息发布到 ROS 话题上（用于日志记录等）。</p>
 
   </section>
 
-  <section><h1>Kuka LBR iiwa + Schunk WSG Gripper</h1>
+  <section><h1>Kuka LBR iiwa + Schunk WSG 夹爪</h1>
 
-    <p>We have made extensive use of both the iiwa7 R800 and the iiwa14 R820; <drake></drake> provides URDFs for both models and the drivers should work for either.  We use the iiwa7 for the labs in this course because it is slightly smaller and we do not need the end-effector payload.</p>
-
-    <ul>
-      <li><a href="https://github.com/RobotLocomotion/drake-iiwa-driver">IIWA LCM driver</a></li>
-    </ul>
-
-    <p>We've been quite happy with the Schunk WSG 50 gripper as a reliable and accurate two-fingered gripper solution.</p>
+    <p>我们已经广泛使用 iiwa7 R800 和 iiwa14 R820 两种型号；<drake></drake> 为这两个模型都提供了 URDF 文件，并且驱动程序适用于两者。我们在本课程实验中使用 iiwa7，因为它体积稍小，而且我们并不需要较大的末端执行器负载能力。</p>
 
     <ul>
-      <li><a href="https://github.com/RobotLocomotion/drake-schunk-driver">Schunk LCM driver</a></li>
+      <li><a href="https://github.com/RobotLocomotion/drake-iiwa-driver">IIWA LCM 驱动程序</a></li>
     </ul>
 
-    <p>Note: We are evaluating the Franka Panda as an alternative platform (and are likely to provide drivers for it here soon).</p>
+    <p>我们一直对 Schunk WSG 50 夹爪非常满意，它是一种可靠且精确的双指夹爪解决方案。</p>
+
+    <ul>
+      <li><a href="https://github.com/RobotLocomotion/drake-schunk-driver">Schunk LCM 驱动程序</a></li>
+    </ul>
+
+    <p>注意：我们正在评估 Franka Panda 作为替代平台（并且很可能很快会在这里提供对应驱动程序）。</p>
 
   </section>
 
   <section><h1>Franka Panda</h1>
 
-    <p>The Franka Panda series of robots are a very popular iiwa alternative.
-    We use a driver that communicates with it directly over LCM. </p>
+    <p>Franka Panda 系列机器人是一种非常流行的 iiwa 替代方案。我们使用一个通过 LCM 直接与其通信的驱动程序。</p>
 
     <ul>
       <li><a
       href="http://github.com/RobotLocomotion/drake-franka-driver">Franka Panda
-      driver</a></li>
+      驱动程序</a></li>
     </ul>
 
-    <p><a href="https://github.com/RobotLocomotion/drake-ros">Using the ROS
-    drivers directly</a> is certainly possible, too.</p>
+    <p>当然，<a href="https://github.com/RobotLocomotion/drake-ros">直接使用 ROS
+    驱动程序</a>也是可以的。</p>
 
   </section>
 
-  <section><h1>Intel Realsense D415 Depth Cameras</h1>
+  <section><h1>Intel Realsense D415 深度相机</h1>
 
-    <p>The D415 has been the camera of choice because of it's relatively good
-    minimum range and due to the fact that multiple cameras do not interfere
-    with each other when viewing the same scene.</p>
+    <p>D415 一直是我们的首选相机，这是因为它的最小工作距离相对较好，并且当多台相机观察同一场景时，它们彼此之间不会相互干扰。</p>
 
     <ul>
       <li><a
       href="https://github.com/RobotLocomotion/realsense2-lcm-driver">LCM
-      Driver</a></li>
+      驱动程序</a></li>
       <li><a
-      href="https://github.com/ToyotaResearchInstitute/handical">Camera
-      calibration toolbox</a>.</li>
+      href="https://github.com/ToyotaResearchInstitute/handical">相机
+      标定工具箱</a>。</li>
     </ul>
 
 

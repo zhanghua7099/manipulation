@@ -56,105 +56,51 @@ href="https://www.youtube.com/channel/UChfUOAhz7ynELF-s_1LPpWg">Lecture videos a
 <script type="text/javascript">document.write(notebook_header('clutter'))
 </script>
 <!-- EVERYTHING ABOVE THIS LINE IS OVERWRITTEN BY THE INSTALL SCRIPT -->
-<chapter style="counter-reset: chapter 4"><h1>Bin Picking</h1>
+<chapter style="counter-reset: chapter 4"><h1>料箱抓取（Bin Picking）</h1>
 
-  <todo>Consider moving / teaching this BEFORE geometric pose estimation.  It could actually be nice to introduce cameras / point clouds with this material instead of with pose estimation.</todo>
+  <todo>考虑将这一部分移动到 / 安排在几何位姿估计之前进行教学。实际上，用这部分内容来介绍相机 / 点云，而不是通过位姿估计来介绍，可能会更合适。</todo>
 
-  <p>In this chapter we'll consider the simplest version of the bin picking
-  problem: the robot has a bin full of random objects and simply needs to move
-  those objects from one bin to the other.  We'll be agnostic about what those
-  objects are and about where they end up in the other bin, but we would like
-  our solution to achieve a reasonable level of performance for a very wide
-  variety of objects.  This turns out to be a pretty convenient way to create a
-  training ground for robot learning -- we can set the robot up to move objects
-  back and forth between bins all day and night, and intermittently add and
-  remove objects from the bin to improve diversity.  Of course, it is even
-  easier in simulation!</p>
+  <p>在本章中，我们将考虑料箱抓取问题的最简单版本：机器人面前有一个装满随机物体的料箱，它只需要将这些物体从一个料箱移动到另一个料箱。我们不会特别关心这些物体具体是什么，也不会关心它们最终在另一个料箱中的具体位置，但我们希望我们的解决方案能够对非常广泛种类的物体都达到合理的性能水平。事实证明，这是一种非常方便的方式来构建机器人学习的训练环境——我们可以让机器人日夜不停地在两个料箱之间来回搬运物体，并且间歇性地向料箱中添加和移除物体，以提高多样性。当然，在仿真中实现这一点会更加容易！</p>
 
-  <p>Bin picking has potentially very important applications in industries such
-  as logistics, and there are significantly more refined versions of this
-  problem. For example, we might need to pick only objects from a specific
-  class, and/or place the objects in known position (e.g. for "packing").  But
-  let's start with the basic case.</p>
+  <p>料箱抓取在物流等行业中具有非常重要的潜在应用，而且这个问题还有许多更加精细化的版本。例如，我们可能只需要抓取某一特定类别的物体，和/或需要将物体放置到已知位置（例如用于“装箱”）。但让我们先从最基本的情况开始。</p>
 
-  <section><h1>Generating random cluttered scenes</h1>
+  <section><h1>生成随机杂乱场景</h1>
   
-    <p>If our goal is to test a diversity of bin picking situations, then the
-    first task is to figure out how to generate diverse simulations.  How
-    should we populate the bin full of objects?  So far we've set up each
-    simulation by carefully setting the initial positions (in the
-    <code>Context</code>) for each of the objects, but that approach won't
-    scale.</p>
+    <p>如果我们的目标是测试多种多样的料箱抓取场景，那么第一项任务就是弄清楚如何生成多样化的仿真环境。我们应该如何在料箱中填充物体？到目前为止，我们一直通过仔细设置每个物体的初始位置（在 <code>Context</code> 中）来搭建每个仿真场景，但这种方法无法扩展到大规模情况。</p>
 
-    <subsection><h1>Falling things</h1>
+    <subsection><h1>下落的物体</h1>
 
-      <p>In the real world, we would probably just dump the random objects into
-      the bin.  That's a decent strategy for simulation, too.  We can roughly
-      expect our simulation to faithfully implement multibody physics as long
-      as our initial conditions (and time step) are reasonable; but the physics
-      isn't well defined if we initialize the <code>Context</code> with
-      multiple objects occupying the same physical space.  The simplest and
-      most common way to avoid this is to generate a random number of objects
-      in random poses, with their vertical positions staggered so that they
-      trivially start out of penetration.</p>
+      <p>在现实世界中，我们大概只会把随机物体直接倒进料箱里。对于仿真来说，这同样是一个不错的策略。只要我们的初始条件（以及时间步长）设置合理，我们大致可以期望仿真能够忠实地实现多刚体物理；但如果我们在初始化 <code>Context</code> 时让多个物体占据同一物理空间，那么物理行为将不再有明确意义。避免这种情况最简单、最常见的方法，就是生成随机数量的物体，并赋予它们随机位姿，同时让它们在竖直方向上的位置错开，从而保证它们在初始状态下不会发生穿透。</p>
 
-      <p>If you look for them, you can find animations of large numbers of
-      falling objects in the demo reels for most advanced multibody simulators.
-      (These demos can potentially be a bit misleading; it's relatively easy to
-      make a simulation which lots of objects falling that looks relatively
-      good from a distance, but if you zoom in and look closely you'll often
-      find many anomalies.) For our purposes the falling dynamics themselves
-      are not the focus. We just want the state of the objects when they are
-      done falling as initial conditions for our manipulation system.</p>
+      <p>如果你留意的话，你可以在大多数先进多刚体模拟器的演示视频中看到大量物体下落的动画。（这些演示有时可能会有一点误导性；因为制作一个“许多物体下落且从远处看起来不错”的仿真其实相对容易，但如果你放大并仔细观察，往往会发现许多异常现象。）对于我们的目的来说，下落动力学本身并不是重点。我们真正关心的，只是物体在完成下落之后的状态，因为这些状态将作为我们操作系统的初始条件。</p>
 
-      <todo>maybe cite the falling things paper, but make it clear that the idea
-      is not new?</todo></p>
+      <todo>也许可以引用一下 “falling things” 那篇论文，但需要明确说明这个想法并不是新的？</todo></p>
 
-      <example><h1>Piles of foam bricks in 2D</h1>
+      <example><h1>二维中的泡沫砖堆</h1>
 
-        <p>Here is the 2D case.  I've added many instances of our favorite red
-        foam brick to the plant.  Note that it's possible to write highly
-        optimized simulators that take advantage of physics being restricted to
-        2D; that's not what I've done here.  Rather, I've added a planar joint
-        connecting each brick to the world, and run our full 3D simulator.  The
-        planar joint has three degrees of freedom.  I've oriented them here to
-        be $x$, $z$, and $\theta$ to constrain the objects to the $xz$
-        plane.</p>
+        <p>这里是二维情况。我已经向系统中添加了许多我们最喜欢的红色泡沫砖实例。请注意，确实可以编写高度优化的模拟器，专门利用物理被限制在二维空间这一特点；但这里我并没有这么做。相反，我为每块砖添加了一个连接到世界坐标系的平面关节（planar joint），并运行我们完整的三维模拟器。这个平面关节具有三个自由度。我在这里将它们设置为 $x$、$z$ 和 $\theta$，从而将物体约束在 $xz$ 平面内。</p>
 
-        <p>I've set the initial positions for each object in the
-        <code>Context</code> to be uniformly distributed over the horizontal
-        position, uniformly rotated, and staggered every 0.1m in their initial
-        vertical position.  We only have to simulate for a little more than a
-        second for the bricks to come to rest and give us our intended "initial
-        conditions".</p>
+        <p>我在 <code>Context</code> 中为每个物体设置了初始位置：其水平位置服从均匀分布、姿态具有均匀随机旋转，并且它们的初始竖直位置每隔 0.1m 错开排列。我们只需要模拟略多于一秒钟，砖块就会静止下来，并为我们提供预期中的“初始条件”。</p>
 
         <script>document.write(notebook_link('clutter', "falling_things"))</script>
   
         <figure>
           <iframe style="border:0;height:300px;width:540px;" src="data/falling_bricks_2d.html?height=240px" pdf="no"></iframe>
-          <p pdf="only"><a href="data/falling_bricks_2d.html">Click here for the animation.</a></p>
+          <p pdf="only"><a href="data/falling_bricks_2d.html">点击这里查看动画。</a></p>
         </figure>
 
       </example>
 
-      <p>It's not really any different to do this with any random objects --
-      here is what it looks like when I run the same code, but replace the
-      brick with a random draw from a few objects from the YCB dataset
-      <elib>Calli17</elib>.  It somehow amuses me that we can see the <a
-      href="https://en.wikipedia.org/wiki/Central_limit_theorem">central limit
-      theorem</a> hard at work, even when our objects are slightly
-      ridiculous.</p>
+      <p>对于任意随机物体来说，这样做其实并没有什么不同——下面展示的是我运行同样代码时的效果，只不过把砖块替换成了从 YCB 数据集 <elib>Calli17</elib> 中随机抽取的一些物体。不知为何，即使这些物体本身有点滑稽，我们依然能够看到 <a
+      href="https://en.wikipedia.org/wiki/Central_limit_theorem">中心极限定理</a> 在努力发挥作用，这件事让我觉得很有趣。</p>
 
       <figure>
       <img style="width:70%" src="data/ycb_planar_clutter.png"/>
       </figure>
 
-      <example><h1>Filling bins with clutter</h1>
+      <example><h1>用杂乱物体填充料箱</h1>
 
-        <p>The same technique also works in 3D.  Setting uniformly random
-        orientations in 3D requires a little more thought, but Drake supplies
-        the method <code>UniformlyRandomRotationMatrix</code> (and also one for
-        quaternions and roll-pitch-yaw) to do that work for us.</p>
+        <p>同样的技术也适用于三维情况。在三维空间中设置均匀随机的姿态需要稍微多考虑一些，但 Drake 提供了 <code>UniformlyRandomRotationMatrix</code> 方法（同时也提供了用于四元数和滚转-俯仰-偏航角的方法）来替我们完成这项工作。</p>
 
         <script>document.write(notebook_link('clutter', 'falling_things'))</script>
   
@@ -164,97 +110,47 @@ href="https://www.youtube.com/channel/UChfUOAhz7ynELF-s_1LPpWg">Lecture videos a
 
       </example>
 
-      <p>Please appreciate that bins are a particularly simple case for
-      generating random scenarios. If you wanted to generate random kitchen
-      environments, for example, then you won't be as happy with a solution
-      that drops refrigerators, toasters, and stools from uniformly random
-      i.i.d. poses.  In those cases, authoring reasonable distributions gets
-      much more interesting <elib>Izatt20</elib>; we will revisit the topic of
-      generative scene models later in the notes.</p>
+      <p>请注意，料箱是生成随机场景时一种特别简单的情况。例如，如果你想生成随机厨房环境，那么如果解决方案只是从均匀随机的独立同分布位姿中把冰箱、烤面包机和凳子扔下来，你大概就不会那么满意了。在这些情况下，设计合理的分布会变得有趣得多 <elib>Izatt20</elib>；我们将在后面的讲义中重新讨论生成式场景模型这一主题。</p>
 
     </subsection>
 
   </section>
 
-  <section><h1>Static equilibrium with frictional contact</h1>
+  <section><h1>带摩擦接触的静态平衡</h1>
 
-    <p>Although the examples above are conceptually very simple, there is
-    actually a lot going on in the physics engine to make all of this work.
-    To appreciate a few of the details, let's explore the easiest case -- the
-    (static) mechanics once all of the objects have come to rest.</p>
+    <p>尽管上面的例子在概念上非常简单，但为了让这一切正常工作，物理引擎内部实际上发生了很多事情。为了理解其中的一些细节，让我们探索最简单的情况——所有物体都已经静止之后的（静态）力学。</p>
 
-    <p>I won't dive into a full discussion of multibody dynamics nor multibody
-    simulation, though I do have more notes <a
-    href="http://underactuated.mit.edu/multibody.html">available here</a>. What
-    is important to understand is that the familiar $f=ma$ takes a particular
-    form when we write it down in terms of the generalized positions, $q$, and
-    velocities, $v$: $$M(q)\dot{v} + C(q,v)v = \tau_g(q) + \sum_i
-    J^T_i(q)F^{c_i}.$$  We already understand the generalized positions, $q$,
-    and velocities, $v$. The left side of the equation is just a generalization
-    of "mass times acceleration", with the mass matrix, $M$, and the Coriolis
-    terms $C$. The right hand side is the sum of the (generalized) forces, with
-    $\tau_g(q)$ capturing the terms due to gravity, and $F^{c_i}$ is the
-    spatial force due to the $i$th contact.  $J_i(q)$ is the $i$th "contact
-    Jacobian" -- it is the Jacobian that maps from the generalized velocities
-    to the spatial velocity of the $i$th contact frame.</p>
+    <p>我不会深入完整讨论多刚体动力学或多刚体仿真，不过我确实有更多相关笔记 <a
+    href="http://underactuated.mit.edu/multibody.html">可在这里查看</a>。需要理解的重要一点是，当我们用广义位置 $q$ 和广义速度 $v$ 来写出熟悉的 $f=ma$ 时，它会呈现出一种特定形式：$$M(q)\dot{v} + C(q,v)v = \tau_g(q) + \sum_i
+    J^T_i(q)F^{c_i}.$$ 我们已经理解了广义位置 $q$ 和广义速度 $v$。方程左侧只是“质量乘以加速度”的推广，其中包含质量矩阵 $M$ 和科里奥利项 $C$。右侧是（广义）力的总和，其中 $\tau_g(q)$ 表示由重力产生的项，而 $F^{c_i}$ 是由第 $i$ 个接触产生的空间力。$J_i(q)$ 是第 $i$ 个“接触雅可比矩阵”——它是将广义速度映射到第 $i$ 个接触坐标系空间速度的雅可比矩阵。</p>
 
-    <p>Our interest here is in finding (stable) steady-state solutions to
-    these differential equations that can serve as good initial conditions
-    for our simulation.  At steady-state we have $v=\dot{v}=0$, and
-    conveniently all of the terms on the left-hand side of the equations are
-    zero.  This leaves us with just the force-balance equations $$\tau_g(q) =
+    <p>我们这里感兴趣的是寻找这些微分方程的（稳定）稳态解，使其能够作为我们仿真的良好初始条件。在稳态时，我们有 $v=\dot{v}=0$，并且很方便的是，方程左侧的所有项都为零。于是剩下的只是力平衡方程：$$\tau_g(q) =
     - \sum_i J^T_i(q) F^{c_i}.$$</p>
 
-    <subsection id="spatial_force"><h1>Spatial force</h1>
+    <subsection id="spatial_force"><h1>空间力</h1>
 
-      <p>Before we proceed, let's be a little more careful about our force
-      notation, and define its spatial algebra. Often we think of forces as a
-      three-element vector (with components for $x$, $y$, and $z$) applied to a
-      rigid body at some point.  More generally, we will define a six-component
-      vector for <a
-      href="https://drake.mit.edu/doxygen_cxx/group__multibody__spatial__vectors.html"><i>spatial
-      force</i></a>, using the monogram notation:
+      <p>在继续之前，让我们更仔细地说明一下力的记号，并定义它的空间代数。我们通常会把力看作一个三元素向量（包含 $x$、$y$ 和 $z$ 方向的分量），并认为它作用在刚体上的某个点。更一般地，我们将使用 monogram 记号，为 <a
+      href="https://drake.mit.edu/doxygen_cxx/group__multibody__spatial__vectors.html"><i>空间力</i></a> 定义一个六分量向量：
       \begin{equation}F^{B_p}_{{\text{name}},C} = \begin{bmatrix}
       \tau^{B_p}_{\text{name},C} \\ f^{B_p}_{\text{name},C} \end{bmatrix} \quad
-      \text{ or, if you prefer } \quad \left[F^{B_p}_{\text{name}}\right]_C =
+      \text{ 或者，如果你更喜欢 } \quad \left[F^{B_p}_{\text{name}}\right]_C =
       \begin{bmatrix} \left[\tau^{B_p}_{\text{name}}\right]_C \\
       \left[f^{B_p}_{\text{name}}\right]_C \end{bmatrix}.\end{equation}
-      $F^{B_p}_{\text{name},C}$ is the named spatial force applied to a point,
-      or frame origin, $B_p$, expressed in frame $C$. The form with the
-      parentheses is preferred in Drake, but is a bit too verbose for my taste
-      here in the notes.  The name is optional, and the expressed in frame, if
-      unspecified, is the world frame. For forces in particular, it is
-      recommended that we include the body, $B$, that the force is being
-      applied to in the symbol for the point $B_p$, especially since we will
-      often have equal and opposite forces. In code, we write
-      <code>Fname_Bp_C</code>.</p>
+      $F^{B_p}_{\text{name},C}$ 是施加在点或坐标系原点 $B_p$ 上、并在坐标系 $C$ 中表达的具名空间力。带方括号的形式在 Drake 中更受推荐，但对于我在这些讲义中的口味来说有点过于冗长。名称是可选的；如果没有指定“在哪个坐标系中表达”，则默认为世界坐标系。尤其对于力来说，建议我们在点 $B_p$ 的符号中包含受力的物体 $B$，特别是因为我们经常会遇到大小相等、方向相反的力。在代码中，我们写作
+      <code>Fname_Bp_C</code>。</p>
       
-      <p>Like spatial velocity, spatial forces have a rotational component and
-      a translational component; $\tau^{B_p}_C \in \Re^3$ is the <i>torque</i>
-      (on body $B$ applied at point $p$ expressed in frame $C$), and
-      $f^{B_p}_C \in \Re^3$ is the translational or Cartesian force. A
-      spatial force is also commonly referred to as a <a
-      href="https://en.wikipedia.org/wiki/Screw_theory#Wrench">wrench</a>. If
-      you find it strange to think of forces as having a rotational
-      component, then think of it this way: the world might only impart
-      Cartesian forces at the points of contact, but we often want to
-      summarize the combined effect of many Cartesian forces applied to
-      different points into one common frame. To do this, we represent the
-      equivalent effect of each Cartesian force at the point of application
-      as a force
-      <i>and</i> a torque applied at a different point on the body.</p>
+      <p>和空间速度一样，空间力也有一个旋转分量和一个平移分量；$\tau^{B_p}_C \in \Re^3$ 是<i>力矩</i>（作用在物体 $B$ 上、作用点为 $p$、并在坐标系 $C$ 中表达），而
+      $f^{B_p}_C \in \Re^3$ 是平移力或笛卡尔力。空间力也通常被称为 <a
+      href="https://en.wikipedia.org/wiki/Screw_theory#Wrench">力旋量（wrench）</a>。如果你觉得把力看作具有旋转分量有些奇怪，那么可以这样理解：世界可能只会在接触点施加笛卡尔力，但我们经常希望把许多作用在不同点上的笛卡尔力的合效应汇总到一个共同坐标系中。为了做到这一点，我们把每个笛卡尔力在其作用点处的等效效果表示为作用在物体另一个点上的一个力<i>和</i>一个力矩。</p>
 
-      <p id="spatial_force_algebra">Spatial forces fit neatly into our spatial algebra:
+      <p id="spatial_force_algebra">空间力可以自然地融入我们的空间代数：
       <ul>
-        <li>Spatial forces add when they are applied to the same body in the
-        same frame, e.g.: \begin{equation}F^{B_p}_{\text{total},C}
+        <li>当空间力作用在同一个物体上，并且在同一个坐标系中表达时，它们可以相加，例如：\begin{equation}F^{B_p}_{\text{total},C}
         = \sum_i F^{B_p}_{i,C} .\end{equation}</li>
-        <li>Shifting a spatial force from one application point, $B_p$, to
-        another point, $B_q$, uses the cross product: \begin{equation} f^{B_q}_C
+        <li>将空间力从一个作用点 $B_p$ 平移到另一个点 $B_q$ 时，需要使用叉积：\begin{equation} f^{B_q}_C
         = f^{B_p}_C, \qquad \tau^{B_q}_C = \tau^{B_p}_C + {}^{B_q}p^{B_p}_C
         \times f^{B_p}_C.\label{eq:spatial_force_shift}\end{equation}</li>
-        <li>As with all spatial vectors, rotations can be used to change
-        between the "expressed-in" frames: \begin{equation} f^{B_p}_D = {}^DR^C
+        <li>和所有空间向量一样，可以使用旋转在不同的“表达于”坐标系之间进行变换：\begin{equation} f^{B_p}_D = {}^DR^C
         f^{B_p}_C, \qquad \tau^{B_p}_D = {}^DR^C
         \tau^{B_p}_C.\end{equation}</li>
       </ul>
@@ -262,126 +158,74 @@ href="https://www.youtube.com/channel/UChfUOAhz7ynELF-s_1LPpWg">Lecture videos a
   
     </subsection>
 
-    <subsection><h1>Collision geometry</h1>
+    <subsection><h1>碰撞几何</h1>
 
-      <p>Now that we have our notation, we next need to understand where the
-      contact forces come from.</p>
+      <p>现在我们已经有了记号，接下来需要理解接触力从何而来。</p>
 
-      <p>Geometry engines for robotics, like <code>SceneGraph</code> in
-      <drake></drake>, distinguish between a few different <a
-      href="https://drake.mit.edu/doxygen_cxx/group__geometry__roles.html">roles</a>
-      that geometry can play in a simulation.  In <a
-      href="http://sdformat.org/spec">robot description files</a>, we
-      distinguish between <a
-      href="http://sdformat.org/spec?ver=1.8&elem=link">visual</a>
-      and <a
-      href="http://sdformat.org/spec?ver=1.8&elem=collision">collision</a>
-      geometries.  In particular, every rigid body in the simulation can have
-      multiple
-      <i>collision</i>
-      geometries associated with it (playing the "proximity" role). Collision
-      geometries are often much simpler than the visual geometries we use for
-      illustration and simulating perception -- sometimes they are just a
-      low-polygon-count version of the visual mesh and sometimes we actually
-      use much simpler geometry (like boxes, spheres, and cylinders).  These
-      simpler geometries make the physics engine faster and more robust.</p>
+      <p>用于机器人的几何引擎，例如 <drake></drake> 中的 <code>SceneGraph</code>，会区分几何体在仿真中可以扮演的几种不同 <a
+      href="https://drake.mit.edu/doxygen_cxx/group__geometry__roles.html">角色</a>。在 <a
+      href="http://sdformat.org/spec">机器人描述文件</a> 中，我们区分 <a
+      href="http://sdformat.org/spec?ver=1.8&elem=link">视觉</a>
+      几何和 <a
+      href="http://sdformat.org/spec?ver=1.8&elem=collision">碰撞</a>
+      几何。特别地，仿真中的每个刚体都可以关联多个
+      <i>碰撞</i>
+      几何体（它们扮演“邻近性”角色）。碰撞几何体通常比我们用于图示和感知仿真的视觉几何体简单得多——有时它们只是视觉网格的低多边形版本，有时我们实际上会使用更简单的几何体（例如盒子、球体和圆柱体）。这些更简单的几何体能让物理引擎更快、更鲁棒。</p>
 
-    <!--
-    <p>For subtle reasons we will explore below, in addition to simplifying
-    the geometry, we sometimes over-parameterize the collision geometry in
-    order to make the numerics more robust.  For example, when we simulate
-    the red brick, we actually use <i>nine</i> collision geometries for
-    the one body.</p>
+
+    <p>由于一些我们将在下面探讨的微妙原因，除了简化几何体之外，我们有时还会对碰撞几何进行过参数化（over-parameterize），以提高数值计算的鲁棒性。例如，在模拟红色砖块时，我们实际上为同一个物体使用了 <i>九个</i> 碰撞几何体。</p>
 
     <figure><img style="width:50%"
-    src="data/foam_brick_contact_geometry.png"/><figcaption>The (exaggerated)
-    contact geometry used for robust simulation of boxes.  We add contact
-    "points" (epsilon radius spheres) to each corner, and have a slightly
-    inset box for the remaining contacts.  <a
-    href="data/foam_brick_contact_geometry.html">Here</a> is the interactive
-    version.</figcaption></figure>
-    -->
+    src="data/foam_brick_contact_geometry.png"/><figcaption>用于稳健模拟盒体的（经过夸张处理的）接触几何。我们在每个角点添加了接触“点”（具有 epsilon 半径的球体），并为其余接触使用了一个略微内缩的盒体。<a
+    href="data/foam_brick_contact_geometry.html">这里</a> 提供了交互版本。</figcaption></figure>
 
-    <example><h1>Collision geometry inspector</h1>
+
+    <example><h1>碰撞几何检查器</h1>
     
-      <p>Drake has a very useful <code>ModelVisualizer</code> tool that
-      publishes by the illustration and collision geometry roles to Meshcat
-      (see, for example, the Drake <script>document.write(drake_tutorials_link(
+      <p>Drake 提供了一个非常有用的 <code>ModelVisualizer</code> 工具，它会将 illustration（可视化）和 collision（碰撞）几何角色发布到 Meshcat（例如可以参考 Drake 的 <script>document.write(drake_tutorials_link(
         'authoring_multibody_simulation',
-        link_text='tutorial on authoring multibody simulations'))
-      </script>). This is very useful for designing new models, but also for 
-      understanding the contact geometry of existing models.</p>
+        link_text='关于构建多刚体仿真的教程'))
+      </script>）。这个工具对于设计新模型非常有帮助，同时也有助于理解已有模型的接触几何。</p>
 
-      <p>We used this tool before, when we were visualizing the various robot
-      models. Go ahead and try it again; navigate in the meshcat controls to
-      <code>Scene > drake > proximity</code> and check the box to enable
-      visualizing the geometries with the proximity role.</p>
+      <p>我们之前在可视化各种机器人模型时已经使用过这个工具。现在可以再次尝试；在 Meshcat 控制界面中导航到
+      <code>Scene > drake > proximity</code>，并勾选对应选项以启用对 proximity（邻近性）角色几何体的可视化。</p>
 
       <script>document.write(notebook_link('robot', notebook='inspector'))</script>
       
       <figure>
         <img width="50%"" src="figures/ur3e_collision_geo.png"/>
-        <figcaption>Visualizing the visual and collision geometries for the
-        UR3e.</figcaption>
+        <figcaption>UR3e 的视觉几何与碰撞几何可视化。</figcaption>
       </figure>
 
     </example>
 
-    <p>SceneGraph also implements the concept of a <a
-    href="https://drake.mit.edu/doxygen_cxx/classdrake_1_1geometry_1_1_collision_filter_declaration.html">collision
-    filter</a>.  It can be important to specify that, for instance, the iiwa
-    geometry at link 5 cannot collide with the geometry in links 4 or 6.
-    Specifying that some collisions should be ignored not only speeds up the
-    computation, but it also facilitates the use of simplified collision
-    geometry for links.  It would be extremely hard to approximate link 4 and
-    5 accurately with spheres, and cylinders if I had to make sure that those
-    spheres and cylinders did not overlap in any feasible joint angle.  The
-    default collision filter settings should work fine for most applications,
-    but you can tweak them if you like.</p>
+    <p><code>SceneGraph</code> 还实现了 <a
+    href="https://drake.mit.edu/doxygen_cxx/classdrake_1_1geometry_1_1_collision_filter_declaration.html">碰撞过滤器（collision
+    filter）</a> 的概念。例如，指定 iiwa 的第 5 连杆几何体不能与第 4 或第 6 连杆的几何体发生碰撞，可能会非常重要。指定某些碰撞应被忽略，不仅能够加快计算速度，还能方便我们为连杆使用简化后的碰撞几何。如果我必须确保这些球体和圆柱体在任何可行关节角度下都不会彼此重叠，那么仅用球体和圆柱体来准确近似第 4 和第 5 连杆将会极其困难。默认的碰撞过滤设置对于大多数应用来说已经足够好，但如果你愿意，也可以自行调整。</p>
 
-    <p>So where do the contact forces, $f^{c_i}$, come from?  There is
-    potentially an equal and opposite contact (spatial) force for every
-    <i>pair</i> of collision geometries that are not filtered out by the
-    collision filter. In <code>SceneGraph</code>, the <a
+    <p>那么接触力 $f^{c_i}$ 是从哪里来的呢？对于每一对没有被碰撞过滤器排除的碰撞几何体，都可能存在一对大小相等、方向相反的接触（空间）力。在 <code>SceneGraph</code> 中，<a
     href="https://drake.mit.edu/doxygen_cxx/classdrake_1_1geometry_1_1_scene_graph_inspector.html#a79b84ada25718e2a38fd2d13adb4d839"><code>GetCollisionCandidates</code></a>
-    method returns them all.  We'll take to calling the two bodies in a collision pair "body A" and "body B".</p>
+    方法会返回所有这样的碰撞对。我们会把碰撞对中的两个物体分别称为“物体 A”和“物体 B”。</p>
 
   </subsection>
 
-  <subsection><h1>Contact forces between bodies in collision</h1>
+  <subsection><h1>碰撞物体之间的接触力</h1>
 
-    <p>In our mathematical models, two bodies would never occupy the same
-    region of space, but in a simulation using numerical integration, this can
-    rarely be avoided completely. Most simulators summarize the contact forces
-    between two bodies that are in collision -- either touching or overlapping
-    -- as Cartesian forces at one or more contact points. It's easy to
-    underestimate this step!</p>
+    <p>在我们的数学模型中，两个物体永远不会占据同一片空间区域，但在使用数值积分的仿真中，这种情况几乎无法被完全避免。大多数模拟器会将两个发生碰撞——无论是刚好接触还是已经重叠——的物体之间的接触力，总结为作用在一个或多个接触点上的笛卡尔力。人们很容易低估这一步的复杂性！</p>
 
-    <p>First, let's appreciate the sheer number of cases that we have to get right in
-    the code; it's unfortunately extremely common for open-source tools to have bugs in
-    here. But I think the simple gui I've created below makes it pretty apparent that
-    asking to summarize the forces between two bodies in deep penetration with a single
-    Cartesian force applied at a point is fraught with peril. As you move the objects,
-    you will find many discontinuities; this is a common reason why you sometimes see
-    rigid body simulations "explode".  It might seem natural to try to use multiple
-    contact points instead of a single contact point to summarize the forces, and some
-    simulators do, but it is very hard to write an algorithm that only depends on the
-    current configurations of the geometry which selects contact points consistently
-    from one time step to the next.</p>
+    <p>首先，让我们认识到代码中需要正确处理的情况数量之庞大；不幸的是，开源工具在这里出现 bug 是极其常见的。但我认为，下面我创建的简单 GUI 已经非常清楚地说明了：试图用一个施加在某个点上的单一笛卡尔力，来总结两个发生深度穿透的物体之间的力，是一件充满风险的事情。当你移动这些物体时，你会发现许多不连续现象；这也是为什么刚体仿真有时会“爆炸”的一个常见原因。看起来很自然的做法是，使用多个接触点而不是单个接触点来总结这些力，某些模拟器也确实这么做，但要编写一个只依赖当前几何配置、并且能够在连续时间步之间一致地选择接触点的算法，是非常困难的。</p>
 
-    <p>One of the innovations in Drake which makes it particularly good at simulating complex contact situations is that we have moved away from point contact models. When we enable <a href="https://drake.mit.edu/doxygen_cxx/group__hydroelastic__user__guide.html">hydroelastic contact in Drake</a>, the spatial forces between two penetrating bodies are computed by taking an integral over a "hydroelastic surface" which generalizes the notion of a contact patch <elib>Elandt19</elib>. As of this writing, you still have to "opt-in" to using hydroelastic in Drake (see <script>document.write(drake_tutorials_link(
+    <p>Drake 的一项创新让它特别擅长仿真复杂接触情形，那就是我们已经不再使用点接触模型。当我们在 Drake 中启用 <a href="https://drake.mit.edu/doxygen_cxx/group__hydroelastic__user__guide.html">水弹性接触（hydroelastic contact）</a> 时，两个相互穿透物体之间的空间力是通过在一个“水弹性表面”上进行积分计算得到的，这个表面对接触斑块（contact patch）的概念进行了推广 <elib>Elandt19</elib>。在撰写本文时，你仍然必须在 Drake 中主动选择启用 hydroelastic（参见 <script>document.write(drake_tutorials_link(
       'hydroelastic_contact_basics',
-                ext='this tutorial on hydroelastic'))
-    </script>); I'm working to use it in all of my examples in these notes.</p>
+                ext='这个关于水弹性接触的教程'))
+    </script>）；我正在努力在这些讲义的所有示例中都使用它。</p>
 
-    <todo>More about hydroelastic here.  Show some of the nice videos.
+    <todo>这里需要更多关于 hydroelastic 的内容。展示一些不错的视频。
       https://youtu.be/5-k2Pc6OmzE</todo>
 
-    <example><h1>Contact force inspector</h1>
+    <example><h1>接触力检查器</h1>
         
-      <p>I've created a simple GUI that allows you to pick any two primitive
-      geometry types and inspect the hydroelastic contact information that is
-      computed when those object are put into penetration.
+      <p>我创建了一个简单的 GUI，它允许你选择任意两种基本几何类型，并检查当这些物体发生穿透时所计算出的水弹性接触信息。
       </p>
 
       <script>document.write(notebook_link('clutter', 'contact_inspector'))</script>
@@ -392,178 +236,84 @@ href="https://www.youtube.com/channel/UChfUOAhz7ynELF-s_1LPpWg">Lecture videos a
 
   </subsection>
 
-  <subsection><h1>The Contact Frame</h1>
+  <subsection><h1>接触坐标系</h1>
 
-    <p>We still need to decide the magnitude and direction of these spatial
-    forces, and to do this we need to specify the
-    <i>contact frame</i> in which the spatial force is to be applied.  For
-    instance, we <a
-    href="https://drake.mit.edu/doxygen_cxx/classdrake_1_1multibody_1_1_point_pair_contact_info.html">might
-    use</a> $C_B$ to denote a contact frame on body $B$, with the forces
-    applied at the origin of the frame.</p>
+    <p>我们仍然需要决定这些空间力的大小和方向，而要做到这一点，我们需要指定空间力所施加的
+    <i>接触坐标系</i>。例如，我们 <a
+    href="https://drake.mit.edu/doxygen_cxx/classdrake_1_1multibody_1_1_point_pair_contact_info.html">可以</a> 用 $C_B$ 表示物体 $B$ 上的一个接触坐标系，力施加在该坐标系的原点处。</p>
 
-    <p>Although I strongly advocate for using the hydroelastic contact model in
-    your simulations, for the purposes of exposition, let's think about the
-    point contact model here. If the collision engine produces a number of
-    contact point locations, how should we define the frames?</p>
+    <p>尽管我强烈建议你在仿真中使用水弹性接触模型，但为了便于讲解，我们这里还是先考虑点接触模型。如果碰撞引擎产生了一系列接触点位置，我们应该如何定义这些坐标系呢？</p>
     
-    <p>Our convention will be to align the positive $z$ axis with the "contact
-    normal", with positive forces resisting penetration. Defining this normal
-    also requires care.  For instance, what is the normal at the corner of a
-    box?  Taking the normal as a (<a
-    href="https://en.wikipedia.org/wiki/Subderivative">sub-</a>)gradient of the
-    signed-distance function between two bodies provides a reliable definition
-    that will extend into generalized coordinates. The $x$ and $y$ axes of the
-    contact frame are any orthogonal basis for the tangential coordinates.  You
-    can find additional figures and explanations <a
-    href="https://underactuated.csail.mit.edu/multibody.html#contact">here</a>.</p>
+    <p>我们的约定是：将正 $z$ 轴与“接触法向”对齐，并令正方向的力用于抵抗穿透。定义这个法向同样需要谨慎。例如，在一个盒子的角点处，法向是什么？将法向定义为两个物体之间有符号距离函数的（<a
+    href="https://en.wikipedia.org/wiki/Subderivative">次</a>）梯度，可以提供一种可靠的定义，并且这一方法还能推广到广义坐标中。接触坐标系中的 $x$ 和 $y$ 轴则是切向坐标中的任意一组正交基。你可以在<a
+    href="https://underactuated.csail.mit.edu/multibody.html#contact">这里</a>找到更多图示与解释。</p>
 
-    <example><h1>Brick on a half-plane</h1>
+    <example><h1>半平面上的砖块</h1>
 
-      <p>Let's work through these details on a simple example -- our foam
-      brick sitting on the ground.  The ground is welded to the world, so has
-      no degrees of freedom; we can ignore the forces applied to the ground
-      and focus on the forces applied to the brick.</p>
+      <p>让我们通过一个简单示例来梳理这些细节——我们的泡沫砖静置在地面上。地面被焊接到世界坐标系，因此没有自由度；我们可以忽略施加在地面上的力，而只关注施加在砖块上的力。</p>
 
-      <p>Where are the contact forces and contact frames?  If we used only
-      box-on-box geometry, then the choice of contact force location is not
-      unique during this "face-on-face" contact; this is even more true in 3D
-      (where three forces would be sufficient). Let's assume for a moment
-      that our contact engine determines two points of contact -- one at each
-      corner of the box. (In order to help the contact engine make robust
-      choices when we are using point contact models, we sometimes actually
-      <a href="data/foam_brick_contact_geometry.html">annotate the boxes with
-      small sphere collision geometries in the eight corners</a>; this is not
-      needed when using hydroelastic contact.) I've labeled the frames $C_1$
-      and $C_2$ in the sketch below.</p>
+      <p>接触力和接触坐标系在哪里？如果我们只使用盒体对盒体的几何模型，那么在这种“面-面对接触”情况下，接触力作用点的选择并不是唯一的；在三维中这种情况会更加明显（在那里三个力就已经足够）。暂时假设我们的接触引擎确定了两个接触点——分别位于盒子的两个角点。（为了帮助接触引擎在使用点接触模型时做出鲁棒的选择，我们有时实际上会
+      <a href="data/foam_brick_contact_geometry.html">在盒子的八个角上添加小球碰撞几何体</a>；而在使用水弹性接触时则不需要这样做。）我在下面的示意图中将这些坐标系标记为 $C_1$
+      和 $C_2$。</p>
 
       <figure>
-        <img src="data/brick_on_half_plane.jpg" width=50%/>
+        <img style="width:45%; max-height:4cm; object-fit:contain;" src="data/brick_on_half_plane.jpg" />
       </figure>
 
-      <p>In order to achieve static equilibrium, we require that all of the
-      forces and torques on the brick be in balance. We have three forces to
-      consider: $F_{g}, F_1,$ and $F_2$, named using shorthand for gravity,
-      contact 1, and contact 2, respectively. The gravity vector is most
-      naturally described in the world frame, applied to the body at the center
-      of mass: $$F_{g, W}^B = \begin{bmatrix} 0, 0, 0, 0, 0, -mg
-      \end{bmatrix}^T.$$ The contact forces are most naturally described in the
-      contact frames; for instance we know that $$f_{1, C_1,z}^{B_{c_1}} \ge
-      0,$$ because the force cannot pull on the ground. To write the force
-      balance equation, we need to use our spatial algebra to express all of
-      the spatial forces in the same frame, and apply them at the same
-      point.</p>
+      <p>为了实现静态平衡，我们要求作用在砖块上的所有力和力矩都保持平衡。我们需要考虑三个力：$F_{g}, F_1,$ 和 $F_2$，它们分别是重力、接触 1 和接触 2 的简写名称。重力向量最自然的描述方式是在世界坐标系中，并作用于物体的质心处：$$F_{g, W}^B = \begin{bmatrix} 0, 0, 0, 0, 0, -mg
+      \end{bmatrix}^T.$$ 接触力则最自然地在接触坐标系中描述；例如我们知道 $$f_{1, C_1,z}^{B_{c_1}} \ge
+      0,$$ 因为接触力不可能把地面“拉起来”。为了写出力平衡方程，我们需要使用空间代数，把所有空间力都表示到同一个坐标系中，并且施加在同一个点上。</p>
 
-      <p>For instance, if we are to transform contact force 1, we can first
-      change the frame: $$F_{1,B}^{B_{c_1}} = {}^B R^{C_1}
-      F_{1,C_{1}}^{B_{c_1}}.$$ Then we can change the point at which it's
-      applied: $$f_{1,B}^B = f_{1,B}^{B_{c_1}}, \qquad \tau_{1,B}^B =
-      \tau_{1,B}^{B_{C_1}} + {}^Bp_B^{B_{C_1}} \times f_{1,B}^{B_{c_1}}.$$ We
-      can now solve for the force balance: $$F_{1,B}^B + F_{2,B}^B + F_{g,B}^B
-      = 0,$$ which is six equations in 3D (or only three in 2D). The
-      translational components tell me that $$f_{1,B}^B + f_{2,B}^B =
-      \begin{bmatrix}0 \\ 0 \\ mg\end{bmatrix},$$ but it's the <i>torque</i>
-      component in $y$ that tells me that $f_{1,B_z}$ and $f_{2,B_z}$ must be
-      equal if the center of mass is equally distance from the two contact
-      points.</p>
+      <p>例如，如果我们要变换接触力 1，可以先变换坐标系：$$F_{1,B}^{B_{c_1}} = {}^B R^{C_1}
+      F_{1,C_{1}}^{B_{c_1}}.$$ 然后可以改变它的作用点：$$f_{1,B}^B = f_{1,B}^{B_{c_1}}, \qquad \tau_{1,B}^B =
+      \tau_{1,B}^{B_{C_1}} + {}^Bp_B^{B_{C_1}} \times f_{1,B}^{B_{c_1}}.$$ 现在我们可以求解力平衡：$$F_{1,B}^B + F_{2,B}^B + F_{g,B}^B
+      = 0,$$ 这在三维中是六个方程（在二维中则只有三个）。平移分量告诉我 $$f_{1,B}^B + f_{2,B}^B =
+      \begin{bmatrix}0 \\ 0 \\ mg\end{bmatrix},$$ 但真正告诉我 $f_{1,B_z}$ 和 $f_{2,B_z}$ 必须相等的，是 $y$ 方向上的<i>力矩</i>分量，前提是质心到两个接触点的距离相等。</p>
       
-      <p>We haven't said anything about the horizontal
-      forces yet, except that they must balance. Let's develop that
-      next.</p>
+      <p>到目前为止，除了它们必须相互平衡之外，我们还没有讨论水平方向上的力。接下来让我们展开这一点。</p>
 
     </example>
     
   </subsection>
 
-  <subsection><h1>The (Coulomb) Friction Cone</h1>
+  <subsection><h1>（库仑）摩擦锥</h1>
 
-    <p>Now the rules governing contact forces can begin to take shape.  First
-    and foremost, we demand that there is no force at a distance. Using
-    $\phi_i(q)$ to denote the distance between two bodies in configuration
-    $q$, we have $$\phi(q) > 0 \Rightarrow f^{c_i} = 0.$$  Second, we demand
-    that the normal force only resists penetration; bodies are never pulled
-    into contact: $$f^{c_i}_{C_z} \ge 0.$$  In <i>rigid</i> contact models, we
-    solve for the smallest normal force that enforces the non-penetration
-    constraint (this is known as the principle of least constraint).  In
-    <i>soft</i> contact models, we define the force to be a function of the
-    penetration depth and velocity.</p>  <todo>Citations</todo>
+    <p>现在，支配接触力的规则可以开始成形了。首先也是最重要的是，我们要求不存在超距作用力。用 $\phi_i(q)$ 表示构型
+    $q$ 下两个物体之间的距离，则有 $$\phi(q) > 0 \Rightarrow f^{c_i} = 0.$$ 其次，我们要求法向力只用于抵抗穿透；物体永远不会被“拉入”接触：$$f^{c_i}_{C_z} \ge 0.$$ 在<i>刚性</i>接触模型中，我们会求解出能够满足非穿透约束的最小法向力（这称为最小约束原理）。在<i>柔性</i>接触模型中，我们将力定义为穿透深度和速度的函数。</p>  <todo>引用文献</todo>
 
-    <todo>Need figures here</todo>
+    <todo>这里需要图示</todo>
 
-    <p>Forces in the tangential directions are due to friction.  The most
-    commonly used model of friction is Coulomb friction, which states that
-    $$\sqrt{{f^{c_i}_{C_x}}^2 + {f^{c_i}_{C_y}}^2} \le \mu f^{c_i}_{C_z},$$ with $\mu$ a
-    non-negative scalar <i>coefficient of friction</i>.  Typically we define
-    both $\mu_{static}$, which is applied when the tangential velocity is
-    zero, and $\mu_{dynamic}$, applied when the tangential velocity is
-    non-zero. In the Coulomb friction model, the tangential contact force is
-    the force within this friction cone which produces maximum dissipation.
+    <p>切向方向上的力来自摩擦。最常用的摩擦模型是库仑摩擦，它表明
+    $$\sqrt{{f^{c_i}_{C_x}}^2 + {f^{c_i}_{C_y}}^2} \le \mu f^{c_i}_{C_z},$$ 其中 $\mu$ 是一个非负标量，称为<i>摩擦系数</i>。通常我们会同时定义
+    $\mu_{static}$，它在切向速度为零时使用；以及 $\mu_{dynamic}$，它在切向速度非零时使用。在库仑摩擦模型中，切向接触力是在这个摩擦锥内产生最大耗散的那个力。
     </p>
 
-    <p>Taken together, the geometry of these constraints forms a <a
-    href="https://en.wikipedia.org/wiki/Convex_cone">cone</a> of admissable
-    contact forces.  It is famously known as the "friction cone", and we will
-    refer to it often.</p>
+    <p>综合来看，这些约束的几何形状形成了一个可允许接触力的<a
+    href="https://en.wikipedia.org/wiki/Convex_cone">锥</a>。它被著名称为“摩擦锥”，我们之后会经常提到它。</p>
 
-    <p>It's a bit strange for us to write that the forces are in some set.
-    Surely the world will pick just one force to apply? It can't apply all
-    forces in a set.  The friction cone specifies the range of possible
-    forces; under the Coulomb friction model we say that the one force that
-    will be picked is the force inside this set that will successfully resist
-    relative motion in the contact x-y frame. If no force inside the friction
-    cone can completely resist the motion, then we have sliding, and we say
-    that the force that the world will apply is the force inside the friction
-    cone of <i>maximal dissipation</i>. For the conic friction cone, this
-    will be pointed in the direction opposite of the sliding velocity. So
-    even though the world will indeed "pick" one force from the friction cone
-    to apply, it can still be meaningful to reason about the set of possible
-    forces that could be applied because those denote the set of possible
-    opposing forces that friction can perfectly resist. For instance, a brick
-    under gravity will not move if we can exactly oppose the force of gravity
-    with a force inside the friction cone.</p>
+    <p>把力写成属于某个集合，对我们来说可能有点奇怪。世界当然只会选择施加一个力，不可能把集合中的所有力都施加出来。摩擦锥规定的是可能力的范围；在库仑摩擦模型下，我们说最终被选择的那个力，是这个集合中能够成功抵抗接触 $x-y$ 坐标系中相对运动的力。如果摩擦锥中没有任何力能够完全抵抗这种运动，那么就会发生滑动，并且我们说世界将施加摩擦锥内具有<i>最大耗散</i>的那个力。对于圆锥形的摩擦锥而言，这个力会指向与滑动速度相反的方向。因此，尽管世界确实会从摩擦锥中“选择”一个力来施加，围绕可能被施加的力的集合进行推理仍然是有意义的，因为这些力表示摩擦能够完全抵抗的可能外力集合。例如，在重力作用下的一块砖，如果我们能够用摩擦锥内的一个力精确抵消重力，那么它就不会运动。</p>
 
-    <example><h1>Brick on an inclined half-plane</h1>
+    <example><h1>倾斜半平面上的砖块</h1>
 
-      <p>If we take our last example, but tilt the table to an angle relative
-      to gravity, then the horizontal forces start becoming important.
-      Before going through the equations, let's check your intuition.  Will
-      the magnitude of the forces on the two corners stay the same in this
-      configuration?  Or will there be more contact force on the lower
-      corner?</p>
+      <p>如果我们沿用上一个例子，但将桌面相对于重力方向倾斜一个角度，那么水平方向的力就开始变得重要。在推导方程之前，先检查一下你的直觉。在这种构型下，两个角点上的力的大小会保持相同吗？还是较低的那个角点上会有更大的接触力？</p>
 
       <figure>
-        <img src="data/brick_incline.jpg" width=50%/>
+        <img style="width:45%; max-height:4cm; object-fit:contain;" src="data/brick_incline.jpg" />
       </figure>
 
-      <p>In the illustration above, you'll notice that the contact frames
-      have rotated so that the $z$ axis is aligned with the contact normals.
-      I've sketched two possible friction cones (dark green and lighter
-      green), corresponding to two different coefficients of friction.  We
-      can tell immediately by inspection that the smaller value of $\mu$
-      (corresponding to the darker green) cannot produce contact forces that
-      will completely counteract gravity (the friction cone does not contain
-      the vertical line).  In this case, the box will slide and no static
-      equilibrium exists in this configuration.</p>
+      <p>在上面的示意图中，你会注意到接触坐标系已经发生了旋转，使得 $z$ 轴与接触法向对齐。我画出了两个可能的摩擦锥（深绿色和浅绿色），它们对应于两个不同的摩擦系数。我们可以通过观察立刻看出，较小的 $\mu$ 值（对应深绿色）无法产生能够完全抵消重力的接触力（摩擦锥不包含竖直线）。在这种情况下，盒子会发生滑动，并且该构型下不存在静态平衡。</p>
 
-      <p>If we increase the coefficient of (static) friction to the range
-      corresponding to the lighter green, then we can find contact forces that
-      produce an equilibrium.  Indeed, for this problem, we need some amount of
-      friction to even have an equilibrium (we'll explore this in the <a
-      href="#static_equilibrium">exercises</a>).  We also need for the vertical
-      projection of the center of mass onto the ramp to land between the two
-      contact points, otherwise the brick will tumble over the bottom edge.  We
-      can see this by writing our same force/torque balance equations.  We can
-      write them applied at and expressed in body frame, B, assuming the center
-      of mass in the center of the brick and the brick has length $l$ and
-      height $h$:\begin{gather*} f^{B}_{1, B_x} + f^{B}_{2, B_x} =
+      <p>如果我们将（静摩擦）摩擦系数增大到对应浅绿色区域的范围，那么我们就能够找到产生平衡的接触力。事实上，对于这个问题来说，我们甚至需要一定量的摩擦才能存在平衡（我们会在<a
+      href="#static_equilibrium">练习</a>中进一步探讨这一点）。我们还要求质心在斜坡上的竖直投影落在两个接触点之间，否则砖块会绕下边缘翻倒。我们可以通过写出同样的力/力矩平衡方程来看到这一点。假设质心位于砖块中心，砖块长度为 $l$、高度为 $h$，并且方程在物体坐标系 $B$ 中表达并作用于该坐标系下，则有：
+      \begin{gather*} f^{B}_{1, B_x} + f^{B}_{2, B_x} =
       -mg\sin\gamma \\ f^{B}_{1,B_z}  + f^{B}_{2,B_z} = mg\cos\gamma \\ -h
       f^{B}_{1,B_x} + l f^{B}_{1,B_z} = h f^{B}_{2,B_x} + l f^{B}_{2, B_z} \\
       f^{B}_{1, B_z} \ge 0, \quad f^{B}_{2, B_z} \ge 0 \\ |f^{B}_{1, B_x}| \le
       \mu f^{B}_{1, B_z}, \quad |f^{B}_{2, B_x}| \le \mu f^{B}_{2, B_z}
       \end{gather*} </p>
 
-      <p>So, are the magnitude of the contact forces the same or different?
-      Substituting the first equation into the third reveals $$f^{B}_{2, B_z}
+      <p>那么，接触力的大小到底是相同还是不同呢？将第一个方程代入第三个方程，可以得到
+      $$f^{B}_{2, B_z}
       = f^{B}_{1, B_z} + \frac{mgh}{l}\sin\gamma.$$</p>
     
     </example>
@@ -572,435 +322,214 @@ href="https://www.youtube.com/channel/UChfUOAhz7ynELF-s_1LPpWg">Lecture videos a
 
 
 
-  <subsection><h1>Static equilibrium as an optimization problem</h1>
+  <subsection><h1>作为优化问题的静态平衡</h1>
 
-    <p>Rather than dropping objects from a random height, perhaps we can
-    initialize our simulations using optimization to find the initial
-    conditions that are already in static equilibrium.  In <drake></drake>,
-    the
+    <p>与其让物体从随机高度掉落，也许我们可以使用优化方法来初始化仿真，从而直接找到已经处于静态平衡状态的初始条件。在 <drake></drake> 中，
     <a
     href="https://drake.mit.edu/doxygen_cxx/classdrake_1_1multibody_1_1_static_equilibrium_problem.html"><code>StaticEquilbriumProblem</code></a>
-    collects all of the constraints we enumerated above into an optimization
-    problem: \begin{align*} \find_q \quad \subjto \quad& \tau_g(q) = - \sum_i
+    将我们上面列举的所有约束收集成一个优化问题：
+    \begin{align*} \find_q \quad \subjto \quad& \tau_g(q) = - \sum_i
     J^T_i(q) f^{c_i} & \\ & f^{c_i}_{C_z} \ge 0 & \forall i, \\ &
     |f^{c_i}_{C_{x,y}}|_2 \le \mu f^{c_i}_{C_z} & \forall i, \\ & \phi_i(q)
     \ge 0 & \forall i, \\ & \phi(q) = 0 \textbf{ or } f^{c_i}_{C_z} = 0
-    &\forall i, \\ & \text{joint limits}.\end{align*} This is a nonlinear
-    optimization problem: it includes the nonconvex non-penetration
-    constraints we discussed in the last chapter.  The second-to-last
-    constraints (a logical or) is particularly interesting; constraints of
-    the form $x \ge 0, y \ge 0, x =0 \textbf{ or } y = 0$ are known as
-    complementarity constraints, and are often written as $x \ge 0, y \ge 0,
-    xy = 0$.  We can make the problem easier for the nonlinear optimization
-    solver by relaxing the equality to $0 \le \phi(q) f^{c_i}_{C_z} \le
-    \text{tol}$, which provides a proper gradient for the optimizer to follow
-    at the cost of allowing some force at a distance.</p>  
+    &\forall i, \\ & \text{关节限制}.\end{align*}
+    这是一个非线性优化问题：它包含了我们在上一章讨论过的非凸非穿透约束。倒数第二个约束（一个逻辑“或”）尤其有趣；形如
+    $x \ge 0, y \ge 0, x =0 \textbf{ or } y = 0$
+    的约束被称为互补约束（complementarity constraints），通常写作
+    $x \ge 0, y \ge 0,
+    xy = 0$。我们可以通过将等式放宽为
+    $0 \le \phi(q) f^{c_i}_{C_z} \le
+    \text{tol}$，来让非线性优化求解器更容易处理这个问题。这种做法为优化器提供了一个可以跟随的有效梯度，但代价是允许存在少量“超距作用力”。</p>
     
-    <p>It's easy to add additional costs and constraints; for initial
-    conditions we might use an objective that keeps $q$ close to an initial
-    configuration-space sample.</p>
+    <p>我们还可以很容易地添加额外的代价项和约束；例如，对于初始条件，我们可以使用一个目标函数，使 $q$ 尽量接近某个初始构型空间采样。</p>
 
-    <example><h1>Tall Towers</h1></example>
+    <example><h1>高塔</h1></example>
 
-    <p>So how well does it work?  </p>  <todo>finish this...</todo>
+    <p>那么它的效果到底如何呢？</p>  <todo>补充完成这一部分……</todo>
 
     </subsection>
 
   </section>
 
-  <section><h1>Contact simulation</h1>
+  <section><h1>接触仿真</h1>
 
-    <p>Static equilibrium problems provide a nice view into a few of the
-    complexities of contact simulation. But things get a lot more interesting
-    when the robot and/or objects in the scene start moving!</p>
+    <p>静态平衡问题为我们提供了一个很好的视角，用来理解接触仿真中的一些复杂性。但当机器人和/或场景中的物体开始运动时，事情就会变得有趣得多！</p>
 
-    <p>More coming soon!</p>
+    <p>更多内容即将推出！</p>
     
-    <todo>Why is multibody plant discrete time?</todo>
-    <todo>Stiff differential equations / choosing your time step</todo>
-    <todo>What makes a fast simulator?</todo>
+    <todo>为什么 multibody plant 是离散时间的？</todo>
+    <todo>刚性微分方程 / 如何选择时间步长</todo>
+    <todo>什么样的模拟器才算快？</todo>
 
-    <todo>Call out to Drake's soft sim.</todo>
+    <todo>介绍 Drake 的 soft sim。</todo>
   </section>
 
-  <section><h1>Model-based grasp selection</h1>
+  <section><h1>基于模型的抓取选择</h1>
 
-    <p>What makes a good grasp? This topic has been studied extensively for
-    decades in robotics, with an original focus on thinking of a (potentially
-    dexterous) hand interacting with a known object.
-    <elib>Prattichizzo08</elib> is an excellent survey of that literature; I
-    will summarize just a few of the key ideas here.</p>
+    <p>什么样的抓取才是好的抓取？这个主题在机器人学中已经被广泛研究了几十年，最初主要关注的是一个（可能具有灵巧性）的机械手如何与一个已知物体交互。<elib>Prattichizzo08</elib> 是关于这部分文献的优秀综述；这里我只会总结其中几个关键思想。</p>
 
-    <p>If the goal of a grasp is to stabilize an object in the hand, then one
-    definition of a "good grasp" is be one that is able to resist
-    disturbances described by an "adversarial" wrench applied to the body.</p>
+    <p>如果抓取的目标是在机械手中稳定物体，那么“好抓取”的一种定义就是：它能够抵抗施加在物体上的、由“对抗性”力旋量（wrench）描述的扰动。</p>
 
-    <subsection><h1>The contact wrench cone</h1>
+    <subsection><h1>接触力旋量锥</h1>
 
-      <p>Above, we introduced the friction cone as the range of possible forces
-      that friction is able to produce in order to resist motion. For the
-      purposes of grasp planning, by applying the additive inverse to the
-      forces in the friction cone, we can obtain all of the "adversarial"
-      forces that can be resisted at the point of contact. And to understand
-      the total ability of all contact forces (applied at multiple points of
-      contact) to resist motion of the body, we want to somehow add all of
-      these forces together. Fortunately, the spatial algebra for spatial
-      forces can be readily extended from operating on spatial force vectors to
-      operating on entire sets of spatial forces.</p>
+      <p>上面我们介绍了摩擦锥，它表示摩擦为了抵抗运动所能够产生的力的范围。对于抓取规划而言，通过对摩擦锥中的力取加法逆元，我们可以得到所有在接触点处能够被抵抗的“对抗性”力。为了理解所有接触力（作用在多个接触点上）共同抵抗物体运动的总能力，我们希望能够以某种方式将这些力加在一起。幸运的是，空间力的空间代数可以很自然地从作用于单个空间力向量，扩展到作用于整个空间力集合。</p>
 
-      <p>Because our sets of interest here are convex cones, I will use the
-      relatively standard choice of $\mathcal{K}$ for the six-dimensional
-      <i>wrench cone</i>. Specifically, we have
-      $\mathcal{K}^{B_p}_{\text{name}, C}$ for the cone corresponding to
-      potential spatial forces for $F^{B_p}_{\text{name}, C}$. For instance,
-      our Coulomb friction cone for the point contact model (which, as we've
-      defined it, has no torsional friction) in the contact frame could be:
+      <p>由于我们这里关心的集合都是凸锥，我将采用相对标准的记号 $\mathcal{K}$ 来表示六维的<i>力旋量锥</i>。具体来说，$\mathcal{K}^{B_p}_{\text{name}, C}$ 表示与潜在空间力 $F^{B_p}_{\text{name}, C}$ 对应的锥。例如，对于点接触模型（按照我们的定义，它没有扭转摩擦），其在接触坐标系中的库仑摩擦锥可以写作：
       \begin{equation}\mathcal{K}^C_C = \left\{ \begin{bmatrix} 0 \\ 0 \\ 0 \\
       f^{C}_{C_x} \\ f^C_{C_y} \\ f^C_{C_z} \end{bmatrix} : \sqrt{
       \left(f^{C}_{C_x}\right)^2 + \left(f^{C}_{C_y}\right)^2 } \le \mu
       f^C_{C_z} \right\}.\end{equation}</p>
 
-      <p id="wrench_cone_algebra">The spatial algebra for spatial forces can be applied directly to the
-      wrench cones:
+      <p id="wrench_cone_algebra">空间力的空间代数可以直接应用于力旋量锥：
         <ul>
-          <li>For addition of wrenches applied at the same point and expressed
-          in the same frame, the interpretation we seek is that the cone formed
-          by the sum of wrench cones describes the set of wrenches that could
-          be obtained by choosing one element from each of the individual cones
-          and summing them up. This set operator is the <a
-          href="https://en.wikipedia.org/wiki/Minkowski_addition">Minkowski
-          sum</a>, which we denote with $\oplus$, e.g.:
+          <li>对于作用在同一点且在同一坐标系中表达的力旋量相加，我们所需要的解释是：由多个力旋量锥之和形成的锥，描述了这样一个力旋量集合——从每个单独的锥中各选择一个元素，然后将它们相加所能得到的所有力旋量。这个集合运算是 <a
+          href="https://en.wikipedia.org/wiki/Minkowski_addition">闵可夫斯基和</a>，我们用 $\oplus$ 表示，例如：
           \begin{equation}\mathcal{K}^{B_p}_{\text{total},C}=
           \mathcal{K}^{B_p}_{0,C} \oplus \mathcal{K}^{B_p}_{1,C} \oplus
           \cdots\end{equation}</li>
-          <li>Shifting a wrench cone from one application frame, $B_p$, to
-          another frame, $B_q$, is a linear operation on the cones; to
-          emphasize that I will write Eq $\ref{eq:spatial_force_shift}$ in
-          matrix form: \begin{equation} \mathcal{K}^{B_q}_C = \begin{bmatrix}
+          <li>将力旋量锥从一个作用坐标系 $B_p$ 平移到另一个坐标系 $B_q$，是对这些锥的线性操作；为了强调这一点，我将公式 $\ref{eq:spatial_force_shift}$ 写成矩阵形式：
+          \begin{equation} \mathcal{K}^{B_q}_C = \begin{bmatrix}
           I_{3 \times 3} & \left[ {}^{B_q}p^{B_p}_C \right]_\times \\ 0_{3
           \times 3} & I_{3 \times 3} \end{bmatrix}
-          \mathcal{K}^{B_p}_C,\end{equation} where the notation $[p]_{\times}$
-          is the skew-symmetric matrix corresponding to the cross product.</li>
-          <li>Rotations can be used to change between the "expressed-in"
-          frames: \begin{equation} \mathcal{K}^{B_p}_D = \begin{bmatrix} {}^DR^C
+          \mathcal{K}^{B_p}_C,\end{equation}
+          其中记号 $[p]_{\times}$ 表示与叉积对应的反对称矩阵。</li>
+          <li>可以使用旋转在不同的“表达于”坐标系之间进行变换：
+          \begin{equation} \mathcal{K}^{B_p}_D = \begin{bmatrix} {}^DR^C
           & 0_{3 \times 3} \\ 0_{3 \times 3} & {}^DR^C \end{bmatrix}
           \mathcal{K}^{B_p}_C.\end{equation}</li>
         </ul>
       </p>
 
-      <example><h1>A contact wrench cone visualization</h1>
+      <example><h1>接触力旋量锥可视化</h1>
 
-        <p>I've made a simple interactive visualization for you to play with to
-        help your intuition about these wrench cones. I have a box that fixed
-        in space and only subjected to contact forces (no gravity is
-        illustrated here); I've drawn the friction cone at the point of contact
-        and at the center of the body. Note that I've intentionally disabled
-        hydroelastic contact for this example -- the forces are computed using
-        only a single contact point between each collision pair -- to simplify
-        the interpretation.</p>
+        <p>我制作了一个简单的交互式可视化工具，你可以用它来帮助建立对这些力旋量锥的直觉。我这里有一个固定在空间中的盒子，它只受到接触力作用（这里没有绘制重力）；我在接触点处以及物体中心处都画出了摩擦锥。请注意，我在这个例子中有意禁用了水弹性接触——这些力仅使用每个碰撞对之间的单个接触点来计算——以简化解释。</p>
         
-        <p>There is one major caveat: the wrench cone lines in $\Re^6$, but I
-        can only draw cones in $\Re^3$. So I've made the (standard) choice to
-        draw the projection of the 6d cone into 3d space with two cones: one
-        for the translational components (in green for the contact point and
-        again in red for the body frame) and another for the rotational
-        components (in blue for the body frame). This can be slightly
-        misleading because one cannot actually select independently from both
-        sets.</p>
+        <p>这里有一个重要的注意事项：力旋量锥位于 $\Re^6$ 中，但我只能在 $\Re^3$ 中绘制锥。因此，我采用了（标准的）做法，用两个锥来绘制六维锥到三维空间的投影：一个用于平移分量（接触点处用绿色表示，在物体坐标系处再次用红色表示），另一个用于旋转分量（在物体坐标系中用蓝色表示）。这可能会稍微产生误导，因为实际上不能从这两个集合中独立选择元素。</p>
 
         <script>document.write(notebook_link('clutter', 'contact_wrench'))</script>
 
-        <p>Here is the contact wrench cone for a single contact point, visualized for two different contact locations:</p>
+        <p>这里展示的是单个接触点的接触力旋量锥，并分别对两个不同的接触位置进行了可视化：</p>
         <figure>
           <img src="figures/contact_wrench_1.png" width="40%">
           <img src="figures/contact_wrench_2.png" width="40%">
         </figure>
-        <p>I hope that you immediately notice that the rotational component of
-        the wrench cone is low dimensional -- due to the cross product, all
-        vectors in that space must be orthogonal to the vector ${}^Bp^C$. Of
-        course it's way better to run the notebook yourself and get the 3d
-        interactive visualization.</p>
+        <p>我希望你能够立刻注意到，力旋量锥中的旋转分量是低维的——由于叉积的存在，该空间中的所有向量都必须与向量 ${}^Bp^C$ 正交。当然，最好的方式还是你自己运行 notebook，体验真正的三维交互式可视化。</p>
 
-        <p>Here is the contact wrench cone for a two contact points on that are
-        directly opposite from each other:</p>
+        <p>这里展示的是两个彼此正对的接触点所形成的接触力旋量锥：</p>
         <figure>
           <img src="figures/contact_wrench_3.png" width="50%">
         </figure>
-        <p>Notice that while each of the rotational cones are low dimensional,
-        they span different spaces. Together (as understood by the Minkowski
-        sum of these two sets) they can resist all pure torques applied at the
-        body frame. This intuition is largely correct, but this is also where
-        the projection of the 6d cone onto two 3d cones becomes a bit
-        misleading. There are some wrenches that cannot be resisted by this
-        grasp. Specifically, if I were to visualize the wrench cone at the
-        point directly between the two contact points, we would see that the
-        wrench cones <i>do not include</i> torques applied directly along the
-        axis between the two contacts. The two contact points alone, without
-        torsional friction, are unable to resist torques about that axis.</p>
+        <p>请注意，尽管每个旋转锥本身都是低维的，但它们张成的是不同的空间。它们结合在一起（通过这两个集合的闵可夫斯基和来理解）后，可以抵抗施加在物体坐标系中的所有纯力矩。这种直觉大体上是正确的，但这里也体现出了把六维锥投影成两个三维锥所带来的一点误导性。有些力旋量实际上是这种抓取无法抵抗的。具体来说，如果我把力旋量锥可视化到两个接触点正中间的位置，我们会发现这些力旋量锥<i>并不包含</i>沿着两个接触点连线方向施加的力矩。仅靠这两个接触点，在没有扭转摩擦的情况下，是无法抵抗绕该轴的力矩的。</p>
 
-        <p>In practice, the gripper model that we use in our simulation
-        workflow uses hydroelastic contact, which simulates a contact patch and
-        <i>can</i> produce torsional friction -- so we can resist moments
-        around this axis. The exact amount one gets will be proportional to how
-        hard the gripper is squeezing the object.</p>
+        <p>在实际中，我们在仿真工作流中使用的夹爪模型采用了水弹性接触，它会模拟一个接触斑块，并且<i>能够</i>产生扭转摩擦——因此我们可以抵抗绕该轴的力矩。能够产生的具体大小，将与夹爪挤压物体的力度成正比。</p>
 
       </example>
 
-      <p>Now we can compute the cone of possible wrenches that any set of
-      contacts can apply on a body -- the contact wrench cone -- by putting all
-      of the individual contact wrench cones into a common frame and summing
-      them together. A classic metric for grasping would say that a good grasp
-      is one where the contact wrench cone is large (can resist many
-      adversarial wrench disturbances). If the contact wrench cone is all of
-      $\Re^6$, then we say the contacts have a achieved <i>force
-      closure</i><elib>Prattichizzo08</elib>.</p>
+      <p>现在，我们可以通过将所有单独的接触力旋量锥变换到同一个坐标系中并将它们相加，从而计算任意一组接触能够施加在物体上的可能力旋量锥——即接触力旋量锥（contact wrench cone）。经典的抓取评价指标会认为，一个好的抓取应当具有较大的接触力旋量锥（即能够抵抗许多对抗性的力旋量扰动）。如果接触力旋量锥覆盖了整个 $\Re^6$，那么我们就说这些接触实现了<i>力闭合（force closure）</i><elib>Prattichizzo08</elib>。</p>
 
-      <p>It's worth mentioning that the elegant (linear) spatial algebra of the wrench cones also makes these quantities very suitable for use in optimization (e.g. <elib>Dai16</elib>).</p>
+      <p>值得一提的是，力旋量锥优雅的（线性）空间代数性质，也使得这些量非常适合用于优化问题中（例如 <elib>Dai16</elib>）。</p>
 
     </subsection>
 
-    <subsection id="antipodal"><h1>Colinear antipodal grasps</h1>
+    <subsection id="antipodal"><h1>共线对跖抓取</h1>
     
-      <p>The beauty of this wrench analysis originally inspires a very
-      model-based analysis of grasping, where one could try to optimize the
-      contact locations in order to maximize the contact wrench cone. But our
-      goals for this chapter are to assume very little about the object that we
-      are grasping, so we'll (for now) avoid optimizing over the surface of an
-      object model for the best grasp location. Nevertheless, our model-based
-      grasp analysis gives us a few very good heuristics for grasping even
-      unknown objects.</p>
+      <p>这种力旋量分析之美，最初激发了一种非常基于模型的抓取分析方法：人们可以尝试优化接触位置，以最大化接触力旋量锥。但本章的目标是尽量少假设被抓取物体的信息，因此我们（暂时）会避免在物体模型表面上优化最佳抓取位置。尽管如此，我们的基于模型的抓取分析仍然为抓取未知物体提供了一些非常好的启发式方法。</p>
 
-      <p>In particular, a good heuristic for a two fingered gripper to have a
-      large contact wrench cone is to find colinear "antipodal" grasp points.
-      Antipodal here means that the normal vectors of the contact (the $z$ axis
-      of the contact frames) are pointing in exactly opposite directions. And
-      "colinear" means that they are on the same line -- the line between the
-      two contact points. As you can see in the two-fingered contact wrench
-      visualization above, this is a reasonably strong heuristic for having a
-      large total contact wrench cone. As we will see next, we can apply this
-      heuristic even without knowing much of anything about the objects.</p>
+      <p>特别地，对于双指夹爪而言，一个获得较大接触力旋量锥的良好启发式方法，是寻找共线的“对跖”抓取点。这里的对跖意味着接触法向量（即接触坐标系的 $z$ 轴）正好指向相反方向。而“共线”意味着它们位于同一条直线上——也就是两个接触点之间的连线。正如你在上面的双指接触力旋量可视化中所看到的，这是一种相当有效的启发式方法，可以获得较大的总接触力旋量锥。接下来我们将看到，即使几乎不了解物体本身，我们也可以应用这个启发式方法。</p>
 
     </subsection>
 
-    <todo>Alternative grasp metrics...</todo>
+    <todo>其他抓取评价指标……</todo>
 
   </section>
 
-  <section><h1>Grasp selection from point clouds</h1>
+  <section><h1>从点云中选择抓取</h1>
 
-    <p>Rather than looking into the bin of objects, trying to recognize
-    specific objects and estimate their pose, let's consider an approach where
-    we simply look for graspable areas directly on the (unsegmented) point
-    cloud. These very geometric approaches to grasp selection can work very
-    well in practice, and can also be used in simulation to train a
-    deep-learning-based grasp selection system that can work very well in the
-    real world and even deal with partial views and occlusions
-    <elib>tenPas17+Mahler17+Zeng18</elib>.</p>
+    <p>与其观察料箱中的物体、尝试识别具体物体并估计它们的位姿，不如考虑一种方法：直接在（未分割的）点云上寻找可抓取区域。这类非常几何化的抓取选择方法在实践中可以表现得很好，也可以在仿真中用于训练基于深度学习的抓取选择系统，使其在真实世界中同样表现出色，甚至能够处理部分视角和遮挡问题 <elib>tenPas17+Mahler17+Zeng18</elib>。</p>
 
-    <subsection><h1>Point cloud pre-processing</h1>
+    <subsection><h1>点云预处理</h1>
     
-      <p>To get a good view into the bin, we're going to set up multiple RGB-D
-      cameras.  I've used three per bin in all of my examples here.  And those
-      cameras don't only see the objects in the bin; they also see the bins, the
-      other cameras, and anything else in the viewable workspace.  So we have a
-      little work to do to merge the point clouds from multiple cameras into a
-      single point cloud that only includes the area of interest.</p>
+      <p>为了获得料箱内部的良好视野，我们将设置多个 RGB-D 相机。在这里的所有示例中，我为每个料箱使用了三台相机。这些相机看到的不仅是料箱中的物体；它们还会看到料箱本身、其他相机，以及可视工作空间中的任何其他东西。因此，我们需要做一些处理，将来自多台相机的点云合并成一个只包含感兴趣区域的单一点云。</p>
 
-      <p>First, we can <i>crop</i> the point cloud to discard any points that
-      are from outside the area of interest (which we'll define as an
-      axis-aligned bounding box immediately above the known location of the
-      bin).</p>
+      <p>首先，我们可以对点云进行<i>裁剪</i>，丢弃任何来自感兴趣区域之外的点（我们会把感兴趣区域定义为已知料箱位置正上方的一个轴对齐包围盒）。</p>
 
-      <p>As we will discuss in some detail below, many of our grasp selection
-      strategies will benefit from <i>estimating the "normals"</i> of the point
-      cloud (a unit vector that estimates the normal direction relative to the
-      surface of the underlying geometry).  It is actually better to estimate
-      the normals on the individual point clouds, making use of the camera
-      location that generated those points, than to estimate the normal after
-      the point cloud has been merged.</p>
+      <p>正如我们将在下面详细讨论的那样，许多抓取选择策略都会受益于对点云<i>“法向量”的估计</i>（即一个单位向量，用来估计相对于底层几何表面的法向方向）。事实上，最好是在各个单独的点云上估计法向量，并利用生成这些点的相机位置；这比在点云合并之后再估计法向量更好。</p>
         
-      <p>For sensors mounted on the real world, <i>merging point clouds</i>
-      requires high-quality camera calibration and must deal with the messy
-      depth returns.  All of the tools from the last chapter are relevant, as
-      the tasks of merging the point clouds is another instance of the
-      point-cloud-registration problem. For the perfect depth measurements we
-      can get out of simulation, given known camera locations, we can skip this
-      step and simply concatenate the list of points in the point clouds
-      together.</p>
+      <p>对于安装在真实世界中的传感器，<i>合并点云</i>需要高质量的相机标定，并且必须处理杂乱的深度返回。上一章中的所有工具在这里都相关，因为合并点云的任务本身就是点云配准问题的另一个实例。对于我们可以从仿真中获得的完美深度测量，并且在相机位置已知的情况下，我们可以跳过这一步，直接把多个点云中的点列表拼接在一起。</p>
 
-      <p>Finally, the resulting raw point clouds likely include many more points
-      then we actually need for our grasp planning.  One of the standard
-      approaches for <i>down-sampling</i> the point clouds is using a <a
-      href="https://en.wikipedia.org/wiki/Voxel">voxel</a> grid -- regularly
-      sized cubes tiled in 3D.  We then summarize the original point cloud with
-      exactly one point per voxel (see, for instance <a
-      href="http://www.open3d.org/docs/latest/tutorial/Advanced/voxelization.html">Open3D's
-      note on voxelization</a>).  Since point clouds typically only occupy a
-      small percentage of the voxels in 3D space, we use sparse data structures
-      to store the voxel grid.  In noisy point clouds, this voxelization step is
-      also a useful form of filtering.</p>
+      <p>最后，得到的原始点云很可能包含了比抓取规划实际所需多得多的点。对点云进行<i>下采样</i>的一种标准方法是使用 <a
+      href="https://en.wikipedia.org/wiki/Voxel">体素</a> 网格——也就是在三维空间中规则排列、大小一致的立方体。然后我们用每个体素中恰好一个点来概括原始点云（例如参见 <a
+      href="http://www.open3d.org/docs/latest/tutorial/Advanced/voxelization.html">Open3D 关于体素化的说明</a>）。由于点云通常只占据三维空间中很小一部分体素，我们会使用稀疏数据结构来存储体素网格。在有噪声的点云中，这个体素化步骤也是一种有用的滤波形式。</p>
 
-      <example><h1>Mustard bottle point clouds</h1>
+      <example><h1>芥末瓶点云</h1>
 
         <figure><img style="width:60%"
           src="data/mustard_normals.png"></figure>
 
           <script>document.write(notebook_link('clutter',  'point_cloud_processing'))</script>
       
-        <p>I've produced a scene with three cameras looking at our favorite YCB
-        mustard bottle.  I've taken the individual point clouds (already
-        converted to the world frame by the
-        <code>DepthImageToPointCloud</code> system), cropped the point clouds
-        (to get rid of the geometry from the other cameras), estimated their
-        normals, merged the point clouds, then down-sampled the point clouds.
-        The order is important!</p>
+        <p>我生成了一个场景，其中三台相机都观察着我们最喜欢的 YCB 芥末瓶。我取出各个单独的点云（这些点云已经由 <code>DepthImageToPointCloud</code> 系统转换到了世界坐标系中），对点云进行裁剪（以去除来自其他相机的几何体），估计它们的法向量，合并点云，然后再对点云进行下采样。这个顺序很重要！</p>
 
-        <p>I've pushed all of the point clouds to meshcat, but with many of them
-        set to not be visible by default.  Use the drop-down menu to turn them
-        on and off, and make sure you understand basically what is happening on
-        each of the steps.  For this one, I can also give you the <a
-        href="data/mustard_bottle_point_clouds.html">meshcat output
-        directly</a>, if you don't want to run the code.</p>
+        <p>我已经把所有点云都发布到了 meshcat 中，但其中许多默认设置为不可见。使用下拉菜单来打开和关闭它们，并确保你基本理解每个步骤中发生了什么。对于这个例子，如果你不想运行代码，我也可以直接给你 <a
+        href="data/mustard_bottle_point_clouds.html">meshcat 输出</a>。</p>
 
       </example>
 
     </subsection>
 
-    <subsection><h1>Estimating normals and local curvature</h1>
+    <subsection><h1>估计法向量和局部曲率</h1>
     
-      <p>The grasp selection strategy that we will develop below will be based on the local geometry (normal direction and curvature) of the scene.  Understanding how to estimate those quantities from point clouds is an excellent exercise in point cloud processing, and is representative of other similar point cloud algorithms.</p>
+      <p>我们将在下面发展出的抓取选择策略，将基于场景的局部几何特征（法向方向和曲率）。理解如何从点云中估计这些量，是点云处理中的一个非常好的练习，也能代表其他类似的点云算法。</p>
 
-      <p>Let's think about the problem of fitting a plane, in a least-squares
-      sense, to a set of points<elib>Shakarji98</elib>. We can describe a plane
-      in 3D with a position $p$ and a unit length normal vector, $n$.  The
-      distance between a point $p^i$ and a plane is simply given by the
-      magnitude of the inner product, $\left| (p^i - p)^T n \right|.$  So our
-      least-squares optimization becomes $$\min_{p, n} \quad \sum_{i=1}^N
-      \left| (p^i - p)^T n \right|^2, \quad \subjto \quad |n| = 1. $$  Taking
-      the gradient of the Lagrangian with respect to $p$ and setting it equal
-      to zero gives us that $$p^* = \frac{1}{N} \sum_{i=1}^N p^i.$$ Inserting
-      this back into the objective, we can write the problem as $$\min_n n^T W
-      n, \quad \subjto \quad |n|=1, \quad \text{where } W = \left[ \sum_i  (p^i
-      - p^*) (p^i - p^*)^T \right].$$  Geometrically, this objective is a
-      quadratic bowl centered at the origin, with a unit circle constraint.  So
-      the optimal solution is given by the (unit-length) eigenvector
-      corresponding to the <i>smallest</i> eigenvalue of the data matrix, $W$.
-      And for any optimal $n$, the "flipped" normal $-n$ is also optimal.  We
-      can pick arbitrarily for now, and then flip the normals in a
-      post-processing step (to make sure that the normals all point towards the
-      camera origin).</p>
+      <p>让我们考虑一下如何以最小二乘的意义，将一个平面拟合到一组点上<elib>Shakarji98</elib>。我们可以用一个位置 $p$ 和一个单位长度的法向量 $n$ 来描述三维空间中的一个平面。点 $p^i$ 到该平面的距离简单地由内积的大小给出：$\left| (p^i - p)^T n \right|.$ 因此，我们的最小二乘优化问题变为 $$\min_{p, n} \quad \sum_{i=1}^N
+      \left| (p^i - p)^T n \right|^2, \quad \subjto \quad |n| = 1. $$ 对拉格朗日函数关于 $p$ 求梯度并令其等于零，可以得到 $$p^* = \frac{1}{N} \sum_{i=1}^N p^i.$$ 将其代回目标函数后，可以把问题写成 $$\min_n n^T W
+      n, \quad \subjto \quad |n|=1, \quad \text{其中 } W = \left[ \sum_i  (p^i
+      - p^*) (p^i - p^*)^T \right].$$ 从几何上看，这个目标函数是一个以原点为中心的二次碗形函数，并带有单位圆约束。因此，最优解由数据矩阵 $W$ 的<i>最小</i>特征值所对应的（单位长度）特征向量给出。并且对于任意最优的 $n$，其“翻转”法向量 $-n$ 同样也是最优的。我们暂时可以任意选择方向，然后在后处理步骤中翻转法向量（以确保所有法向量都指向相机原点）。</p>
 
-      <p>What is really interesting is that the second and third
-      eigenvalues/eigenvectors also tell us something about the local geometry.
-      Because $W$ is symmetric, it has orthogonal eigenvectors, and these
-      eigenvectors form a (local) basis for the point cloud.  The smallest
-      eigenvalue pointed along the normal, and the <i>largest</i> eigenvalue
-      corresponds to the direction of least curvature (the squared dot product
-      with this vector is the largest).  This information can be very useful for
-      finding and planning grasps.  <elib>tenPas17</elib> and others before them
-      use this as a primary heuristic in generating candidate grasps.</p>
+      <p>真正有趣的是，第二和第三个特征值/特征向量也会告诉我们一些关于局部几何的信息。因为 $W$ 是对称矩阵，它具有正交特征向量，而这些特征向量构成了点云的一个（局部）基。最小特征值对应的方向沿着法向，而<i>最大</i>特征值对应于曲率最小的方向（与该向量的点积平方最大）。这些信息对于寻找和规划抓取非常有用。<elib>tenPas17</elib> 以及他们之前的其他研究者，都将这一点作为生成候选抓取的主要启发式方法。</p>
   
-      <p>In order to approximate the local curvature of a mesh represented by a
-      point cloud, we can use our fast nearest neighbor queries to find a
-      handful of local points, and use this plane fitting algorithm on just
-      those points. When doing normal estimation directly on a depth image,
-      people often forgo the nearest-neighbor query entirely; simply using the
-      approximation that neighboring points in pixel coordinates are often
-      nearest neighbors in the point cloud.  We can repeat that entire
-      procedure for every point in the point cloud.</p>  
+      <p>为了近似由点云表示的网格的局部曲率，我们可以使用快速最近邻查询来找到少量局部点，并只在这些点上使用这个平面拟合算法。在直接基于深度图像进行法向估计时，人们往往完全省略最近邻查询；而是简单地采用这样一种近似：像素坐标中的相邻点通常也是点云中的最近邻。我们可以对点云中的每一个点重复整个过程。</p>  
       
-      <p>I remember when working with point clouds started to become a bigger
-      part of my life, I thought that surely doing anything moderately
-      computational like this on every point in some dense point cloud would be
-      incompatible with online perception.  But I was wrong! Even years ago,
-      operations like this one were often used inside real-time perception
-      loops. (And they pale in comparison to the number of <a
-      href="https://en.wikipedia.org/wiki/FLOPS">FLOPs</a> we spend these days
-      evaluating large neural networks).</p>
+      <p>我还记得，当处理点云开始成为我生活中更重要的一部分时，我曾以为，在某个稠密点云的每个点上执行这种中等计算量的操作，肯定无法与在线感知兼容。但我错了！即使在多年以前，这类操作也经常被用于实时感知循环中。（而且与如今我们在评估大型神经网络时消耗的 <a
+      href="https://en.wikipedia.org/wiki/FLOPS">FLOPs</a> 数量相比，它们简直微不足道。）</p>
 
-      <example id="normal_estimation"><h1>Normals and local curvature of the mustard bottle.</h1>
+      <example id="normal_estimation"><h1>芥末瓶的法向量与局部曲率</h1>
     
         <figure><img style="width:60%"
         src="data/mustard_surface_estimation.png"></figure>
 
         <script>document.write(notebook_link('clutter', 'normal_estimation'))</script>
   
-        <p>I've coded up the basic least-squares surface estimation algorithm,
-        with the query point in green, the nearest neighbors in blue, and the
-        local least squares estimation drawn with our RGB$\Leftrightarrow$XYZ
-        frame graphic.  You should definitely slide it around and see if you can
-        understand how the axes line up with the normal and local curvature.</p>
+        <p>我已经实现了这个基础的最小二乘曲面估计算法，其中查询点用绿色表示，最近邻点用蓝色表示，而局部最小二乘估计则用我们的 RGB$\Leftrightarrow$XYZ 坐标系图形绘制出来。你绝对应该拖动它四处看看，并尝试理解这些坐标轴是如何与法向量和局部曲率对齐的。</p>
 
       </example>
     
-      <p>You might wonder where you can read more about algorithms of this type.
-      I don't have a great reference for you.  But Radu Rusu was the main author
-      of the point cloud library<elib>Rusu11</elib>, and his thesis has a lot of
-      nice summaries of the point cloud algorithms of
-      2010<elib>Rusu10</elib>.</p>
+      <p>你可能会想知道，可以去哪里阅读更多这类算法的内容。我并没有一个特别好的参考资料推荐给你。不过，Radu Rusu 是点云库（Point Cloud Library）的主要作者<elib>Rusu11</elib>，而他的博士论文中对 2010 年左右的点云算法做了大量很好的总结<elib>Rusu10</elib>。</p>
 
     </subsection>
 
-    <subsection id="grasp_candidates"><h1>Evaluating a candidate grasp</h1>
+    <subsection id="grasp_candidates"><h1>评估候选抓取</h1>
 
-      <p>Now that we have processed our point cloud, we have everything we need
-      to start planning grasps.  I'm going to break that discussion down into
-      two steps.  In this section we'll come up with a cost function that scores
-      grasp candidates.  In the following section, we'll discuss some very
-      simple ideas for trying to find grasps candidates that have a low
-      cost.</p>
+      <p>现在我们已经处理好了点云，就具备了开始规划抓取所需的一切条件。我会把这部分讨论拆分成两个步骤。在本节中，我们将构建一个用于给候选抓取打分的代价函数。在下一节中，我们会讨论一些非常简单的方法，用来尝试寻找代价较低的候选抓取。</p>
 
-      <p>Following our discussion of "model-based" grasp selection above, once we pick
-      up an object -- or whatever happens to be between our fingers when we squeeze --
-      then we will expect the contact forces between our fingers to have to resist at
-      least the <i>gravitational wrench</i> (the spatial force due to gravity) of the
-      object.  The closing force provided by our gripper is in the gripper's $x$-axis,
-      but if we want to be able to pick up the object without it slipping from our
-      hands, then we need forces inside the friction cones of our contacts to be able to
-      resist the gravitational wrench.  Since we don't know what that wrench will be
-      (and are somewhat constrained by the geometry of our fingers), a reasonable
-      strategy is to look at the colinear antipodal points on the surface of the point
-      cloud which also align with $x$-axis of the gripper. In a real point cloud, we are
-      unlikely to find perfect antipodal pairs, but finding areas with normals pointing
-      in nearly opposite directions is a good strategy for grasping!</p>
+      <p>延续上面关于“基于模型”的抓取选择讨论，一旦我们抓起一个物体——或者说，当我们夹紧时，任何正好位于两指之间的东西——那么我们预期手指之间的接触力至少需要抵抗该物体的<i>重力力旋量</i>（即由重力产生的空间力）。夹爪提供的闭合力沿着夹爪的 $x$ 轴方向，但如果我们希望在拾起物体时，它不会从手中滑落，那么接触摩擦锥内部的力就必须能够抵抗这个重力力旋量。由于我们并不知道这个力旋量具体会是什么（并且还受到手指几何形状的一些限制），一种合理的策略是：寻找点云表面上那些共线的对跖点，并且这些点还与夹爪的 $x$ 轴方向对齐。在真实点云中，我们不太可能找到完美的对跖点对，但寻找法向量几乎相反的区域，依然是一种很好的抓取策略！</p>
 
-      <example><h1>Scoring grasp candidates</h1>
+      <example><h1>候选抓取评分</h1>
 
-        <p>In practice, the contact between our fingers and the object(s) will
-        be better described by a <i>patch contact</i> than by a point contact
-        (due to the deflection of the rubber fingertips and any deflection of
-        the objects being picked). So it makes sense to look for patches of
-        points with agreeable normals. There are many ways one could write
-        this, I've done it here by transforming the processed point cloud of
-        the scene into the candidate frame of the gripper, and cropped away all
-        of the points except the ones that are inside a bounding box between
-        the finger tips (I've marked them in red in MeshCat).  The first term
-        in my grasping cost function is just reward for all of the points in
-        the point cloud, based on how aligned their normal is to the $x$-axis
-        of the gripper: $$\text{cost} = -\sum_i (n^i_{G_x})^2,$$ where
-        $n^i_{G_x}$ is the $x$ component of the $i$th point in the cropped
-        point cloud expressed in the gripper frame.</p>
+        <p>在实践中，我们手指与物体之间的接触，更适合用<i>面接触（patch contact）</i>而不是点接触来描述（这是由于橡胶指尖的形变以及被抓取物体本身可能发生的形变）。因此，寻找具有一致法向量的点区域是有意义的。实现这一点的方法有很多，我这里采用的方法是：将场景处理后的点云变换到夹爪的候选坐标系中，然后裁剪掉除指尖之间包围盒内部之外的所有点（我已经在 MeshCat 中用红色标出了这些点）。我的抓取代价函数中的第一项，仅仅是基于点云中所有点的奖励，它取决于这些点的法向量与夹爪 $x$ 轴的对齐程度：
+        $$\text{cost} = -\sum_i (n^i_{G_x})^2,$$
+        其中 $n^i_{G_x}$ 是裁剪后点云中第 $i$ 个点在夹爪坐标系中表达时的 $x$ 分量。</p>
 
         <figure><img style="width:80%"
           src="data/grasp_candidate_evaluation.png"></figure>
     
-        <p>There are other considerations for what might make a good grasp, too.
-        For our kinematically limited robot reaching into a bin, we might favor
-        grasps that put the hand in favorable orientation for the arm.  In the
-        grasp metric I've implemented in the code, I added a cost for the hand
-        deviating from vertical.  I can reward the dot product of the vector
-        world $-z$ vector, $[0, 0, -1]$ with the $y$-axis in gripper frame
-        rotated into world frame with : $$\text{cost} \mathrel{{+}{=}} -\alpha
+        <p>此外，一个好的抓取还可能涉及其他因素。对于我们这种运动学受限、需要伸入料箱中的机器人，我们可能更偏好那些能让机械臂处于有利姿态的抓取。在我代码中实现的抓取评价指标里，我加入了一个关于手部偏离竖直方向的代价项。我可以通过世界坐标系中的 $-z$ 向量 $[0, 0, -1]$ 与夹爪坐标系中的 $y$ 轴、再经过旋转到世界坐标系之后的点积来给予奖励：
+        $$\text{cost} \mathrel{{+}{=}} -\alpha
         \begin{bmatrix} 0 & 0 &-1\end{bmatrix}R^G \begin{bmatrix}0 \\ 1 \\
-        0\end{bmatrix} = \alpha R^G_{3,2},$$ where $\alpha$ is relative cost
-        weight, and $R^G_{3,2}$ is the scalar element of the rotation matrix in
-        the third row and second column.</p>        
+        0\end{bmatrix} = \alpha R^G_{3,2},$$
+        其中 $\alpha$ 是相对代价权重，而 $R^G_{3,2}$ 是旋转矩阵第三行第二列中的标量元素。</p>        
 
-        <p>Finally, we need to consider collisions between the candidate grasp
-        and both the bins and with the point cloud.  I simply return infinite
-        cost when the gripper is in collision.  I've implemented all of those
-        terms in the notebook, and given you a sliders to move the hand around
-        and see how the cost changes.</p>
+        <p>最后，我们还需要考虑候选抓取与料箱以及点云之间的碰撞。当夹爪发生碰撞时，我会直接返回无穷大的代价。我已经在 notebook 中实现了所有这些项，并给你提供了滑块来移动手部、观察代价如何变化。</p>
 
         <script>document.write(notebook_link('clutter', 'grasp_selection'))</script>
     
@@ -1008,68 +537,27 @@ href="https://www.youtube.com/channel/UChfUOAhz7ynELF-s_1LPpWg">Lecture videos a
 
     </subsection>
 
-    <subsection id="grasp_sampler"><h1>Generating grasp candidates</h1>
+    <subsection id="grasp_sampler"><h1>生成候选抓取</h1>
 
-      <p>We've defined a cost function that, given a point cloud from the scene
-      and a model of the environment (e.g. the location of the bins), can score
-      a candidate grasp pose, $X^G$.  So now we would like to solve the
-      optimization problem: find $X^G$ that minimizes the cost subject to the
-      collision constraints.</p>
+      <p>我们已经定义了一个代价函数：给定场景中的点云以及环境模型（例如料箱的位置），它可以对候选抓取位姿 $X^G$ 进行评分。现在我们希望求解这样一个优化问题：找到使代价最小、同时满足碰撞约束的 $X^G$。</p>
 
-      <p>Unfortunately, this is an extremely difficult optimization problem,
-      with a highly nonconvex objective and constraints.  Moreover, the cost
-      terms corresponding to the antipodal points is zero for most $X^G$ --
-      since most random $X^G$ will not have any points between the fingers.  As
-      a result, instead of using the typical mathematical programming solvers,
-      most approaches in the literature resort to a randomized sampling-based
-      algorithm.  And we do have strong heuristics for picking reasonable
-      samples.</p>
+      <p>不幸的是，这是一个极其困难的优化问题，其目标函数和约束都高度非凸。此外，与对跖点相关的代价项，对于大多数 $X^G$ 来说都为零——因为大多数随机的 $X^G$ 都不会在两指之间包含任何点。因此，文献中的大多数方法并不会使用传统的数学规划求解器，而是转向基于随机采样的算法。而且，我们确实拥有一些很强的启发式方法来选择合理的样本。</p>
 
-      <p>One heuristic, used for instance in <elib>tenPas17</elib>, is to use
-      the local curvature of the point cloud to propose grasp candidates that
-      have the point cloud normals pointing into the palm, and orients the hand
-      so that the fingers are aligned with the direction of maximum curvature.
-      One can move the hand in the direction of the normal until the fingers are
-      out of collision, and even sample nearby points.  We have written <a
-      href="#gpg">an exercise</a> for you to explore this heuristic.  But for
-      our YCB objects, I'm not sure it's the best heuristic; we have a lot of
-      boxes, and boxes don't have a lot of information to give in their local
-      curvature.</p>
+      <p>一种启发式方法（例如 <elib>tenPas17</elib> 中所使用的）是利用点云的局部曲率来提出候选抓取：使点云法向量朝向手掌方向，并将手部朝向设置为让手指与最大曲率方向对齐。随后，可以沿着法向方向移动手部，直到手指脱离碰撞，甚至还能对附近点进行采样。我们已经为你编写了<a
+      href="#gpg">一个练习</a>来探索这种启发式方法。不过对于我们的 YCB 物体来说，我不确定这是不是最好的启发式方法；因为我们有很多盒状物体，而盒子的局部曲率并不能提供太多信息。</p>
 
-      <p>Another heuristic is to find antipodal point pairs in the point cloud,
-      and then sample grasp candidates that would align the fingers with those
-      antipodal pairs.  Many 3D geometry libraries support "ray casting"
-      operations at least for a voxel representation of a point cloud; so a
-      reasonable approach to finding antipodal pairs is to simply choose a point
-      at random in the point cloud, then ray cast into the point cloud in the
-      opposite direction of the normal.  If the normal of the voxel found by ray
-      casting is sufficiently antipodal, and if the distance to that voxel is
-      smaller than the gripper width, then we've found a reasonable antipodal
-      point pair.</p>
+      <p>另一种启发式方法是寻找点云中的对跖点对，然后采样那些能够使手指与这些对跖点对对齐的候选抓取。许多三维几何库至少都支持对点云体素表示进行“射线投射（ray casting）”操作；因此，一个合理的寻找对跖点对的方法是：随机选择点云中的一个点，然后沿着该点法向量的反方向向点云中发射射线。如果射线投射找到的体素法向量足够对跖，并且该体素的距离小于夹爪宽度，那么我们就找到了一个合理的对跖点对。</p>
 
-      <example id="grasp_sampling"><h1>Generating grasp candidates</h1>
+      <example id="grasp_sampling"><h1>生成候选抓取</h1>
 
-        <p>As an alternative to ray casting, I've implemented an even simpler
-        heuristic in my code example: I simply choose a point at random, and
-        start sampling grasps in orientation (starting from vertical) that
-        align the $x$-axis of the gripper with the normal of that point.  Then
-        I mostly just rely on the antipodal term in my scoring function to
-        allow me to find good grasps.</p>
+        <p>作为射线投射的替代方案，我在代码示例中实现了一个更简单的启发式方法：我只是随机选择一个点，然后开始在不同姿态下采样抓取（从竖直方向开始），使夹爪的 $x$ 轴与该点的法向量对齐。然后，我基本上主要依赖评分函数中的对跖项来帮助我找到好的抓取。</p>
 
         <figure><img style="width:60%"
           src="data/candidate_grasp_mustard.png"></figure>
 
-        <p>I do implement one more heuristic -- once I've found the points in
-        the point cloud that are between the finger tips, then I move the hand
-        out along the gripper $x$-axis so that those points are centered in the
-        gripper frame.  This helps prevent us knocking over objects as we close
-        our hands to grasp them.</p>
+        <p>我还实现了另一个启发式方法——一旦我找到了位于指尖之间的点云点，我就会沿着夹爪的 $x$ 轴方向将手部向外移动，使这些点在夹爪坐标系中居中。这样可以帮助我们在闭合夹爪抓取物体时，避免把物体撞倒。</p>
 
-        <p>But that's it!  It's a very simple strategy.  I sample a handful of
-        candidate grasps and just draw the top few with the lowest cost.  If you
-        run it a bunch of times, I think you will find it's actually quite
-        reasonable.  Every time it runs, it is simulating the objects falling
-        from the sky; the actual grasp evaluation is actually quite fast.</p>
+        <p>不过也就这些了！这是一个非常简单的策略。我会采样少量候选抓取，然后只绘制其中代价最低的几个。如果你多运行几次，我想你会发现它其实相当合理。每次运行时，它都会模拟物体从空中掉落；而真正的抓取评估实际上是非常快的。</p>
 
         <figure><img style="width:80%"
             src="data/grasp_candidates.png"></figure>
@@ -1084,182 +572,80 @@ href="https://www.youtube.com/channel/UChfUOAhz7ynELF-s_1LPpWg">Lecture videos a
 
   </section>
 
-  <section><h1>The corner cases</h1>
+  <section><h1>边界情况</h1>
   
-    <p>If you play around with the grasp scoring I've implemented above a little
-    bit, you will find deficiencies.  Some of them are addressed easily (albeit
-    heuristically) by adding a few more terms to the cost.  For instance, I
-    didn't check collisions of the pre-grasp configuration, but this could be
-    added easily.</p>
+    <p>如果你稍微玩一玩我上面实现的抓取评分方法，你会发现其中存在一些缺陷。其中有些问题可以通过在代价函数中再添加几个项来比较容易地解决（虽然依然是启发式的）。例如，我并没有检查预抓取（pre-grasp）构型中的碰撞，但这一点其实可以很容易地加入。</p>
 
-    <p>There are other cases where grasping alone is not sufficient as a
-    strategy.  Imagine that you place an object right in one of the corners of
-    the bin.  It might not be possible to get the hand around both sides of the
-    object without being in collision with either the object or the side.  The
-    strategy above will never choose to try to grab the very corner of a box
-    (because it always tried to align the sample point normal with the gripper
-    $x$), and it's not clear that it should.  This is probably especially true
-    for our relatively large gripper.  In the setup we used at TRI, we
-    implemented an additional simple "pushing" heuristic that would be used if
-    there were point clouds in the sink, but no viable grasp candidate could be
-    found.   Instead of grasping, we would drive the hand down and nudge that
-    part of the point cloud towards the middle of the bin.  This can actually
-    help a lot!
+    <p>还有一些情况下，仅靠抓取本身并不足以作为一种策略。想象一下，你把一个物体正好放在料箱的某个角落里。在不与物体或侧壁发生碰撞的情况下，可能无法让手从物体两侧包住它。上面的策略永远不会选择去尝试抓取盒子的最角落（因为它总是试图让采样点的法向量与夹爪的 $x$ 轴对齐），而且它是否应该这样做也并不明确。对于我们这个相对较大的夹爪来说，这一点可能尤其明显。在我们曾经在 TRI 使用的设置中，我们实现了一个额外的简单“推动”启发式策略：如果水槽中存在点云，但找不到可行的候选抓取，就使用这个策略。我们不进行抓取，而是让手向下运动，并轻推那部分点云，使其朝料箱中央移动。这实际上能带来很大帮助！
     </p>
 
-    <p>There are other deficiencies to our simple approach that would be very
-    hard to address with a purely geometric approach.  Most of them come down to
-    the fact that our system so far has no notion of "objects".  For instance,
-    it's not uncommon to see this strategy result in "double picks" if two
-    objects are close together in the bin.  For heavy objects, it might be
-    important to pick up the object close to the center of mass, to improve our
-    chances of resisting the gravitational wrench while staying in our friction
-    cones.  But our strategy here might pick up a heavy hammer by squeezing just
-    the very far end of the handle.</p>
+    <p>我们这个简单方法还有其他一些缺陷，而这些缺陷如果只用纯几何方法，将会非常难以解决。大多数问题都归结于这样一个事实：到目前为止，我们的系统还没有“物体”的概念。例如，如果料箱中有两个物体靠得很近，这种策略导致“双重抓取”并不少见。对于较重的物体来说，靠近质心处抓取可能很重要，这样可以提高我们在保持于摩擦锥内的同时抵抗重力力旋量的机会。但这里的策略可能会仅仅夹住一把重锤手柄最远端，就把它提起来。</p>
 
-    <p>Interestingly, I don't think the problem is necessarily that the point
-    cloud information is insufficient, even without the color information.  I
-    could show you similar point clouds and you wouldn't make the same mistake.
-    These are the types of examples where learning a grasp metric could
-    potentially help.  We don't need to achieve artificial general intelligence
-    to solve this one; just experience knowing that when we tried to grasp in
-    someplace before we failed would be enough to improve our grasp heuristics
-    significantly.</p>
+    <p>有趣的是，我并不认为问题一定在于点云信息不足，即使没有颜色信息也是如此。我可以给你看类似的点云，而你不会犯同样的错误。这类例子正是学习一个抓取评价指标可能有所帮助的地方。为了解决这个问题，我们并不需要实现人工通用智能；只要有一些经验，知道我们过去在某些位置尝试抓取时失败过，就足以显著改进我们的抓取启发式方法。</p>
   
-    <todo>render some point clouds that a human can distinguish but out algorithm would not.</todo>
+    <todo>渲染一些人类能够区分、但我们的算法无法区分的点云。</todo>
 
   </section>
 
-  <section id="task"><h1>Programming the Task Level</h1>
+  <section id="task"><h1>任务层编程</h1>
 
-    <p>Most of us are used to writing code in a <a
-    href="https://hackr.io/blog/procedural-programming">procedural
-    programming</a>
-    paradigm; code executes from the top of the program through function calls, branchs
-    (like if/then statements), for/while loops, etc. It's tempting to try to write our
-    high-level robot programs like that, too.  For the clutter task, I could write
-    "while there is an object to pick up in the first bin, pick it up and move it to the
-    second bin; ...".  And that is certainly not wrong! But to be a component in a
-    robotics framework, this high-level program must somehow communicate with the rest
-    of the system at runtime, including having interfaces to the low-level controllers
-    that are running at some regular frequency (say 100Hz or even 1kHz). So how do we
-    author the high-level behaviors (often called "task level") in a way that integrates
-    seamlessly with the high-rate low-level controls?</p>
+    <p>我们大多数人都习惯于按照<a
+    href="https://hackr.io/blog/procedural-programming">过程式编程</a>
+    范式来编写代码；代码从程序顶部开始执行，经过函数调用、分支
+    （例如 if/then 语句）、for/while 循环等。我们很容易也想用这种方式来编写高层机器人程序。对于杂乱物体任务，我可以写成：“当第一个料箱中还有物体可以抓取时，就抓起它并移动到第二个料箱；……”。这当然没有错！但是，要成为机器人框架中的一个组件，这个高层程序必须以某种方式在运行时与系统的其余部分通信，包括与那些以固定频率运行的低层控制器建立接口（比如 100Hz，甚至 1kHz）。那么，我们应该如何编写这种高层行为（通常称为“任务层”），才能让它与高频率的低层控制无缝集成呢？</p>
 
-    <p>There are a few important programming paradigms for authoring the
-    task-level behavior.  Broadly speaking, I would categorize them into three
-    bins:
+    <p>用于编写任务层行为的编程范式有几种重要方式。广义上来说，我会将它们分成三类：
       <ul>
-        <li>Procedural code (in a separate thread) passes messages/events to a
-        module that lives in the main robot/simulation thread. This is
-        relatively common in a multi-process message-passing ecosystem like
-        ROS.</li>
-        <li>Task-level "policies" can be authored directly as e.g. finite state
-        machines (FSMs) or "behavior trees", which get evaluated directly in
-        the robot/simulation loop.</li>
-        <li>Task-level "planners" can take rules for how task-level behaviors
-        can be chained together to achieve long-term goals:
+        <li>过程式代码（运行在单独线程中）向主机器人/仿真线程中的模块传递消息或事件。这种方式在像 ROS 这样的多进程消息传递生态系统中相当常见。</li>
+        <li>任务层“策略”可以直接编写成例如有限状态机（FSM）或“行为树（behavior trees）”，并在机器人/仿真循环中直接进行求值。</li>
+        <li>任务层“规划器”则可以根据任务层行为如何串联以实现长期目标的规则来进行规划：
         <ul>
-          <li>In the simplest case, the planner outputs a plan that can be
-          executed during the robot/simulation loop, just like the trajectories
-          we've used to plan the motion of the gripper.</li>
-          <li>If the planner can be run online (e.g. constantly
-          adjusting/replanning given new sensor information), then it can be
-          used directly in the robot/simulation loop.</li>
-          <li> Alternatively, a few planners can actually "compile" their plans
-          directly into a policy (e.g. in the form of an FSM). <a
-          href="https://en.wikipedia.org/wiki/Linear_temporal_logic_to_B%C3%BCchi_automaton">Here
-          is one of the classic examples</a>.</li>
+          <li>在最简单的情况下，规划器输出一个可以在机器人/仿真循环中执行的计划，就像我们之前用来规划夹爪运动的轨迹一样。</li>
+          <li>如果规划器能够在线运行（例如根据新的传感器信息持续调整/重新规划），那么它也可以直接在机器人/仿真循环中使用。</li>
+          <li>另外，一些规划器实际上可以直接将它们的计划“编译”为一个策略（例如 FSM 的形式）。<a
+          href="https://en.wikipedia.org/wiki/Linear_temporal_logic_to_B%C3%BCchi_automaton">这里
+          给出了一个经典示例</a>。</li>
         </ul>
         </li>
       </ul>
-    Each of these paradigms has its place, and some researchers heavily favor
-    one over the other. I'll always remember Rod Brooks writing papers like
-    <u>Elephants Don't Play Chess</u> to argue against task-level
-    planning<elib>Brooks90+Brooks91+Brooks91a</elib>. Rod's "subsumption
-    architecture" was distinctly in the "task-level policies" category and can
-    be seen as a precursor to Behavior Trees; it established its credibility by
-    having success on the early Roomba vacuum cleaners. The planning community
-    might counter that for truly complicated tasks, it would be impossible for
-    human programmers to author a policy for all possible permutations /
-    situations that an AI system might encounter; that planning is the approach
-    that truly scales. They have addressed some of the initial criticisms about
-    symbol grounding and modeling requirements with extensions like planning in
-    belief space and task-and-motion planning, which we will cover in later
-    parts of the notes. 
+    这些范式各有其适用场景，而且有些研究者会强烈偏向其中某一种。我始终记得 Rod Brooks 写过像 <u>Elephants Don't Play Chess</u> 这样的论文，用来反对任务层规划<elib>Brooks90+Brooks91+Brooks91a</elib>。Rod 的“包容架构（subsumption architecture）”明显属于“任务层策略”类别，并且可以被视为行为树的前身；它通过在早期 Roomba 吸尘机器人上的成功应用建立了自己的可信度。而规划领域则可能反驳说，对于真正复杂的任务，人类程序员不可能为 AI 系统可能遇到的所有排列组合/情形都编写出对应策略；真正能够扩展的方法是规划。他们还通过诸如信念空间规划（planning in belief space）和任务-运动规划（task-and-motion planning）等扩展，解决了最初关于符号落地（symbol grounding）和建模需求的一些批评；我们将在后续讲义中介绍这些内容。
     </p>
 
-    <subsection><h1>State Machines and Behavior Trees</h1>
+    <subsection><h1>状态机与行为树</h1>
     
     </subsection>
 
-    <subsection><h1>Task planning</h1>
+    <subsection><h1>任务规划</h1>
 
-      <p>Task-level planners are based primarily on search. There is a long
-      history of AI planning as search. STRIPS <elib>Fikes71</elib> was perhaps
-      the earliest, and most famous representation (and algorithm) for
-      describing planning problems using an initial state, a goal state, and a
-      set of actions with pre-conditions and effects.  Temporal logic (e.g.
-      linear temporal logic (LTL), metric temporal logic (MTL), signal temporal
-      logic (STL)) enables the specification to include complex goals or
-      constraints that evolve over time, such as "event A should eventually
-      happen after event B". The planning domain definition language (PDDL)
-      <elib>Aeronautiques98+Haslum19</elib> extended the STRIPS representation
-      to include more expressive features such as typed variables, conditional
-      effects, and (even temporal logic) quantifiers, and served as the
-      specification language for a long-running and highly influential series
-      of <a href="https://www.icaps-conference.org/competitions/">ICAPS
-      planning competitions</a>. These planning competitions gave rise to a
-      number of highly effective planning algorithms such as GraphPlan
-      <elib>Blum97</elib>, HSP <elib>Bonet01</elib>, Fast-Forward
-      <elib>Hoffmann01</elib>, and FastDownward <elib>Helmert06</elib>. These
-      planners demonstrated the power of "heurstic search", and strongly
-      leverage the object-oriented nature of the specification to use
-      factorization as a strong heuristic.</p>
+      <p>任务层规划器主要基于搜索。AI 规划作为搜索已经有很长的历史。STRIPS <elib>Fikes71</elib> 也许是最早、也是最著名的一种表示方法（以及算法），它使用初始状态、目标状态以及一组具有前置条件和效果的动作来描述规划问题。时序逻辑（例如线性时序逻辑 LTL、度量时序逻辑 MTL、信号时序逻辑 STL）则使得规划描述能够包含复杂的目标或随时间变化的约束，例如“事件 A 最终应该在事件 B 之后发生”。规划领域定义语言（PDDL）
+      <elib>Aeronautiques98+Haslum19</elib> 在 STRIPS 表示基础上进行了扩展，加入了更具表达能力的特性，例如类型化变量、条件效果以及（甚至包括时序逻辑的）量词，并成为一系列长期举办、极具影响力的 <a href="https://www.icaps-conference.org/competitions/">ICAPS
+      规划竞赛</a> 的规范语言。这些规划竞赛催生了许多高效的规划算法，例如 GraphPlan
+      <elib>Blum97</elib>、HSP <elib>Bonet01</elib>、Fast-Forward
+      <elib>Hoffmann01</elib> 和 FastDownward <elib>Helmert06</elib>。这些规划器展示了“启发式搜索（heuristic search）”的强大能力，并且高度利用了规划描述中面向对象的特性，将因子化（factorization）作为一种强有力的启发式方法。</p>
 
     </subsection>
 
-    <subsection><h1>Large Language Models</h1>
+    <subsection><h1>大语言模型</h1>
 
-      <p>In late 2022, of course, a new approach to task "planning" exploded
-      onto the scene with the rise of large language models (LLMs). It quickly
-      became clear that the most powerful language models like GPT4 are capable
-      of producing highly nontrivial plans from very limited natural language
-      specifications. Careful prompting can be used to guide the LLM to produce
-      actions that the robot is is able to perform, and it seems that LLMs are
-      particularly good at writing python code. Using Python, it's even
-      possible to prompt the LLM to <a
-      href="https://code-as-policies.github.io/">generate a policy</a> rather
-      than just a plan <elib>Liang23</elib>. At the time of this writing, their
-      is still a challenge in automating a depiction of the current environment
-      as perceived from the robot cameras/sensors into a natural language
-      prompt, but it seems that this is only a matter of time. Word is that the
-      rolling release of <a
+      <p>当然，在 2022 年末，随着大语言模型（LLM）的兴起，一种新的任务“规划”方法迅速爆发式登场。人们很快意识到，像 GPT-4 这样最强大的语言模型，已经能够从非常有限的自然语言描述中生成高度非平凡的计划。通过精心设计提示词，可以引导 LLM 生成机器人真正能够执行的动作，而且 LLM 似乎特别擅长编写 Python 代码。借助 Python，甚至可以提示 LLM <a
+      href="https://code-as-policies.github.io/">生成一个策略（policy）</a>，而不仅仅是一个计划 <elib>Liang23</elib>。在撰写本文时，如何将机器人摄像头/传感器所感知到的当前环境自动转换为自然语言提示，仍然是一个挑战，但看起来这只是时间问题。据说，滚动发布版的 <a
       href="https://openai.com/research/gpt-4v-system-card">GPT-4V(ision)</a>
-      works amazingly well in this capacity.</p>
+      在这方面表现得极其出色。</p>
 
-      <p>An informal consensus is that language models make simple planning
-      problems extraordinarily easy. Importantly, while a search-based planner
-      might exploit missing requirements / constraints in your specification,
-      the LLMs output very reasonable plans, using "common sense" to fill in
-      the gaps. There are still limits to what today's LLMs can achieve in the
-      way of long-horizon task planning with multi-step reasoning, but clever
-      prompt engineering can lead to impressive results <elib>Yao23</elib>.</p>
+      <p>一个非正式的共识是：语言模型让简单规划问题变得异常容易。重要的是，与基于搜索的规划器可能会利用你在规范中遗漏的要求/约束不同，LLM 会利用“常识”来填补空缺，从而输出非常合理的计划。当然，如今的 LLM 在长时域、多步推理任务规划方面仍然存在限制，但巧妙的提示工程已经能够带来令人印象深刻的结果 <elib>Yao23</elib>。</p>
 
-      <todo>example?</todo>
+      <todo>示例？</todo>
     </subsection>
 
-    <subsection><h1>A simple state machine for "clutter clearing"</h1>
+    <subsection><h1>用于“杂乱清理”的简单状态机</h1>
 
-      <p>For the purposes of clutter clearing in the systems framework, taking
-      the second approach: writing the task-level behavior "policy" as a simple
-      state machine will work nicely.</p>
+      <p>对于系统框架中的杂乱清理任务而言，采用第二种方法——把任务层行为“策略”编写为一个简单状态机——会是一个很好的选择。</p>
 
-      <example><h1>A simple state machine for "clutter clearing"</h1>
+      <example><h1>用于“杂乱清理”的简单状态机</h1>
 
         <figure><img width="90%" src="figures/clutter_clearing_fsm.svg"/></figure>
 
-        <todo>Show minimal LeafSystem that implements it.</todo>
+        <todo>展示实现它的最小 LeafSystem。</todo>
 
       </example>
 
@@ -1267,12 +653,9 @@ href="https://www.youtube.com/channel/UChfUOAhz7ynELF-s_1LPpWg">Lecture videos a
 
   </section>
 
-  <section><h1>Putting it all together</h1>
+  <section><h1>整合所有部分</h1>
   
-    <p>First, we bundle up our grasp-selection algorithm into a system that
-    reads the point clouds from 3 cameras, does the point cloud processing
-    (including normal estimation), and the random sampling, and puts the grasp
-    selection onto the output port:</p>
+    <p>首先，我们将抓取选择算法封装成一个系统：它读取来自 3 个相机的点云，完成点云处理（包括法向量估计）以及随机采样，并将抓取选择结果输出到输出端口：</p>
     <p text-align="center">
       <script src="htmlbook/js-yaml.min.js"></script>
       <script type="text/javascript">
@@ -1289,16 +672,9 @@ output_ports:
       </script>
     </p> 
 
-    <p>Note that we will instantiate this system twice -- once for the bin
-    located on the positive X axis and again for the system on the negative y
-    axis.  Thanks to the "pull-architecture" in Drake's systems framework, this
-    relatively expensive sampling procedure only gets called when the
-    downstream system evaluates the output port.</p>
+    <p>请注意，我们会实例化这个系统两次——一次用于位于正 X 轴方向上的料箱，另一次用于位于负 Y 轴方向上的料箱。由于 Drake 系统框架中的“拉取架构（pull-architecture）”，这种相对昂贵的采样过程只有在下游系统求值输出端口时才会被调用。</p>
 
-    <p>The work-horse system in this example is the <code>Planner</code> system
-    which implements the basic state machine, calls the planning functions,
-    stores the resulting plans in its <code>Context</code>, and evaluates the
-    plans on the output port:</p>
+    <p>这个示例中的主力系统是 <code>Planner</code> 系统，它实现了基本状态机，调用规划函数，将得到的计划存储在它的 <code>Context</code> 中，并在输出端口上对这些计划求值：</p>
     <p text-align="center">
       <script src="htmlbook/js-yaml.min.js"></script>
       <script type="text/javascript">
@@ -1317,297 +693,189 @@ output_ports:
       document.write(system_html(sys));
       </script>
     </p> 
-    <p>This system needs enough input / output ports to get the relevant
-    information into the planner, and to command the downstream
-    controllers.</p>
+    <p>这个系统需要足够的输入/输出端口，以便将相关信息传入规划器，并向下游控制器发送命令。</p>
 
     <example id="clutter_clearing">
-      <h1>Clutter clearing (complete demo)</h1>
+      <h1>杂乱清理（完整演示）</h1>
       <script>document.write(notebook_link('clutter', 'clutter_clearing'))</script>
     </example>
 
   </section>
 
-  <todo>Maybe add a section here about monte-carlo testing?</todo>
+  <todo>也许可以在这里添加一个关于蒙特卡洛测试的章节？</todo>
 
-  <section id="exercises"><h1>Exercises</h1>
+  <section id="exercises"><h1>练习</h1>
 
-    <exercise id="static_equilibrium"><h1>Assessing static equilibrium</h1>
-        <p>For this problem, we'll use the Coulomb friction model, where $|f_t|
-        \le \mu f_n$. In other words, the friction force is large enough to
-        resist any movement up until the force required would exceed $\mu f_n$,
-        in which case $|f_t| = \mu f_n$.
+    <exercise id="static_equilibrium"><h1>评估静态平衡</h1>
+        <p>在这个问题中，我们将使用库仑摩擦模型，其中 $|f_t|
+        \le \mu f_n$。换句话说，摩擦力足够大，可以抵抗任何运动，直到所需的力超过 $\mu f_n$ 为止；在这种情况下，$|f_t| = \mu f_n$。
         <ol type="a">
           <li>
-            <p>Consider a box with mass $m$ sitting on a ramp at angle
-            $\theta$, with coefficient of box $\mu$ in between the sphere and
-            the ramp:</p>
+            <p>考虑一个质量为 $m$ 的盒子放在倾角为
+            $\theta$ 的斜坡上，盒子与斜坡之间的摩擦系数为 $\mu$：</p>
             <figure>
                 <img style="width:50%",
                 src="figures/exercises/static_equilibrium_ramp.png"/>
             </figure>
-            <p>For a given angle $\theta$, what is the minimum coefficient of
-            friction required for the box to not slip down the plane? Use $g$
-            for acceleration due to gravity.</p>
+            <p>对于给定角度 $\theta$，为了让盒子不会沿平面下滑，所需的最小摩擦系数是多少？用 $g$ 表示重力加速度。</p>
           </li>
         </ol>
-        <p>Now consider a flat ground plane with three solid (uniform density)
-        spheres sitting on it, with radius $r$ and mass $m$. Assume they have
-        the same coefficient of friction $\mu$ between each other as with the
-        ground.</p>
+        <p>现在考虑一个平坦地面，上面放着三个实心（均匀密度）球体，每个球体半径为 $r$、质量为 $m$。假设球体彼此之间以及球体与地面之间具有相同的摩擦系数 $\mu$。</p>
 
-        <p>For each of the following configurations: could the spheres be in
-        static equilibrium for some $\mu\in[0,1]$, $m > 0$, $r > 0$? Explain
-        why or why not. Remember that both torques and forces need to be
-        balanced for all bodies to be in equilibrium.</p>
+        <p>对于下面每一种构型：这些球体是否可能在某个 $\mu\in[0,1]$、$m > 0$、$r > 0$ 下处于静态平衡？请解释为什么可以或为什么不可以。请记住，要让所有物体处于平衡状态，力矩和力都必须平衡。</p>
 
-        <p>To help you solve these problems, we have
-        <script>document.write(notebook_link('clutter', notebook='static_equilibrium', link_text = 'a notebook'))</script>
-        to help you build intuition and test your answers. It lets you specify
-        the configuration of the spheres and then uses the <a
+        <p>为了帮助你求解这些问题，我们提供了
+        <script>document.write(notebook_link('clutter', notebook='static_equilibrium', link_text = '一个 notebook'))</script>
+        来帮助你建立直觉并测试你的答案。它允许你指定球体的构型，然后使用 <a
         href="https://drake.mit.edu/doxygen_cxx/classdrake_1_1multibody_1_1_static_equilibrium_problem.html">StaticEquilbriumProblem</a>
-        class to solve for static equilibrium. Use this notebook to help
-        visualize and think about the system, but for each of the
-        configurations, you should have a physical explanation for your answer.
-        (An example of such a physical explanation would be a free body diagram
-        of the forces and torques on each sphere, and equations for how they
-        can or cannot sum to zero. This is essentially what
-        StaticEquilbriumProblem checks for.)</p>
+        类来求解静态平衡。请使用这个 notebook 来帮助你可视化并思考该系统，但对于每一种构型，你都应该能够为自己的答案给出物理解释。（这种物理解释的一个例子是：画出每个球体所受力和力矩的自由体图，并写出它们如何能够或不能够相加为零的方程。这本质上就是
+        StaticEquilbriumProblem 所检查的内容。）</p>
         <ol start="2" type="a">
-          <li> Spheres stacked on top of each other:
+          <li> 球体上下堆叠：
             <figure>
                 <img style="width:50%", src="figures/exercises/static_equilibrium_stacked.png"/>
             </figure>
           </li>
-          <li> One sphere on top of another, offset:
+          <li> 一个球体偏置地放在另一个球体上：
             <figure>
                 <img style="width:50%", src="figures/exercises/static_equilibrium_tilted.png"/>
             </figure>
           </li>
-          <li> Spheres stacked in a pyramid:
+          <li> 球体堆成金字塔：
             <figure>
                 <img style="width:50%",
                 src="figures/exercises/static_equilibrium_pyramid.png"/>
             </figure>
           </li>
-          <li> Spheres stacked in a pyramid, but with a distance $d$ in between
-          the bottom two:
+          <li> 球体堆成金字塔，但底部两个球体之间有距离 $d$：
             <figure>
                 <img style="width:50%",
                 src="figures/exercises/static_equilibrium_pyramid_with_space.png"/>
             </figure>
           </li>
         </ol>
-        <p>Finally, a few conceptual questions on the
-        StaticEquilbriumProblem:</p>
+        <p>最后，关于 StaticEquilbriumProblem 的几个概念性问题：</p>
         <ol start="6" type="a">
-            <li>Why does it matter what initial guess we specify for the
-            system? (Hint: what type of optimization problem is this?)</li>
-            <li>Take a look at the Drake documentation for <a
-            href="https://drake.mit.edu/doxygen_cxx/classdrake_1_1multibody_1_1_static_equilibrium_problem.html">StaticEquilbriumProblem</a>.
-            It lists the constraints that are used when it solves for
-            equilibrium. Which two of these can a free body diagram
-            answer?</li>
+            <li>为什么我们为系统指定什么初始猜测很重要？（提示：这是什么类型的优化问题？）</li>
+            <li>查看 Drake 文档中关于 <a
+            href="https://drake.mit.edu/doxygen_cxx/classdrake_1_1multibody_1_1_static_equilibrium_problem.html">StaticEquilbriumProblem</a>
+            的说明。它列出了求解平衡时使用的约束。其中哪两个约束可以通过自由体图来回答？</li>
         </ol>
       </exercise>
 
-    <exercise><h1>Normal Estimation from Depth</h1>
+    <exercise><h1>从深度图估计法向量</h1>
 
-      <p>For this exercise, you will investigate a slightly different approach to normal vector estimation. In particular, we can exploit the spatial structure that is already in a depth image to avoid computing nearest neighbors. You will work exclusively in <script>document.write(notebook_link('clutter', notebook='normal_estimation_depth', link_text='this notebook'))</script>. You will be asked to complete the following steps:</p>
+      <p>在这个练习中，你将研究一种略有不同的法向量估计方法。具体来说，我们可以利用深度图中已经存在的空间结构，来避免计算最近邻。你将完全在 <script>document.write(notebook_link('clutter', notebook='normal_estimation_depth', link_text='这个 notebook'))</script> 中完成本练习。你需要完成以下步骤：</p>
       <ol type="a">
-        <li> Analyze mathematically how the data matrix constructed from close
-        clusters of points in a depth image can be used to compute surface normals.
+        <li> 从数学上分析如何使用由深度图中相近点簇构造的数据矩阵来计算表面法向量。
         </li>
-        <li> Implement a method to estimate normal vectors from a depth image,
-        without computing nearest neighbors. </li>
-        <li> Reason about a scenario where the depth image-based solution will
-        not be as performant as computing nearest-neighbors.</li>
+        <li> 实现一种从深度图估计法向量的方法，且不计算最近邻。</li>
+        <li> 思考一种场景，在该场景中，基于深度图的解决方案表现不如计算最近邻的方法。</li>
       </ol>    
     </exercise>
 
-    <exercise><h1>Analytic Antipodal Grasping</h1>
-      <p>So far, we have used sampling-based methods to find antipodal grasps - but can we have find one analytically if we knew the equation of the object shape? For this exercise, you will analyze and implement a correct-by-construction method to find antipodal points using symbolic differentiation and MathematicalProgram. You will work exclusively in <script>document.write(notebook_link('clutter', notebook='analytic_antipodal_grasps', link_text='this notebook'))</script>. You will be asked to complete the following steps:</p>
+    <exercise><h1>解析对跖抓取</h1>
+      <p>到目前为止，我们一直使用基于采样的方法来寻找对跖抓取——但如果我们知道物体形状的方程，是否可以解析地找到一个对跖抓取呢？在这个练习中，你将分析并实现一种构造上正确的方法，使用符号微分和 MathematicalProgram 来寻找对跖点。你将完全在 <script>document.write(notebook_link('clutter', notebook='analytic_antipodal_grasps', link_text='这个 notebook'))</script> 中完成本练习。你需要完成以下步骤：</p>
       <ol type="a">
-        <li> Prove that antipodal points are critical points of an energy
-        function defined on the shape. </li>
-        <li> Prove the converse does not hold.</li>
-        <li> Implement a method to find these antipodal points using
-        MathematicalProgram.</li>
-        <li> Analyze the Hessian of the energy function and its relation to the
-        type of antipodal grasps.</li>
+        <li> 证明对跖点是定义在该形状上的某个能量函数的临界点。</li>
+        <li> 证明其逆命题并不成立。</li>
+        <li> 使用 MathematicalProgram 实现一种寻找这些对跖点的方法。</li>
+        <li> 分析该能量函数的 Hessian 矩阵，以及它与对跖抓取类型之间的关系。</li>
       </ol>    
     </exercise>
 
-    <exercise id="gpg"><h1>Grasp Candidate Generation</h1>
+    <exercise id="gpg"><h1>抓取候选生成</h1>
 
-      <p>In the chapter notebook, we generated grasp candidates using the
-      antipodal heuristic.  In this exercise, we will investigate an
-      alternative method for generating grasp candidates based on local
-      curvature, similar to the one proposed in <elib>tenPas17</elib>. This
-      exercise is implementation-heavy, and you will work exclusively in <script>document.write(notebook_link('clutter', notebook='grasp_candidate', link_text='this notebook'))</script>.</p>
+      <p>在本章 notebook 中，我们使用对跖启发式方法生成了抓取候选。在这个练习中，我们将研究一种替代方法：基于局部曲率来生成抓取候选，类似于 <elib>tenPas17</elib> 中提出的方法。这个练习偏重实现，你将完全在 <script>document.write(notebook_link('clutter', notebook='grasp_candidate', link_text='这个 notebook'))</script> 中完成。</p>
       
     </exercise>    
 
-    <exercise id="behaviorTrees"><h1>Behavior Trees</h1>
-      <p>Let's reintroduce the terminology of behavior trees. Behavior trees
-      provide a structure for switching between different tasks in a way that
-      is both modular and reactive. Behavior trees are a directed rooted tree
-      where the internal nodes manage the control flow and the leaf nodes are
-      actions to be executed or conditions to be evaluated. For example, an
-      action may be to "pick ball". This action can succeed or fail. A
-      condition may be "Is my hand empty?" which can be true (thus the
-      condition succeeds) or can be false (the condition fails). <br/><br/>
+    <exercise id="behaviorTrees"><h1>行为树</h1>
+      <p>让我们重新介绍一下行为树（behavior trees）的术语。行为树提供了一种在不同任务之间切换的结构，它同时具备模块化和响应式特性。行为树是一棵有向有根树，其中内部节点负责管理控制流，而叶节点则是需要执行的动作或需要评估的条件。例如，一个动作可能是“抓起球（pick ball）”。这个动作可能成功，也可能失败。一个条件可能是“我的手是空的吗？（Is my hand empty?）”，它可能为真（因此条件成功），也可能为假（条件失败）。<br/><br/>
 
-      More specifically, each node is periodically checked. In turn it will
-      check its children, and report status as success, failure or running
-      depending on its childrens' statuses. There are different categories
-      of control flow nodes, but we'll consider two categories of control
-      flow nodes:
+      更具体地说，每个节点都会被周期性检查。随后，它会检查自己的子节点，并根据子节点的状态报告 success（成功）、failure（失败）或 running（运行中）。控制流节点有不同类别，但我们这里只考虑两类控制流节点：
 
       <dl>
-        <dt>Sequence Node: ($\rightarrow$)</dt> <dd>Sequence nodes execute
-        each of the child behaviors left to right. The sequence returns <i>failure 
-        if any of the children fail</i> and <i>running if any of the children are 
-        running</i>. One way to think about this operator is that
-        a sequence node takes an "and" over all of the child behaviors.</dd>
-        <dt>Fallback Node: (?)</dt> <dd>Fallback nodes also execute each of the
-        child behaviors one after another. However, fallback <i>succeeds if any
-        of the children succeed</i>. One way to think about this operator is
-        that the fallback node takes an "or" over all of the children
-        behaviors.</dd>
+        <dt>顺序节点（Sequence Node）：($\rightarrow$)</dt> <dd>顺序节点从左到右依次执行每个子行为。如果任意一个子节点失败，则顺序节点返回<i>失败</i>；如果任意一个子节点正在运行，则顺序节点返回<i>运行中</i>。一种理解这个操作符的方式是：顺序节点对所有子行为取“与（and）”。</dd>
+        <dt>回退节点（Fallback Node）：(?)</dt> <dd>回退节点同样会依次执行每个子行为。然而，只要任意一个子节点成功，回退节点就会<i>成功</i>。一种理解这个操作符的方式是：回退节点对所有子行为取“或（or）”。</dd>
       </dl>  
 
-    The symbols are visualized below. Sequence nodes are represented as an
-    arrow in a box, fallback nodes are represented as a question mark in a box,
-    actions are inside boxes and conditions are inside ovals.</p>
+    这些符号如下图所示。顺序节点用方框中的箭头表示，回退节点用方框中的问号表示，动作位于矩形框中，而条件位于椭圆框中。</p>
     <figure><img style="width:70%", src="figures/exercises/behaviorTree_symbols.png"/></figure>
 
-    <p>Let's apply our understanding of behavior trees in the context of a
-    simple task where a robot's goal is to: find a ball, pick the ball up and
-    place the ball in a bin. We can describe task with the high-level behavior
-    tree:</p>
+    <p>让我们在一个简单任务的背景下应用对行为树的理解：机器人的目标是找到一个球，把球拿起来，并把它放进箱子中。我们可以用如下高层行为树来描述这个任务：</p>
     <figure><img style="width:80%", src="figures/exercises/behaviorTree_highLevel.png"/></figure>
 
-    <p>Confirm to yourself that this small behavior tree captures the task! We
-    can go one level deeper and expand out our "Pick Ball" behavior:</p>
+    <p>请确认一下，这棵小型行为树确实表达了该任务！我们还可以再深入一层，将“抓球（Pick Ball）”行为展开：</p>
     <figure><img style="width:80%", src="figures/exercises/behaviorTree_pick.png"/></figure>
 
-    <p>The pick ball behavior can be considered as such: Let's start with the
-    left branch. If the ball is already close, the condition "Ball Close?"
-    returns true. If the ball is not close, we execute an action to "Approach
-    ball", thus making the ball close. Thus either the ball is already close
-    (i.e. the condition "Ball Close?" is true) or we approach the ball (i.e.
-    the action "Approach ball" is successfully executed) to make the ball
-    close. Given that the ball is now close, we consider the right branch of
-    the pick action. If the ball is already grasped, the condition "Ball
-    Grasped?" returns true. if the ball is not grasped, we execute the action,
-    "Grasp Ball".<br/>
+    <p>抓球行为可以这样理解：先看左侧分支。如果球已经足够近，那么条件“球接近了吗？（Ball Close?）”返回 true。如果球还不够近，那么我们执行“接近球（Approach ball）”动作，从而让球变得接近。因此，要么球已经接近（即条件“Ball Close?”为真），要么我们通过成功执行“Approach ball”动作来让球接近。既然现在球已经接近了，我们就考虑抓取动作右侧的分支。如果球已经被抓住，那么条件“球已抓住？（Ball Grasped?）”返回 true。如果球还未被抓住，我们就执行“抓住球（Grasp Ball）”动作。<br/>
 
-    We can expand our our behavior tree even further to give our full
-    behavior:</p>
+    我们还可以进一步扩展行为树，以得到完整的行为：</p>
     <figure><img style="width:99%", src="figures/exercises/behaviorTree_detail.png" id="behaviorTree"/>
-            <figcaption>Behavior Tree for Pick-Up Task</figcaption></figure>
+            <figcaption>拾取任务的行为树</figcaption></figure>
 
-    <p>Here we've added the behavior that if the robot cannot complete the
-    task, it can ask a kind human for help. Take a few minutes to walk through
-    the behavior tree and convince yourself it encodes the desired task
-    behavior.</p>
+    <p>这里我们添加了这样一种行为：如果机器人无法完成任务，它可以向一位善良的人类寻求帮助。请花几分钟时间梳理这棵行为树，并确认它确实编码了我们想要的任务行为。</p>
 
     <ol type="a">
-        <li> We claimed behavior trees enable reactive behavior. Let's explore
-        that. Imagine we have a robot executing our <a
-        href="#behaviorTree">behavior tree</a>. As the robot is executing the
-        action "Approach Bin", a rude human knocks the ball out of the robot's
-        hand. The ball rolls to a position that the robot can still see, but is
-        quite far away. Following the logic of the behavior tree, what
-        condition fails and what action is executed because of this?</li>
+        <li> 我们声称行为树能够实现响应式行为。让我们来探索这一点。假设机器人正在执行我们的<a
+        href="#behaviorTree">行为树</a>。当机器人正在执行“接近箱子（Approach Bin）”动作时，一个粗鲁的人类把球从机器人手中打掉了。球滚到了机器人依然能够看到、但距离很远的位置。根据行为树的逻辑，哪个条件会失败？又会因此执行哪个动作？</li>
 
-        <li>Another way to mathematically model computation is through finite
-        state machines (FSM). Finite state machines are composed of states,
-        transitions and events. We can encode the behavior of our behavior tree
-        for our pick-up task through a finite state machine, as shown below:
+        <li>另一种对计算进行数学建模的方法是有限状态机（FSM）。有限状态机由状态、状态转移和事件组成。我们可以使用有限状态机来编码拾取任务中的行为树行为，如下图所示：
 
 
     <figure><img style="width:99%",
     src="figures/exercises/fsm_blanked.png"/></figure>
-    We have left a few states and transitions blank. Your task is to fill in
-    those 4 values such that the finite state machine produces the same
-    behavior as the behavior tree. </li>
+    我们故意留空了一些状态和转移。你的任务是填写这 4 个值，使该有限状态机能够产生与行为树相同的行为。</li>
     </ol>
 
-    <p>From this simple task we can see that while finite state machines can
-    often be easy to understand and intuitive, they can quickly get quite
-    messy!</p>
+    <p>从这个简单任务中我们可以看到：虽然有限状态机通常容易理解且直观，但它们也会很快变得相当混乱！</p>
 
     <ol type="a" start=3> 
-        <li> Throughout this chapter and the lectures we've discussed a bin
-        picking task. Our goal is to now capture the behavior of the
-        bin-picking task using a behavior tree. We want to encode the following
-        behavior: while Bin 1 is not empty, we are going to select a feasible
-        grasp within the bin, execute our grasp and transport what's within our
-        grasp to Bin 2. If there are still objects within Bin 1, but we cannot
-        find a feasible grasp, assume we have some action that shakes the bin,
-        hence randomizing the objects and (hopefully) making feasible grasps
-        available.<br/><br/>
+        <li> 在本章和课程中，我们一直讨论的是一个料箱抓取（bin picking）任务。现在我们的目标是使用行为树来描述该料箱抓取任务的行为。我们希望编码如下行为：当 Bin 1 还没有空时，我们将选择一个可行抓取，在料箱中执行抓取，并把抓到的物体运送到 Bin 2。如果 Bin 1 中仍然有物体，但我们无法找到可行抓取，那么假设我们有一个动作可以摇晃料箱，从而打乱物体（希望这样能够产生可行抓取）。<br/><br/>
 
-        We define the following conditions:
+        我们定义以下条件：
         <ul>
-          <li>"Bin 1 empty?</li>
-          <li>"Feasible Grasp Exists?"</li>
-          <li>"Grasp selected?"</li>
-          <li>"Grasped Object(s) above Bin 2?"</li>
-          <li>"Object Grasped?"</li>
-          <li>"Object(s) in Bin 2?"</li>
+          <li>“Bin 1 空了吗？”</li>
+          <li>“存在可行抓取吗？”</li>
+          <li>“抓取已选择？”</li>
+          <li>“抓取到的物体位于 Bin 2 上方？”</li>
+          <li>“物体已抓住？”</li>
+          <li>“物体已经在 Bin 2 中？”</li>
         </ul><br/>
-        And the following actions:
+        以及以下动作：
 
         <ul>
-          <li>"Drop grasped object(s) into Bin 2"</li>
-          <li>"Grasp Object(s)"</li>
-          <li>"Select Grasp"</li>
-          <li>"Randomize Bin"</li>
-          <li>"Transport grasped object(s) to above Bin 2"</li>
+          <li>“将抓住的物体放入 Bin 2”</li>
+          <li>“抓取物体”</li>
+          <li>“选择抓取”</li>
+          <li>“随机化料箱”</li>
+          <li>“将抓住的物体运输到 Bin 2 上方”</li>
         </ul><br/>
 
-        Using these conditions, actions and our two control flow nodes
-        (Sequence and Fallback), we want you to draw a behavior tree that
-        captures the behavior of our bin picking task. To get you started, we
-        have included a "rough draft" behavior tree below, but it's broken in a
-        number of places (e.g., some branches might be missing, some control
-        flow nodes/actions/conditions might have the wrong type, etc.):
+        使用这些条件、动作以及我们的两个控制流节点（顺序节点和回退节点），请你绘制一棵行为树，用来描述料箱抓取任务的行为。为了帮助你开始，我们在下面提供了一棵“草稿版”行为树，但它在多个地方是错误的（例如，某些分支可能缺失，某些控制流节点/动作/条件的类型可能不正确，等等）：
 
         <figure><img style="width:80%",
         src="figures/exercises/behaviorTreeBroken.png"/></figure>
 
-        Your job is to identify all of the places where it's broken, and draw
-        your own correct behavior tree with all the broken components fixed. 
+        你的任务是找出所有出错的地方，并绘制你自己的正确行为树，修复所有损坏的组件。
         </li>
     </ol>
 
-    <p>We claimed behavior trees are modular. Their modularity comes from the
-    fact that we can write reusable snippets of code that define actions and
-    conditions and then compose them using behavior trees. For example, we can
-    imagine that the "Select Grasp" action from part (c) is implemented using
-    the antipodal grasping mechanism we have built up throughout this chapter.
-    And the "Transport grasped object(s) to above Bin 2" action could be
-    implemented using the pick and place tools we developed in Chapter 3.</p>
+    <p>我们声称行为树是模块化的。它们的模块化来自这样一个事实：我们可以编写可复用的代码片段来定义动作和条件，然后使用行为树将它们组合起来。例如，我们可以想象，部分 (c) 中的“选择抓取（Select Grasp）”动作，是使用我们在本章中逐步构建起来的对跖抓取机制实现的。而“将抓住的物体运输到 Bin 2 上方”动作，则可以使用我们在第 3 章中开发的拾取与放置工具来实现。</p>
 
-    <p>Source: The scenario and figures for parts (a) and (b) of this exercise
-    are inspired by material in <elib>Colledanchise18</elib></p>
+    <p>来源：本练习中部分 (a) 和 (b) 的场景与图示，受到 <elib>Colledanchise18</elib> 中材料的启发。</p>
     </exercise>
 
-    <exercise id="antipodal_grasp_letters"><h1>Sampling Antipodal Grasps</h1>
-    <p> For this exercise we will practice sampling antipodal grasps with your own
-    initials. You will explore how ray casting can be used to find antipodal point pairs,
-    which form the basis of a grasp. You will work exclusively in
+    <exercise id="antipodal_grasp_letters"><h1>采样对跖抓取</h1>
+    <p> 在这个练习中，我们将使用你自己的姓名首字母来练习采样对跖抓取。你将探索如何使用射线投射来寻找对跖点对，而这些点对构成抓取的基础。你将完全在
     <script>document.write(notebook_link('clutter', notebook='6_grasp_initials',
-    link_text='this notebook'))</script>. You will be asked to complete the following
-    steps: </p>
+    link_text='这个 notebook'))</script> 中完成本练习。你需要完成以下步骤：</p>
 
     <ol type="a">
-        <li> Sample antipodal point pairs from a mesh. </li>
-        <li> Filter antipodal point pairs based on grasp heuristics. </li>
-        <li> Use the grasp heuristics to manipulate custom meshes in a scene. </li>
+        <li> 从网格中采样对跖点对。</li>
+        <li> 基于抓取启发式方法筛选对跖点对。</li>
+        <li> 使用抓取启发式方法在场景中操作自定义网格。</li>
     </ol>
   </section>
  

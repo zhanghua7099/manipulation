@@ -58,140 +58,127 @@ href="https://www.youtube.com/channel/UChfUOAhz7ynELF-s_1LPpWg">Lecture videos a
 <script type="text/javascript">document.write(notebook_header('deep_perception'))
 </script>
 <!-- EVERYTHING ABOVE THIS LINE IS OVERWRITTEN BY THE INSTALL SCRIPT -->
-<chapter style="counter-reset: chapter 9"><h1>Deep Perception for
-Manipulation</h1>
+<chapter style="counter-reset: chapter 9"><h1>用于操作的深度感知</h1>
 
-  <p>In the previous chapter, we discussed deep-learning approaches to object
-  detection and (instance-level) segmentation; these are general-purpose tasks
-  for processing RGB images that are used broadly in computer vision. Detection
-  and segmentation alone can be combined with geometric perception to, for
-  instance, estimate the pose of a known object in just the segmented point
-  cloud instead of the entire scene, or to run our point-cloud grasp selection
-  algorithm only on the segmented point cloud in order to pick up an object of
-  interest.</p>
+  <p>在上一章中，我们讨论了用于目标检测和（实例级）分割的深度学习方法；
+  这些都是处理 RGB 图像的通用任务，在计算机视觉中被广泛使用。
+  仅凭检测和分割，就可以与几何感知结合起来，例如，只在分割出的点云中估计某个已知物体的位姿，
+  而不是在整个场景中估计；或者只在分割出的点云上运行我们的点云抓取选择算法，
+  以便抓取感兴趣的物体。</p>
 
-  <p>One of the most amazing features of deep learning for perception is that
-  we can pre-train on a different dataset (like ImageNet or COCO) or even a
-  different task and then fine-tune on our domain-specific dataset or task. But
-  what are the right perception tasks for manipulation?  Object detection and
-  segmentation are a great start, but often we want to know more about the
-  scene/objects to manipulate them. That is the topic of this chapter.</p>
+  <p>深度学习用于感知时最令人惊叹的特性之一是：
+  我们可以在另一个数据集（如 ImageNet 或 COCO）上预训练，
+  甚至可以在另一个任务上预训练，然后再在我们特定领域的数据集或任务上进行微调。
+  但是，对于操作任务而言，什么才是合适的感知任务？
+  目标检测和分割是一个很好的起点，但为了操作场景或物体，我们通常还想了解更多信息。
+  这正是本章的主题。</p>
 
-  <p>There is a potential answer to this question that we will defer to a later
-  chapter: learning end-to-end "visuomotor" policies, sometimes affectionately
-  referred to as "pixels to torques". Here I want us to think first about how
-  we can combine a deep-learning-based perception system with the powerful
-  existing (model-based) tools that we have been building up for planning and
-  control.</p>
+  <p>这个问题有一个潜在答案，我们会推迟到后面的章节再讨论：
+  学习端到端的“视觉运动（visuomotor）”策略，有时也亲切地称为“从像素到力矩（pixels to torques）”。
+  在这里，我希望我们首先思考的是：
+  如何将基于深度学习的感知系统，与我们一直在构建的、用于规划和控制的强大现有（基于模型的）工具结合起来。</p>
 
-  <todo> maybe a system diagram which includes perception, planning and
-  control? So far we’ve had two version - grasp candidates and/or object pose…
+  <todo> 也许放一个包含感知、规划和控制的系统图？
+  到目前为止我们已经有两个版本——抓取候选和/或物体位姿……
   </todo>
 
-  <p>I'll start with the deep-learning version of a perception task we've
-  already considered: object pose estimation.</p>
+  <p>我将从一个我们已经考虑过的感知任务的深度学习版本开始：
+  物体位姿估计。</p>
 
-  <!-- representations of uncertainty should be a theme i'll carry throughout.
-  make analogy to object detection outputs (e.g. in mask-rcnn) -->
+  <!-- 不确定性的表示应该成为我贯穿全文的一个主题。
+  类比目标检测输出（例如 mask-rcnn 中的输出） -->
 
-  <section><h1>Pose estimation</h1>
+  <section><h1>位姿估计</h1>
 
-    <!-- some notes in 2021 lecture 11 ithoughts. -->
+    <!-- 2021 年第 11 讲 ithoughts 中有一些笔记。 -->
 
-    <p>We discussed pose estimation at some length in the <a
-    href="pose.html">geometric perception chapter</a>, and had a few take-away
-    messages. Most importantly, the geometric approaches have only a very
-    limited ability to make use of RGB values; but these are incredibly
-    valuable for resolving a pose. Geometry alone doesn't tell the full story.
-    Another subtle lesson was that the ICP loss, although conceptually very
-    clean, does not sufficiently capture the richer concepts like
-    non-penetration and free-space constraints. As the original core problems
-    in 2D computer vision started to feel "solved", we've seen a surge of
-    interest/activity from the computer vision community on 3D perception,
-    which is great for robotics!</p>
+    <p>我们在<a
+    href="pose.html">几何感知章节</a>中较为详细地讨论了位姿估计，并得到了一些要点。
+    最重要的是，几何方法只能非常有限地利用 RGB 值；
+    但这些 RGB 信息对于确定一个位姿来说极其有价值。
+    仅靠几何并不能讲完整个故事。
+    另一个微妙的经验是，ICP 损失虽然在概念上非常清晰，
+    但并不能充分捕捉诸如非穿透约束和自由空间约束这类更丰富的概念。
+    随着二维计算机视觉中最初的核心问题开始显得已经被“解决”，
+    我们看到计算机视觉社区对三维感知的兴趣和活动迅速增长，
+    这对机器人学来说是一件好事！</p>
 
-    <p>The conceptually simplest version of this problem is that we would like
-    to estimate the pose of a known object from a single RGB image. How should
-    we train a mustard-bottle-specific (for example) deep network which takes
-    an RGB image in, and outputs a pose estimate? Of course, if we can do this,
-    we can also apply the idea to e.g. the images cropped from the bounding
-    box output of an object recognition / instance segmentation system.</p> 
+    <p>这个问题在概念上最简单的版本是：
+    我们希望从单张 RGB 图像中估计一个已知物体的位姿。
+    那么，我们应该如何训练一个专门针对芥末瓶（例如）的深度网络，
+    使它输入一张 RGB 图像，并输出一个位姿估计？
+    当然，如果我们能够做到这一点，
+    我们也可以将这个想法应用到例如由目标识别/实例分割系统输出的边界框裁剪出的图像上。</p>
 
-    <subsection><h1>Pose representation</h1>
+    <subsection><h1>位姿表示</h1>
     
-      <p>Once again, we must confront the question of how best to represent a
-      pose. Many initial architectures discretized the pose space into bins and
-      formulated pose estimation as a classification problem, but the trend
-      eventually shifted towards pose
-      regression<elib>Mahendran17+Xiang17</elib>. Regressing three numbers to
-      represent x-y-z translation seems clear, but we have many choices for how
-      to represent 3D orientation (e.g. Euler angles, unit quaternions,
-      rotation matrices, ...), and our choice can impact learning and
-      generalization performance.</p>
+      <p>我们再次必须面对一个问题：如何最好地表示位姿。
+      许多早期架构将位姿空间离散化为若干区间，并将位姿估计表述为一个分类问题；
+      但这一趋势最终转向了位姿回归<elib>Mahendran17+Xiang17</elib>。
+      回归三个数来表示 x-y-z 平移似乎很清楚，
+      但对于如何表示三维朝向，我们有很多选择
+      （例如欧拉角、单位四元数、旋转矩阵，……），
+      而我们的选择会影响学习和泛化性能。</p>
 
-      <p>To output a single pose, works like <elib>Zhou19</elib> and
-      <elib>Levinson20</elib> argue that many rotation parameterizations have
-      issues with discontinuities. They recommend having the network output 6
-      numbers for the rotation (and then projecting to SO(3) via Gram-Schmidt
-      orthogonalization), or outputting the full 9 numbers of the rotation
-      matrix, and projecting back to SO(3) via <a
-      href="pose.html#registration">SVD orthogonalization</a>.</p>
+      <p>对于输出单个位姿的情况，像 <elib>Zhou19</elib> 和
+      <elib>Levinson20</elib> 这样的工作认为，许多旋转参数化方式都存在不连续性问题。
+      他们建议让网络为旋转输出 6 个数
+      （然后通过 Gram-Schmidt 正交化投影到 SO(3)），
+      或者输出旋转矩阵完整的 9 个数，
+      并通过<a
+      href="pose.html#registration">SVD 正交化</a>投影回 SO(3)。</p>
     
-      <p>Perhaps more substantially, many works have pointed out that
-      outputting a single "correct" pose is simply not sufficient
-      <elib>Hashimoto20+Deng22</elib>. When objects have rotational symmetries,
-      or if they are severely occluded, then outputting an entire pose
-      distribution is much more adequate. Representing a categorial
-      distribution is very natural for discretized representations, but how do
-      we represent distributions over continuous pose? One very elegant choice
-      is the Bingham distribution, which gives the natural generalization of
-      Gaussians applied to unit quaternions
-      <elib>Glover14+Peretroukhin20+Deng22</elib>. </p>
+      <p>也许更实质性的是，许多工作指出，
+      输出一个单一的“正确”位姿根本是不够的
+      <elib>Hashimoto20+Deng22</elib>。
+      当物体具有旋转对称性，或者被严重遮挡时，
+      输出整个姿态分布要合适得多。
+      对于离散化表示来说，表示一个类别分布是非常自然的；
+      但我们该如何表示连续位姿上的分布呢？
+      一个非常优雅的选择是 Bingham 分布，
+      它给出了应用于单位四元数的高斯分布的自然推广
+      <elib>Glover14+Peretroukhin20+Deng22</elib>。</p>
 
     </subsection>
 
-    <subsection><h1>Loss functions</h1>
+    <subsection><h1>损失函数</h1>
 
-      <p>No matter which pose representation is coming out of the network and
-      the ground truth labels, one must choose the appropriate loss function.
-      Quaternion-based loss functions can be used to compute the geodesic
-      distance between two orientations, and should certainly be more
-      appropriate than e.g. a least-squares metric on Euler angles. More
-      expensive, but potentially more suitable is to write the loss function in
-      terms of a reconstruction error so that the network is not artificially
-      penalized for e.g. symmetries which it could not possibly address
-      <elib>Hodan20</elib>.</p>
+      <p>无论网络输出的位姿表示和真实标签采用哪一种形式，
+      都必须选择合适的损失函数。
+      基于四元数的损失函数可以用来计算两个朝向之间的测地距离，
+      并且当然应该比例如欧拉角上的最小二乘度量更合适。
+      更昂贵、但可能更合适的方法是，
+      将损失函数写成重建误差的形式，
+      这样网络就不会因为例如它根本不可能处理的对称性而受到人为惩罚
+      <elib>Hodan20</elib>。</p>
 
-      <p>Training a network to output an entire distribution over pose brings
-      up additional interesting questions about the choice for the loss
-      function. While it is possible to train the distribution based on only
-      the statistics of the data labeled with ground truth pose (again,
-      choosing maximum likelihood loss vs mean-squared error), it is also
-      possible to use our understanding of the symmetries to provide more
-      direct supervision. For example, <elib>Hashimoto20</elib> used image
-      differences to efficiently (but heuristically) estimate a ground-truth
-      covariance for each sample.</p>
+      <p>训练一个网络来输出完整的位姿分布，
+      会引出关于损失函数选择的更多有趣问题。
+      虽然可以仅根据带有真实位姿标注的数据统计量来训练该分布
+      （同样需要在最大似然损失与均方误差之间进行选择），
+      但也可以利用我们对对称性的理解来提供更直接的监督。
+      例如，<elib>Hashimoto20</elib> 使用图像差异来高效地
+      （但以启发式方式）估计每个样本的真实协方差。</p>
     
     </subsection>
 
-    <subsection><h1>Pose estimation benchmarks</h1>
+    <subsection><h1>位姿估计基准</h1>
 
-      <p>Benchmark for 6D Object Pose Estimation (BOP)<elib>Hodan20</elib>.  </p>
+      <p>6D 物体位姿估计基准（BOP）<elib>Hodan20</elib>。</p>
 
-      <!-- maybe: Common Objects in 3D:
-Large-Scale Learning and Evaluation of Real-life 3D Category Reconstruction -->
+      <!-- 也许可以加入：Common Objects in 3D:
+真实生活三维类别重建的大规模学习与评估 -->
 
     </subsection>
 
-    <!-- maybe: 
+    <!-- 也许：
 
-      Something about architecture?  (e.g. 3D convolutions, etc) Do I even want
-      to go there?
+      关于架构的一些内容？（例如 3D 卷积等）我真的想讲到那里吗？
 
-      More discussion/refs from Kuni, Duy, and Ben:
+      来自 Kuni、Duy 和 Ben 的更多讨论/参考：
       https://tri-internal.slack.com/archives/C02J6UV6874/p1634596625000100
 
-      Angjoo's course: https://sites.google.com/berkeley.edu/cs294-173/
+      Angjoo 的课程：https://sites.google.com/berkeley.edu/cs294-173/
 
       https://openaccess.thecvf.com/content_ECCV_2018/papers/Martin_Sundermeyer_Implicit_3D_Orientation_ECCV_2018_paper.pdf
 
@@ -199,120 +186,126 @@ Large-Scale Learning and Evaluation of Real-life 3D Category Reconstruction -->
 
     -->
 
-    <subsection><h1>Limitations</h1>
+    <subsection><h1>局限性</h1>
     
-      <p>Although pose estimation is a natural task, and it is straightforward
-      to plug an estimated pose into many of our robotics pipelines, I feel
-      pretty strongly that this is often not the right choice for connecting
-      perception to planning and control. Although some attempts have been made
-      to generalize pose to categories of objects <elib>Wang19</elib>, pose
-      estimation is pretty strongly tied to known objects, which feels
-      limiting. Accurately estimating the pose of an object is difficult, and
-      is often not necessary for manipulation.</p>
+      <p>尽管位姿估计是一个自然的任务，
+      并且将估计出的位姿接入我们的许多机器人流程也很直接，
+      但我非常强烈地认为，
+      这通常并不是将感知连接到规划和控制的正确选择。
+      虽然已经有人尝试将位姿推广到物体类别上 <elib>Wang19</elib>，
+      但位姿估计仍然与已知物体紧密绑定，
+      这让人感觉很受限制。
+      准确估计一个物体的位姿是困难的，
+      而且对于操作来说往往并不是必要的。</p>
 
     </subsection>
 
   </section>
 
-  <section><h1>Grasp selection</h1>
+  <section><h1>抓取选择</h1>
 
-    <p>In <elib>Gibson77+Gibson79</elib>, J.J. Gibson articulated his highly
-    influential <i>theory of affordances</i>, where he described the role of
-    perception as serving behavior (and behavior being controlled by
-    perception). In our case, affordances describe not what the
-    object/environment is nor its pose, but what opportunities for action it
-    provides to the robot. Importantly, one can potentially estimate
-    affordances without explicitly estimating pose.</p>
+    <p>在 <elib>Gibson77+Gibson79</elib> 中，J.J. Gibson 提出了他影响深远的
+    <i>可供性理论（theory of affordances）</i>，
+    其中他将感知的作用描述为服务于行为
+    （而行为则由感知控制）。
+    在我们的情形中，可供性描述的不是物体/环境是什么，
+    也不是它的位姿，
+    而是它为机器人提供了哪些行动机会。
+    重要的是，人们有可能在不显式估计位姿的情况下估计可供性。</p>
 
-    <p>Two of the earliest and most successful examples of this were
-    <elib>tenPas17+tenPas18</elib> and <elib>Mahler17+Mahler17a</elib>, which
-    attempted to learn a grasping affordances directly from raw RGB-D input.
-    <elib>tenPas17</elib> used a grasp selection strategy that was very similar
-    to (and partly the inspiration for) the <a
-    href="clutter.html#grasp_sampler">grasp sampler</a> we introduced in our
-    antipodal grasping workflow. But in addition to the geometric heuristic,
-    <elib>tenPas17</elib> trained a small CNN to predict grasp success.  The
-    input to this CNN was a voxelized summary of the pixels and local geometry
-    estimates in the immediate vicinity of the grasp, and the output was a
-    binary prediction of grasp success or failure. Similarly,
-    <elib>Mahler17</elib> learned a "grasp quality" CNN takes as input the
-    depth image in the grasp frame (+ the grasp depth in the camera frame) and
-    outputs a probability of grasp success.</p>
+    <p>其中两个最早且最成功的例子是
+    <elib>tenPas17+tenPas18</elib> 和 <elib>Mahler17+Mahler17a</elib>，
+    它们尝试直接从原始 RGB-D 输入中学习抓取可供性。
+    <elib>tenPas17</elib> 使用了一种抓取选择策略，
+    这种策略与我们在对向抓取工作流中介绍的
+    <a href="clutter.html#grasp_sampler">抓取采样器</a>
+    非常相似（并且在一定程度上启发了它）。
+    但除了几何启发式方法之外，
+    <elib>tenPas17</elib> 还训练了一个小型 CNN 来预测抓取成功率。
+    该 CNN 的输入是抓取附近像素和局部几何估计的体素化摘要，
+    输出则是对抓取成功或失败的二分类预测。
+    类似地，<elib>Mahler17</elib> 学习了一个“抓取质量”CNN，
+    它以抓取坐标系中的深度图像
+    （加上相机坐标系中的抓取深度）作为输入，
+    并输出抓取成功的概率。</p>
 
-    <p>Transporter nets <elib>Zeng21</elib></p>
+    <p>Transporter 网络 <elib>Zeng21</elib></p>
 
   </section>  
 
-  <section><h1>(Semantic) Keypoints</h1>
+  <section><h1>（语义）关键点</h1>
   
-    <!-- something in-between: can reuse the representation for multiple tasks... -->
+    <!-- 介于两者之间的内容：可以将这种表示复用于多个任务…… -->
 
-    <p>KeyPoint Affordances for Category-Level Robotic Manipulation (kPAM) <elib>Manuelli19+Gao20b</elib>.</p>
+    <p>用于类别级机器人操作的关键点可供性（kPAM）<elib>Manuelli19+Gao20b</elib>。</p>
 
-    <!-- category level -->
+    <!-- 类别级 -->
 
-    <!-- wei's keypoint labeling tool -->
+    <!-- wei 的关键点标注工具 -->
 
-    <todo>Example: corner keypoints for boxes.  (also pose+shape estimation
-    from keypoints?)</todo>
+    <todo>示例：盒子的角点关键点。（还有从关键点进行位姿+形状估计？）</todo>
   </section>
 
-  <section><h1>Dense Correspondences</h1>
+  <section><h1>稠密对应</h1>
 
     <p><elib>Florence18a</elib>, DynoV2, ...</p>
 
-    <!-- dense correspondence -->
-    <!-- anthony's neural descriptor fields -->
+    <!-- 稠密对应 -->
+    <!-- anthony 的神经描述符场 -->
 
   </section>
 
-  <section><h1>Scene Flow</h1>
+  <section><h1>场景流</h1>
   
-    <todo>https://proceedings.mlr.press/v205/seita23a/seita23a.pdf and other work by Held should get me started.</todo>
-    <!-- my favorite paper of David's is FlowBot3D -->
+    <todo>https://proceedings.mlr.press/v205/seita23a/seita23a.pdf 以及 Held 的其他工作应该能让我开始。</todo>
+    <!-- David 的论文中我最喜欢的是 FlowBot3D -->
 
   </section>
 
 
 
-  <section><h1>Task-level state</h1>
+  <section><h1>任务级状态</h1>
 
-    <!-- tcc.  chris paxton "red block is on the blue block".  VLM/VQA.  GPT-4V! -->
+    <!-- tcc。chris paxton “红色积木在蓝色积木上”。VLM/VQA。GPT-4V！ -->
   
   </section>
 
-  <!-- Can I do a putting it all together section here?? Or in each section? -->
+  <!-- 我能在这里加一个“整合起来”的小节吗？？或者放在每一节里？ -->
 
-  <section><h1>Other perceptual tasks / representations</h1>
+  <section><h1>其他感知任务 / 表示</h1>
   
-    <p>My coverage above is necessarily incomplete and the field is moving
-    fast. Here is a quick "shout out" to a few other very relevant ideas.</p>
+    <p>上面的覆盖范围必然是不完整的，而且这个领域发展很快。
+    这里快速“致意”一下其他几个非常相关的想法。</p>
 
-    <p>More coming soon...</p>
-    <!-- shape estimation / completion -->
-    <!-- transporter nets -->
-    <!-- estimating dynamic parameters (mass / friction / etc) -->
+    <p>更多内容即将推出……</p>
+    <!-- 形状估计 / 补全 -->
+    <!-- transporter 网络 -->
+    <!-- 估计动态参数（质量 / 摩擦 / 等等） -->
 
-    <!-- danny's compositional nerf? -->
-    <!-- probably defer learning dynamics models to another chapter -->
-    <!-- M0m from lpk -->
-    <!-- Particles? or deformables more generally… -->
+    <!-- danny 的组合式 nerf？ -->
+    <!-- 也许把学习动力学模型推迟到另一章 -->
+    <!-- 来自 lpk 的 M0m -->
+    <!-- 粒子？或者更一般地说，可变形物体…… -->
 
-    <!-- kick out a complete urdf (+ poses?). so mass, etc. -->
+    <!-- 输出一个完整的 urdf（+ 位姿？）。所以还有质量等。 -->
     
   </section>
 
-  <!-- maybe add a “looking forward” section?  Cracking an egg, etc.  what
-  should the perception system output?  How do we write the planning/control
-  system.  This is where full-stack deep learning approaches are winning.  But
-  i don’t know that being data-driven (or deep) is fundamental here.
+  <!-- 也许加一个“展望未来”的小节？打鸡蛋等。感知系统应该输出什么？
+  我们该如何编写规划/控制系统？这是全栈深度学习方法正在胜出的地方。
+  但我并不确定数据驱动（或深度）在这里是否是根本性的。
 
-  Maybe future chapter on state representations?  In the model-learning
-  section? -->
+  也许未来在状态表示上开一章？放在模型学习部分？ -->
 
-  <section id="exercises"><h1>Exercises</h1>
-    <exercise id="don_contrastive"><h1>Deep Object Net and Contrastive Loss</h1>
-      <p>In this problem you will further explore Dense Object Nets, which were introduced in lecture. Dense Object Nets are able to quickly learn consistent pixel-level representations for visual understanding and manipulation. Dense Object Nets are powerful because the representations they predict are applicable to both rigid and non-rigid objects. They can also generalize to new objects in the same class and can be trained with self-supervised learning. For this problem you will work in <script>document.write(notebook_link('deep_perception', notebook='contrastive', link_text='this notebook'))</script> to first implement the loss function used to train Dense Object Nets, and then predict correspondences between images using a trained Dense Object Net.</p>
+  <section id="exercises"><h1>练习</h1>
+    <exercise id="don_contrastive"><h1>Deep Object Net 与对比损失</h1>
+      <p>在这个问题中，你将进一步探索 Dense Object Nets，它们已在课堂中介绍过。
+      Dense Object Nets 能够快速学习用于视觉理解和操作的一致像素级表示。
+      Dense Object Nets 之所以强大，是因为它们预测的表示既适用于刚性物体，也适用于非刚性物体。
+      它们还可以泛化到同一类别中的新物体，并且可以通过自监督学习进行训练。
+      在这个问题中，你将在 <script>document.write(notebook_link('deep_perception', notebook='contrastive', link_text='这个笔记本'))</script> 中进行操作：
+      首先实现用于训练 Dense Object Nets 的损失函数，
+      然后使用训练好的 Dense Object Net 预测图像之间的对应关系。</p>
     </exercise>
   </section>
 

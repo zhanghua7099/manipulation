@@ -56,286 +56,351 @@ href="https://www.youtube.com/channel/UChfUOAhz7ynELF-s_1LPpWg">Lecture videos a
 <script type="text/javascript">document.write(notebook_header('trajectories'))
 </script>
 <!-- EVERYTHING ABOVE THIS LINE IS OVERWRITTEN BY THE INSTALL SCRIPT -->
-<chapter style="counter-reset: chapter 5"><h1>Motion Planning</h1>
+<chapter style="counter-reset: chapter 5"><h1>运动规划（Motion Planning）</h1>
 
-  <p>There are a few more essential skills that we need in our toolbox.  In this
-  chapter, we will explore some of the powerful methods of kinematic trajectory
-  motion planning.</p>
+  <p>我们的工具箱中还缺少一些关键技能。在本章中，
+  我们将探索一些强大的运动学轨迹运动规划方法。</p>
 
-  <div>I'm actually almost proud of making it this far into the notes without
-  covering this topic yet.  Writing a relatively simple script for the pose of
-  the gripper, like we did in the bin picking chapter, really can solve a lot of
-  interesting problems.  But there are a number of reasons that we might want a
-  more automated solution:
-  <ol><li>When the environment becomes more cluttered, it is harder to write
-  such a simple solution, and we might have to worry about collisions between
-  the arm and the environment as well as the gripper and the environment.</li>
-  <li>If we are doing "mobile manipulation" -- our robotic arms are attached to
-  a mobile base -- then the robot might have to operate in many different environments.  Even if the workspace is not geometrically complicated,
-  it might still be different enough each time we reach that it requires
-  automated (but possibly still simple) planning.</li><li>If the robot is
-  operating in a simple known environment all day long, then it probably makes
-  sense to optimize the trajectories that it is executing; we can often speed up
-  the manipulation process significantly.</li>
+  <div>事实上，直到现在的讲义才开始讲这个主题，我几乎都有点为自己感到骄傲了。
+  就像我们在箱体抓取（bin picking）章节中所做的那样，
+  为夹爪姿态编写一个相对简单的脚本，其实已经能够解决很多有趣的问题。
+  但是，我们仍然有很多理由需要一种更加自动化的解决方案：
+  <ol><li>当环境变得更加杂乱时，
+  编写这样简单的解决方案会更加困难，
+  我们还必须考虑机械臂与环境之间的碰撞，
+  以及夹爪与环境之间的碰撞。</li>
+  <li>如果我们在进行“移动操作（mobile manipulation）”——
+  即机械臂安装在移动底盘上——
+  那么机器人可能需要在许多不同的环境中工作。
+  即使工作空间在几何结构上并不复杂，
+  每次到达目标时环境也可能有足够大的差异，
+  从而需要自动化（即便可能仍然很简单）的规划。</li>
+  <li>如果机器人整天都在一个已知且简单的环境中运行，
+  那么优化它所执行的轨迹通常是有意义的；
+  我们往往可以显著提升操作过程的速度。</li>
   </div>
 
-  <p>In fact, if you ran the <a href="clutter.html#clutter_clearing">clutter
-  clearing demo</a>, I would say that motion planning failures were the biggest
-  limitation of that solution so far: the hand or objects could sometimes
-  collide with the cameras or bins, or the differential-inverse kinematics
-  strategy (which effectively ignored the joint angles) would sometime cause the
-  robot to fold in on itself. In this chapter we'll develop the tools to
-  make that much better!</p>
+  <p>事实上，如果你运行过<a href="clutter.html#clutter_clearing">杂乱环境清理演示（clutter
+  clearing demo）</a>，
+  我会认为运动规划失败是目前该方案最大的限制：
+  手部或物体有时会与摄像头或箱体发生碰撞，
+  或者微分逆运动学策略（它实际上忽略了关节角度）
+  有时会导致机器人自身折叠缠绕。
+  在本章中，我们将开发工具来大幅改善这一点！</p>
 
-  <p>I do need to make one important caveat. For motion planning in
-  manipulation, lots of emphasis is placed on the problem of avoiding
-  collisions. Despite having done some work in this field myself, I actually
-  really dislike the problem formulation of collision-free motion planning.  I
-  think that on the whole, robots are too afraid of bumping into the world
-  (because things still go wrong when they do). I don't think humans are
-  solving these complex geometric problems every time we reach... even when we
-  are reaching in dense clutter. I actually suspect that we are very bad at
-  solving them. I would much rather see robots that perform well even with very
-  coarse / approximate plans for moving through a cluttered environment, that
-  are not afraid to make incidental contacts, and that can still accomplish the
-  task when they do!</p>
+  <p>不过我确实需要说明一个重要的保留意见。
+  在操作任务中的运动规划领域，
+  人们非常强调“避碰”问题。
+  尽管我自己也在这个领域做过一些研究，
+  但实际上我非常不喜欢“无碰撞运动规划”这种问题表述方式。
+  我认为总体而言，机器人太害怕碰撞世界了
+  （因为一旦碰撞，事情仍然常常会出错）。
+  我不认为人类每次伸手时都在求解这些复杂的几何问题……
+  即便是在非常拥挤杂乱的环境中伸手也是如此。
+  我甚至怀疑，我们其实并不擅长求解这些问题。
+  我更希望看到的是：
+  即使只有非常粗糙 / 近似的穿越杂乱环境的规划，
+  机器人依然能够表现良好；
+  它们不害怕发生偶然接触，
+  并且即使发生接触，仍然能够完成任务！</p>
 
-  <section><h1>Inverse Kinematics</h1>
+  <section><h1>逆运动学（Inverse Kinematics）</h1>
 
-    <p>The goal of this chapter is to solve for motion trajectories.  But I would argue that if you really understand how to solve inverse kinematics, then you've got most of what you need to plan trajectories.</p>
+    <p>本章的目标是求解运动轨迹。
+    但我认为，如果你真正理解了如何求解逆运动学，
+    那么你实际上已经掌握了进行轨迹规划所需的大部分内容。</p>
 
-    <p>We know that the <a href="pick.html#kinematics">forward kinematics</a>
-    give us a (nonlinear) mapping from joint angles to e.g. the pose of the
-    gripper: $X^G = f_{kin}(q)$.  So, naturally, one would think that the
-    problem of inverse kinematics (IK) is about solving for the inverse map, $q
-    = f^{-1}_{kin}(X^G).$  But, like we did with differential inverse
-    kinematics, I'd like to think about inverse kinematics as the more general
-    problem of finding joint angles subject to a rich library of costs and
-    constraints; and the space of possible kinematic constraints is indeed
-    rich.</p>
+    <p>我们知道，<a href="pick.html#kinematics">正向运动学（forward kinematics）</a>
+    给出了一个从关节角到例如夹爪位姿的（非线性）映射：
+    $X^G = f_{kin}(q)$。
+    因此，人们自然会认为，
+    逆运动学（IK）的问题就是求解其逆映射，即
+    $q = f^{-1}_{kin}(X^G)$。
+    但是，就像我们在微分逆运动学中所做的那样，
+    我更倾向于把逆运动学看作一个更加通用的问题：
+    即在丰富的代价函数与约束条件下寻找关节角。
+    而运动学约束的可能形式实际上是非常丰富的。</p>
 
-    <p>For example, when we were <a
-    href="clutter.html#grasp_candidates">evaluating grasp candidates for bin
-    picking</a>, we had only a soft preference on the orientation of the hand
-    relative to some antipodal grasp.  In that case, specifying 6 DOF pose of
-    the gripper and finding one set of joint angles which satisfies it exactly
-    would have been an overly constrained specification.  I would say that it's
-    rare that we have only end-effector pose constraints to reason about, we
-    almost always have costs or constraints in joint space (like joint limits)
-    and others in Cartesian space (like non-penetration constraints).</p>
+    <p>例如，当我们在<a
+    href="clutter.html#grasp_candidates">为箱体抓取（bin
+    picking）评估抓取候选（grasp candidates）</a>时，
+    我们对于手部相对于某个对跖抓取（antipodal grasp）的朝向
+    只有一个软偏好（soft preference）。
+    在那种情况下，精确指定夹爪的 6 自由度位姿，
+    并寻找一组能够完全满足该位姿的关节角，
+    实际上会是一个约束过强（overly constrained）的描述。
+    我会说，仅仅处理末端执行器位姿约束的情况其实很少见，
+    我们几乎总是同时需要考虑关节空间中的代价或约束
+    （例如关节限位），
+    以及笛卡尔空间中的其它约束
+    （例如非穿透约束）。</p>
 
     <figure>
       <iframe width="560" height="315" src="https://www.youtube.com/embed/m1rv4d_zUCY" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen pdf="no"></iframe>
-      <p pdf="only"><a href="https://www.youtube.com/embed/m1rv4d_zUCY">Click here to watch the video.</a></p>
-      <figcaption>We made extensive use of rich inverse kinematics
-      specifications in our work on humanoid robots.  The video above is an
-      example of the interactive inverse kinematics interface (here to help us
-      figure out how to fit the our big humanoid robot into the little Polaris).
-      <a href="https://www.youtube.com/watch?v=E_CVq0lWfSc">Here is another
-      video</a> of the same tool being used for the Valkyrie humanoid, where we
-      do specify and end-effector pose, but we also add a joint-centering
-      objective and static stability constraints <elib>Fallon14+Marion16</elib>.
+      <p pdf="only"><a href="https://www.youtube.com/embed/m1rv4d_zUCY">点击此处观看视频。</a></p>
+      <figcaption>在我们关于人形机器人的研究中，
+      我们大量使用了丰富的逆运动学规格描述（rich inverse kinematics
+      specifications）。
+      上面的视频展示了一个交互式逆运动学界面的示例
+      （这里用于帮助我们研究如何让大型人形机器人进入小型 Polaris 车内）。
+      <a href="https://www.youtube.com/watch?v=E_CVq0lWfSc">这里还有另一个视频</a>，
+      展示了同一个工具在 Valkyrie 人形机器人上的应用，
+      在那个例子中，我们确实指定了末端执行器位姿，
+      但同时还加入了关节居中（joint-centering）目标
+      以及静态稳定性约束
+      <elib>Fallon14+Marion16</elib>。
       </figcaption>
     </figure>
   
-    <subsection><h1>From end-effector pose to joint angles</h1>
+    <subsection><h1>从末端执行器位姿到关节角</h1>
 
-      <p>With its obvious importance in robotics, you probably won't be
-      surprised to hear that there is an extensive literature on inverse
-      kinematics.  But you may be surprised at how extensive and complete the
-      solutions can get. The forward kinematics, $f_{kin}$, is a nonlinear
-      function in general, but it is a very structured one.  In fact, with rare
-      exceptions (like if your robot has a <a
-      href="https://www.hindawi.com/journals/mpe/2016/1761968/fig4/">helical
-      joint</a>, aka screw joint), the equations governing the valid Cartesian
-      positions of our robots are actually <i>polynomial</i>.  "But wait!  What
-      about all of those sines and cosines in my kinematic equations?" you say.
-      The trigonometric terms come when we want to relate joint angles with
-      Cartesian coordinates.  In $\Re^3$, for two points, $A$ and $B$, on the
-      same rigid body, the (squared) distance between them, $\|p^A - p^B\|^2,$
-      is a constant.  And a joint is just a polynomial constraint between
-      positions on adjoining bodies, e.g. that they occupy the same point in
-      Cartesian space.  See <elib>Wampler11</elib> for an excellent
-      overview.</p>
+      <p>鉴于逆运动学在机器人学中的重要性，
+      你可能不会惊讶于它拥有大量研究文献。
+      但你也许会惊讶于这些解法能够达到的广度和完整程度。
+      正向运动学 $f_{kin}$ 通常是一个非线性函数，
+      但它是一个具有高度结构化特性的非线性函数。
+      实际上，除了一些少见情况之外
+      （例如你的机器人拥有一个<a
+      href="https://www.hindawi.com/journals/mpe/2016/1761968/fig4/">螺旋关节（helical
+      joint）</a>，也称为螺杆关节（screw joint）），
+      描述机器人合法笛卡尔位置的方程实际上是<i>多项式</i>形式的。
+      “可是等等！我的运动学方程里不是到处都有正弦和余弦吗？”
+      你可能会这样问。
+      三角函数项出现在我们试图关联关节角与笛卡尔坐标的时候。
+      在 $\Re^3$ 中，
+      对于同一个刚体上的两个点 $A$ 和 $B$，
+      它们之间的（平方）距离
+      $\|p^A - p^B\|^2,$
+      是一个常数。
+      而关节本质上只是相邻刚体之间的一种多项式约束，
+      例如它们需要占据笛卡尔空间中的同一个点。
+      关于这一点，可以参考 <elib>Wampler11</elib> 中极佳的综述。</p>
 
-      <todo>example: trig and polynomial kinematics of a two-link arm.</todo>
+      <todo>示例：双连杆机械臂中的三角函数与多项式运动学。</todo>
 
-      <p>Understanding the solutions to polynomial equations is the subject of
-      algebraic geometry.  There is a deep literature on kinematics theory, on
-      symbolic algorithms, and on numerical algorithms.  For even very complex
-      kinematic topologies, such as <a
-      href="https://en.wikipedia.org/wiki/Four-bar_linkage">four-bar
-      linkages</a> and <a
+      <p>理解多项式方程解的理论属于代数几何（algebraic geometry）的研究范畴。
+      关于运动学理论、符号算法以及数值算法，
+      已经存在非常深厚的文献积累。
+      即使对于非常复杂的运动学拓扑结构，
+      例如<a
+      href="https://en.wikipedia.org/wiki/Four-bar_linkage">四杆机构（four-bar
+      linkage）</a>以及<a
       href="https://en.wikipedia.org/wiki/Stewart_platform">Stewart-Gough
-      platforms</a>, we can count the number of solutions, and/or understand
-      the continuous manifold of solutions.  For instance,
+      平台</a>，
+      我们也能够统计其解的数量，
+      和 / 或理解其解所形成的连续流形。
+      例如，
       <elib>Wampler11</elib>
-      describes a substantial toolbox for numerical algebraic geometry (based on
-      homotopy methods) with impressive results on difficult kinematics
-      problems.</p>
+      描述了一套功能强大的数值代数几何工具箱
+      （基于同伦方法（homotopy methods）），
+      并在困难的运动学问题上展示了令人印象深刻的结果。</p>
 
-      <p>The kinematics algorithms based on algebraic geometry have
-      traditionally been targeted for offline global analysis, and are often
-      not designed for fast real-time inverse kinematics solutions needed in a
-      control loop.  The most popular tool these days for real-time inverse
-      kinematics for six- or seven-DOF manipulators is a tool called "IKFast",
-      described in Section 4.1 of <elib>Diankov10</elib>, that gained
-      popularity because of its effective open-source implementation.  Rather
-      than focus on completeness, IKFast uses a number of approximations to
-      provide fast and numerically robust solutions to the "easy" kinematics
-      problems.  It leverages the fact that a six-DOF pose constraint on a
-      six-DOF manipulator has a "closed-form" solution (for most serial-chain
-      robot arms) with a finite number of joint space configurations that
-      produce the same end-effector pose, and for seven-DOF manipulators it
-      adds a layer of sampling in the last degree of freedom on top of the
-      six-DOF solver.</p>
+      <p>基于代数几何的运动学算法，
+      传统上主要面向离线全局分析（offline global analysis），
+      并且通常并不是为了控制回路中所需的快速实时逆运动学求解而设计的。
+      如今，用于六自由度或七自由度机械臂实时逆运动学的最流行工具之一，
+      是一个名为 “IKFast” 的工具，
+      在 <elib>Diankov10</elib> 第 4.1 节中有所描述。
+      它因其高效的开源实现而获得了广泛流行。
+      IKFast 并不专注于求解的完备性（completeness），
+      而是采用了若干近似方法，
+      以便为“简单”运动学问题提供快速且数值鲁棒的解。
+      它利用了这样一个事实：
+      对于一个六自由度机械臂上的六自由度位姿约束，
+      （对于大多数串联机械臂而言）
+      存在“闭式解（closed-form）”，
+      即只有有限数量的关节空间配置
+      会产生相同的末端执行器位姿。
+      而对于七自由度机械臂，
+      它则在六自由度求解器的基础上，
+      对最后一个自由度增加了一层采样过程。</p>
 
-      <todo>add an example of calling (or implementing something equivalent to)
-      IKFast and/or Bertini. looks like bertini 2 has python bindings (but not
-      pip) and is GPL3.</todo>
+      <todo>添加一个调用（或实现类似功能）
+      IKFast 和 / 或 Bertini 的示例。
+      看起来 Bertini 2 提供了 Python 绑定（但不支持 pip 安装），
+      并且采用 GPL3 许可证。</todo>
 
-      <p>These explicit solutions are important to understand because they
-      provide deep insight into the equations, and because they can be fast
-      enough to use inside a more sophisticated solution approach.  But the
-      solutions don't immediately provide the rich specification I advocated
-      for above; in particular, they break down once we have inequality
-      constraints instead of equality constraints.  For those richer
-      specifications, we will turn to optimization.</p>
+      <p>这些显式解（explicit solutions）之所以重要，
+      是因为它们能够帮助我们深入理解这些方程，
+      同时它们也足够快，
+      可以作为更复杂求解方法中的一个组成部分来使用。
+      但是，这些解并不能立即提供我前面所倡导的那种丰富规格描述（rich specification）；
+      特别是，一旦我们面对的是不等式约束而不是等式约束时，
+      这些方法就会失效。
+      因此，对于那些更加丰富的规格描述，
+      我们将转向优化（optimization）方法。</p>
 
     </subsection>
 
-    <subsection><h1>IK as constrained optimization</h1>
+    <subsection><h1>将逆运动学视为约束优化（IK as constrained optimization）</h1>
 
-      <p>Rather than formulate inverse kinematics as $$q = f^{-1}_{kin}(X^G),$$
-      let's consider solving the same problem as an optimization: \begin{align}
-      \min_q & \quad |q - q_0|^2, \\ \subjto &\quad X^G = f_{kin}(q),
-      \end{align} where $q_0$ is some comfortable nominal position. While
-      writing the inverse directly is a bit problematic, especially because we
-      sometimes have multiple (even infinite) solutions or no solutions. This
-      optimization formulation is slightly more precise -- if we have multiple
-      joint angles which achieve the same end-effector position, then we prefer
-      the one that is closest to the nominal joint positions. But the real
-      value of switching to the optimization perspective of the problem is that
-      it allows us to connect to a rich library of additional costs and
-      constraints.</p>
+      <p>与其将逆运动学表述为
+      $$q = f^{-1}_{kin}(X^G),$$
+      不如考虑将同一个问题作为一个优化问题来求解：
+      \begin{align}
+      \min_q & \quad |q - q_0|^2, \\
+      \subjto &\quad X^G = f_{kin}(q),
+      \end{align}
+      其中 $q_0$ 是某个舒适的标称位置（nominal position）。
+      直接写出逆映射其实存在一些问题，
+      特别是因为有时我们会有多个（甚至无限多个）解，
+      或者根本没有解。
+      这种优化形式化会更加精确一些——
+      如果有多组关节角能够实现相同的末端执行器位置，
+      那么我们更倾向于选择那个最接近标称关节位置的解。
+      但真正重要的是，
+      将问题转变为优化视角之后，
+      我们就能够连接到一整套丰富的附加代价函数与约束条件。</p>
 
-      <figure><img style="width:60%" src="data/shelf_ik.png"><figcaption>A
-      richer inverse kinematics problem: solve for the joint angles, $q$, that
-      allow the robot to reach into the shelf and grab the object, while
-      avoiding collisions.</figcaption></figure>
+      <figure>
+      <img style="width:60%" src="data/shelf_ik.png">
+      <figcaption>一个更丰富的逆运动学问题：
+      求解关节角 $q$，
+      使机器人能够伸入货架中抓取目标物体，
+      同时避免发生碰撞。</figcaption>
+      </figure>
 
-      <p>We have <a href="pick.html#diff_ik_w_constraints">already
-      discussed</a> the idea of solving <i>differential</i> inverse kinematics
-      as an optimization problem.  In that workflow, we started by using the
-      pseudo-inverse of the kinematic Jacobian, but then graduated to thinking
-      about the least-squares formulation of the inverse problem.  The more
-      general least-squares setting, we could add additional costs and
-      constraints that would protect us from (nearly) singular Jacobians and
-      could take into account additional constraints from joint limits, joint
-      velocity limits, etc.  We could even add collision avoidance constraints.
-      Some of these constraints are quite nonlinear / nonconvex functions of
-      the configuration $q$, but in the differential kinematics setting we were
-      only seeking to find a small change $\Delta q$ around the nominal
-      configuration, so it was quite reasonable to make linear/convex
-      approximations of these nonlinear/nonconvex constraints.
-      </p>
+      <p>我们<a href="pick.html#diff_ik_w_constraints">已经讨论过</a>
+      将<i>微分</i>逆运动学
+      作为优化问题求解的思想。
+      在那个工作流程中，
+      我们一开始使用运动学雅可比矩阵（kinematic Jacobian）的伪逆，
+      但随后进一步发展为从逆问题的最小二乘形式来思考问题。
+      在更一般的最小二乘框架下，
+      我们可以加入额外的代价函数和约束条件，
+      以避免（近似）奇异雅可比矩阵带来的问题，
+      同时还能考虑关节限位、关节速度限制等额外约束。
+      我们甚至还可以加入避碰约束。
+      这些约束中的一些，
+      关于配置变量 $q$ 来说是高度非线性 / 非凸的函数，
+      但在微分运动学场景中，
+      我们只是在标称配置附近寻找一个小变化 $\Delta q$，
+      因此对这些非线性 / 非凸约束进行线性 / 凸近似
+      是相当合理的。</p>
 
-      <p>Now we will consider the full formulation, where we try to solve the
-      nonlinear / nonconvex optimization directly, without any constraints on
-      only making a small change to an initial $q$.  This is a much harder
-      problem computationally.  Using powerful nonlinear optimization solvers
-      like SNOPT, we are often able to solve the problems, even at interactive
-      rates (the example below is quite fun).  But there are no guarantees.  It
-      could be that a solution exists even if the solver returns
-      "infeasible".</p>
+      <p>现在，我们将考虑完整形式的问题，
+      即直接求解这个非线性 / 非凸优化问题，
+      而不再限制只能对初始 $q$ 做小幅修改。
+      从计算角度来看，
+      这是一个困难得多的问题。
+      使用像 SNOPT 这样强大的非线性优化求解器，
+      我们通常仍然能够求得解，
+      甚至能够达到交互式速度
+      （下面的例子相当有趣）。
+      但并不存在任何保证。
+      即使求解器返回“不可行（infeasible）”，
+      也仍然可能存在真实可行解。</p>
 
-      <p>Of course, the differential IK problem and the full IK problem are
-      closely related.  In fact, you can think about the differential IK
-      algorithm as doing one step of (projected) gradient descent or  one-step
-      of <a
-      href="https://en.wikipedia.org/wiki/Sequential_quadratic_programming">Sequential Quadratic Programming</a>,
-      for the full nonlinear problem.</p>
+      <p>当然，微分逆运动学问题与完整逆运动学问题之间
+      有着非常紧密的联系。
+      实际上，
+      你可以将微分逆运动学算法理解为：
+      对完整非线性问题执行一步（投影）梯度下降，
+      或执行一步
+      <a
+      href="https://en.wikipedia.org/wiki/Sequential_quadratic_programming">序列二次规划（Sequential Quadratic Programming）</a>。</p>
 
-      <p>Drake provides a nice <a
+      <p>Drake 提供了一个很方便的
+      <a
       href="https://drake.mit.edu/doxygen_cxx/classdrake_1_1multibody_1_1_inverse_kinematics.html">InverseKinematics</a>
-      class that makes it easy to assemble many of the standard
-      kinematic/multibody constraints into a
-      <code>MathematicalProgram</code>.  Take a minute to look at the
-      constraints that are offered.  You can add constraints on the relative
-      position and/or orientation on two bodies, or that two bodies are more
-      than some minimal distance apart (e.g. for non-penetration) or closer
-      than some distance, and more.  This is the way that I want you to think
-      about the IK problem; it is an inverse problem, but one with a
-      potentially very rich set of costs and constraints.</p>
+      类，
+      使我们能够很容易地将许多标准的运动学 / 多体约束
+      组装到一个
+      <code>MathematicalProgram</code>
+      中。
+      花一分钟看一下它所提供的约束。
+      你可以添加两个物体之间相对位置和 / 或相对姿态的约束，
+      或者要求两个物体之间的距离大于某个最小距离
+      （例如用于非穿透约束），
+      或者小于某个距离，等等。
+      这正是我希望你思考 IK 问题的方式；
+      它是一个逆问题，
+      但这个逆问题可能包含非常丰富的代价函数和约束条件。</p>
 
-      <example><h1>Interactive IK</h1>
+      <example><h1>交互式 IK（Interactive IK）</h1>
 
-        <p>Despite the nonconvexity of the problem and nontrivial computational
-        cost of evaluating the constraints, we can often solve it at
-        interactive rates.  I've assembled a few examples of this in the
-        chapter notebook:</p>
+        <p>尽管该问题具有非凸性，
+        并且约束求值也具有不小的计算成本，
+        但我们通常仍然可以以交互式速度求解它。
+        我在本章 notebook 中整理了几个这样的例子：</p>
 
         <script>document.write(notebook_link('trajectories', notebook="interactive_ik"))</script>
 
-        <p>In the first version, I've added sliders to let you control the
-        desired pose of the end-effector.  This is the simple version of the IK
-        problem, amenable to more explicit solutions, but we nevertheless solve
-        it with our full nonlinear optimization IK engine (and it does include
-        joint limit constraints).  This demo won't look too different from the
-        very first example in the notes, where you used teleop to command the
-        robot to pick up the red brick.  In fact, differential IK offers a fine
-        solution to this problem, too.</p>
+        <p>在第一个版本中，
+        我添加了滑块，让你控制末端执行器的期望位姿。
+        这是 IK 问题的简单版本，
+        适合使用更显式的解法；
+        但我们仍然使用完整的非线性优化 IK 引擎来求解它
+        （并且其中确实包含关节限位约束）。
+        这个演示看起来不会和讲义最开始的那个例子有太大不同：
+        在那个例子中，你使用遥操作（teleop）命令机器人拿起红色砖块。
+        事实上，微分 IK 也可以很好地解决这个问题。</p>
 
-        <p>In the second example, I've tried to highlight the differences
-        between the nonlinear IK problem and the differential IK problem by
-        adding an obstacle directly in front of the robot.  Because both our
-        differential IK and IK formulations are able to consume the
-        collision-avoidance constraints, both solutions will try to prevent you
-        from crashing the arm into the post.  But if you move the target
-        end-effector position from one side of the post to the other, the full
-        IK solver can switch over to a new solution with the arm on the other
-        side of the post, but the differential IK will never be able to make
-        that leap (it will stay on the first side of the post, refusing to
-        allow a collision).</p>
+        <p>在第二个例子中，
+        我试图通过在机器人正前方添加一个障碍物，
+        来突出非线性 IK 问题与微分 IK 问题之间的区别。
+        由于我们的微分 IK 形式和 IK 形式
+        都能够使用避碰约束，
+        两种解法都会试图防止机械臂撞到柱子上。
+        但是，如果你将目标末端执行器位置
+        从柱子的一侧移动到另一侧，
+        完整 IK 求解器可以切换到一个新的解，
+        使机械臂位于柱子的另一侧；
+        而微分 IK 永远无法完成这种跳跃
+        （它会停留在柱子的第一侧，
+        拒绝允许发生碰撞）。</p>
 
         <figure>
             <img width="40%" src="data/ik_post_1.png"/>
             <img width="40%" src="data/ik_post_2.png"/>
-            <figcaption>As the desired end-effector position moves along
-            positive $y$, the IK solver is able to find a new solution with the
-            arm wrapped the other way around the post.</figcaption>
+            <figcaption>随着期望末端执行器位置沿正 $y$ 方向移动，
+            IK 求解器能够找到一个新的解，
+            使机械臂从柱子的另一侧绕过去。</figcaption>
         </figure>
 
 
       </example>
 
-      <p>With great power comes great responsibility.  The inverse kinematics
-      toolbox allows you to formulate complex optimizations, but your success
-      with solving them will depend partially on how thoughtful you are about
-      choosing your costs and constraints.  My basic advice is this: <ol>
-      <li>Try to keep the objective (costs) simple; I typically only use the
-      "joint-centering" quadratic cost on $q$.  Putting terms that should be
-      constraints into the cost as penalties leads to lots of cost-function
-      tuning, which can be a nasty business.</li><li>Write minimal constraints.
-      You want the set of feasible configurations to be as big as possible.
-      For instance, if you don't need to fully constrain the orientation of the
-      gripper, then don't do it.</li></ol>  I'll follow-up with that second
-      point using the following example.</p>
+      <p>能力越大，责任越大。
+      逆运动学工具箱允许你构建复杂的优化问题，
+      但你能否成功求解它们，
+      部分取决于你在选择代价函数和约束条件时是否足够谨慎。
+      我最基本的建议如下：
+      <ol>
+      <li>尽量保持目标函数（代价函数）简单；
+      我通常只会在 $q$ 上使用“关节居中（joint-centering）”二次代价。
+      把本该作为约束的项
+      以惩罚项（penalty）的形式加入代价函数，
+      往往会导致大量代价函数调参工作，
+      而这通常会变成一件相当棘手的事情。</li>
 
-      <example><h1>Grasp the cylinder</h1>
+      <li>编写最小化约束（minimal constraints）。
+      你希望可行配置集合尽可能大。
+      例如，如果你并不需要完全约束夹爪的姿态方向，
+      那就不要这样做。</li>
+      </ol>
+
+      我会通过下面的例子进一步说明第二点。</p>
+
+      <example><h1>抓取圆柱体（Grasp the cylinder）</h1>
       
-        <p>Let's use IK to grasp a cylinder. You can think of it as a hand
-        rail, if you prefer.  Suppose it doesn't matter where along the
-        cylinder we grasp, nor the orientation at which we grasp it.  Then we
-        should write the IK problem using only the minimal version of those
-        constraints.</p>
+        <p>让我们使用 IK 来抓取一个圆柱体。
+        如果你愿意，
+        也可以把它想象成一个扶手（hand rail）。
+        假设我们并不关心沿圆柱体哪个位置进行抓取，
+        也不关心以什么方向去抓取它。
+        那么我们就应该只使用这些约束的最小形式来构建 IK 问题。</p>
 
-        <p>In the notebook, I've coded up one version of this.  I've put the
-        cylinder's pose on the sliders now, so you can move it around the
-        workspace, and watch how the IK solver decides to position the robot.
-        In particular, if you move the cylinder in $\pm y$, you'll see that the
-        robot doesn't try to follow... until the hand gets to the end of the
-        cylinder. Very nice!</p>
+        <p>在 notebook 中，
+        我已经实现了其中一种方案。
+        我现在把圆柱体的位姿放在滑块上，
+        因此你可以在工作空间中移动它，
+        并观察 IK 求解器如何决定机器人的姿态。
+        特别地，
+        如果你沿 $\pm y$ 方向移动圆柱体，
+        你会发现机器人一开始并不会跟随……
+        直到手部移动到圆柱体末端。
+        非常漂亮！</p>
 
         <figure>
             <img width="30%" src="data/grasp_cylinder_1.png"/>
@@ -343,8 +408,8 @@ href="https://www.youtube.com/channel/UChfUOAhz7ynELF-s_1LPpWg">Lecture videos a
             <img width="30%" src="data/grasp_cylinder_3.png"/>
         </figure>
 
-        <p>One could imagine multiple ways to implement that constraint.
-        Here's how I did it: 
+        <p>我们可以想象出多种实现该约束的方法。
+        以下是我的实现方式：
 
 <pre><code class="language-python">ik.AddPositionConstraint(
     frameB=gripper_frame, p_BQ=[0, 0.1, -0.02],
@@ -353,451 +418,622 @@ ik.AddPositionConstraint(
     frameB=gripper_frame, p_BQ=[0, 0.1, 0.02], 
     frameA=cylinder_frame, p_AQ_lower=[0, 0, -0.5], p_AQ_upper=[0, 0, 0.5])</code></pre>  
     
-        In words, I've defined two points in the gripper frame; in the notation
-        of the <code>AddPositionConstraint</code> method they are ${}^Bp^{Q}$.
-        Recall the <a href="pick.html#grasp_frames">gripper frame</a> is such
-        that $[0, .1, 0]$ is right between the two gripper pads; you should
-        take a moment to make sure you understand where $[0,.1,-0.02]$ and
-        $[0,.1,0.02]$ are.  Our constraints require that both of those points
-        should lie exactly on the center line segment of the cylinder.  This
-        was a compact way for me to leave the orientation around the cylinder
-        axis as unconstrained, and capture the cylinder position constraints
-        all quite nicely.</p>
+        换句话说，
+        我在夹爪坐标系中定义了两个点；
+        在 <code>AddPositionConstraint</code> 方法的记号中，
+        它们是 ${}^Bp^{Q}$。
+        回忆一下，
+        <a href="pick.html#grasp_frames">夹爪坐标系（gripper frame）</a>
+        的定义方式是：
+        $[0, .1, 0]$ 位于两个夹爪垫之间的正中央；
+        你应该花一点时间确认自己真正理解
+        $[0,.1,-0.02]$
+        和
+        $[0,.1,0.02]$
+        分别位于哪里。
+        我们的约束要求这两个点
+        都必须精确落在圆柱体的中心线段上。
+        这种方式能够简洁地保留
+        绕圆柱轴方向的姿态为“不受约束”，
+        同时又很好地表达了圆柱位置约束。</p>
 
         <script>document.write(notebook_link('trajectories', notebook="interactive_ik"))</script>
 
       </example>
 
-      <p>We've provided a rich language of constraints for specifying IK
-      problems, including many which involve the kinematics of the robot and
-      the geometry of the robot and the world (e.g., the minimum-distance
-      constraints).  Let's take a moment to appreciate the geometric puzzle
-      that we are asking the optimizer to solve.</p>
+      <p>我们已经提供了一套丰富的约束语言，
+      用于描述 IK 问题，
+      其中包括许多涉及机器人运动学以及机器人与环境几何关系的约束
+      （例如最小距离约束）。
+      现在让我们花一点时间，
+      来欣赏一下我们要求优化器去求解的这个几何谜题。</p>
 
-      <example><h1>Visualizing the configuration space</h1>
+      <example><h1>可视化配置空间（Visualizing the configuration space）</h1>
 
-        <p>Let's return to the example of the iiwa reaching into the shelf.
-        This IK problem has two major constraints: 1) we want the center of the
-        target sphere to be in the center of the gripper, and 2) we want the
-        arm to avoid collisions with the shelves.  In order to plot these
-        constraints, I've frozen three of the joints on the iiwa, leaving only
-        the three corresponding motion in the $x-z$ plane.</p>
+        <p>让我们回到 iiwa 机械臂伸入货架的例子。
+        这个 IK 问题有两个主要约束：
+        1）我们希望目标球体的中心位于夹爪中心；
+        2）我们希望机械臂避免与货架发生碰撞。
+        为了能够绘制这些约束，
+        我固定了 iiwa 的三个关节，
+        只保留了对应于 $x-z$ 平面运动的三个自由度。</p>
 
         <figure>
             <img width="40%" src="data/shelf_ik2.png"/>
             <img width="40%" src="data/shelf_ik_cspace_grasp_constraint.png"/>
-            <figcaption>The image on the right is a visualization of the "grasp
-            the sphere" constraint in configuration space -- the x,y,z, axes in
-            the visualizer correspond to the three joint angles of the
-            planarized iiwa.</figcaption>
+            <figcaption>右图展示了配置空间（configuration space）中
+            “抓取球体”约束的可视化结果——
+            可视化器中的 x、y、z 坐标轴
+            分别对应于平面化 iiwa 的三个关节角。</figcaption>
         </figure>
 
-        <p>To visualize the constraints, I've sampled a dense grid in the three
-        joint angles of the planarized iiwa, assigning each grid element to 1
-        if the constraint is satisfied or 0 otherwise, then run a marching
-        cubes algorithm to extract an approximation of the true 3D geometry of
-        this constraint in the configuration space.  The "grasp the sphere"
-        constraint produces the nice green geometry I've pictured above on the
-        right; it is clipped by the joint limits.  The collision-avoidance
-        constraint, on the other hand, is quite a bit more complicated.  To see
-        that, you'd better open up this
-        <a href="data/iiwa_shelves_configuration_space.html">3D
-        visualization</a> so you can navigate around it yourself.  Scary!</p>
+        <p>为了可视化这些约束，
+        我在平面化 iiwa 的三个关节角空间中
+        采样了一个稠密网格，
+        如果某个网格点满足约束则赋值为 1，
+        否则赋值为 0，
+        然后运行 marching cubes（行进立方体）算法，
+        从而提取出该约束在配置空间中真实三维几何形状的近似表示。
+        “抓取球体”约束生成了上图右侧所示的漂亮绿色几何体；
+        它会被关节限位裁剪。
+        而另一方面，
+        避碰约束则复杂得多。
+        想真正看清这一点，
+        你最好打开这个
+        <a href="data/iiwa_shelves_configuration_space.html">3D 可视化</a>，
+        自己在里面旋转观察。
+        很可怕吧！</p>
 
         <script>document.write(notebook_link('trajectories', notebook="cspace"))</script>
 
       </example>
 
-      <example><h1>Visualizing the IK optimization problem</h1>
+      <example><h1>可视化 IK 优化问题（Visualizing the IK optimization problem）</h1>
       
-        <p>To help you appreciate the problem that we've formulated, I've made
-        a visualization of the optimization landscape. Take a look at the
-        landscape <a href="data/shelf_ik_prog_zoom.html">here</a> first; this
-        is only plotting a small region around the returned solution. You can
-        use the Meshcat controls to show/hide each of the individual costs and
-        constraints, to make sure you understand.</p>
+        <p>为了帮助你更好地理解我们所构建的问题，
+        我制作了一个优化景观（optimization landscape）的可视化。
+        先看看这个
+        <a href="data/shelf_ik_prog_zoom.html">景观图</a>；
+        这里只绘制了返回解附近的一小块区域。
+        你可以使用 Meshcat 控件来显示 / 隐藏各个单独的代价函数与约束，
+        以确保你真正理解它们。</p>
         
-        <p>As recommended, I've kept the cost landscape (the <i>green</i>
-        surface) to be simply the quadratic joint-centering cost. The
-        constraints are plotted in <i>blue</i> when they are feasible, and
-        <i>red</i> when they are infeasible:
+        <p>正如我所建议的那样，
+        我将代价景观（即<i>绿色</i>曲面）
+        保持为简单的二次关节居中代价（quadratic joint-centering cost）。
+        约束则以<i>蓝色</i>表示可行区域，
+        以<i>红色</i>表示不可行区域：
         <ul>
-          <li>The joint limit constraint is just a simple "bounding-box"
-          constraint here (only the red infeasible region is drawn for bounding
-          box constraints, to avoid making the visualization too
-          cluttered).</li>
-          <li>The position constraint has three elements: for the $x$, $y$, and
-          $z$ positions of the end-effector. The $y$ position constraint is
-          trivially satisfied (all blue) because the manipulator only has the
-          joints that move in the $x-z$ plane. The other two look all red, but
-          if you turn off the $y$ visualization, you can see two small strips
-          of blue in each. That's the conditions in our tight position
-          constraint.</li>
-          <li>But it's the "minimum-distance" (non-collision) constraint that is the most impressive / scary of all. While we visualized the configuration space above, you can see here that visualizing the distance as a real-valued function reveals the optimization landscape that we give to the solver.</li>
-        </ul> The intersection of all the blue regions here are what defined
-        the configuration-space in the example above. All of the code for this
-        visualization is available in the notebook, and you can find the exact
-        formulation of the costs and constraints there:</p>  
+          <li>关节限位约束在这里仅仅是一个简单的“边界框（bounding-box）”
+          约束
+          （对于边界框约束，
+          为了避免可视化过于杂乱，
+          这里只绘制了红色的不可行区域）。</li>
+
+          <li>位置约束包含三个组成部分：
+          分别对应末端执行器的
+          $x$、$y$ 和 $z$ 位置。
+          其中，
+          $y$ 方向的位置约束会被平凡满足（全部为蓝色），
+          因为该机械臂只保留了在 $x-z$ 平面内运动的关节。
+          另外两个看起来几乎全是红色，
+          但如果你关闭 $y$ 方向的可视化，
+          就会看到其中各自存在两条很窄的蓝色带状区域。
+          这正对应于我们严格位置约束的满足条件。</li>
+
+          <li>但真正最令人印象深刻 / 可怕的，
+          还是“最小距离（minimum-distance）”
+          （即非碰撞）约束。
+          虽然我们之前已经对配置空间进行了可视化，
+          但在这里，
+          你可以看到：
+          将距离作为一个实值函数（real-valued function）进行可视化，
+          会直接揭示出我们提供给优化器的优化景观。</li>
+        </ul>
+
+        这里所有蓝色区域的交集，
+        就定义了前面示例中的配置空间。
+        这个可视化的全部代码都可以在 notebook 中找到，
+        你也可以在那里查看代价函数与约束条件的精确形式：</p>  
 
         <script>document.write(notebook_link('trajectories', notebook="optimization_landscape"))</script>
         
-        <p>You should also take a quick look at the <a
-        href="data/shelf_ik_prog.html">full optimization landscape</a>.  This
-        is the same set of curves as in the visualization above, but now it's
-        plotted over the entire domain of joint angles within the joint limits.
-        Nonlinear optimizers like SNOPT can be pretty amazing sometimes!</p>
+        <p>你还应该快速看一下
+        <a
+        href="data/shelf_ik_prog.html">完整优化景观（full optimization landscape）</a>。
+        这里绘制的是与上面可视化相同的一组曲线，
+        但现在它们覆盖了关节限位范围内的整个关节角定义域。
+        像 SNOPT 这样的非线性优化器，
+        有时候真的会令人惊叹！</p>
 
       </example>
 
     </subsection>
     
-    <subsection><h1>Global inverse kinematics</h1>      
+    <subsection><h1>全局逆运动学（Global inverse kinematics）</h1>      
 
-      <p>For unconstrained inverse kinematics with exactly six degrees of
-      freedom, we have closed-form solutions. For the generalized inverse
-      kinematics problem with rich costs and constraints, we've got a nonlinear
-      optimization problem that works well in practice but is subject to local
-      minima (and therefore can fail to find a feasible solution if it exists).
-      If we give up on solving the optimization problem at interactive rates,
-      is there any hope of solving the richer IK formulation robustly?  Ideally
-      to global optimality?</p>
+      <p>对于没有约束且恰好具有六个自由度的逆运动学问题，
+      我们拥有闭式解（closed-form solutions）。
+      而对于带有丰富代价函数与约束条件的广义逆运动学问题，
+      我们得到的是一个在实践中表现良好、
+      但会受到局部极小值（local minima）影响的非线性优化问题
+      （因此即使存在可行解，
+      它也可能无法找到）。
+      如果我们放弃以交互式速度求解该优化问题，
+      那么是否仍然有希望能够鲁棒地求解这种更丰富的 IK 形式？
+      理想情况下，
+      是否甚至能够达到全局最优？</p>
 
-      <p>This is actually an extremely relevant question. There are many
-      applications of inverse kinematics that work offline and don't have any
-      strict timing requirements. Imagine if you wanted to generate training
-      data to train a neural network to learn your inverse kinematics; this
-      would be a perfect application for global IK. Or if you want to do
-      workspace analysis to see if the robot can reach all of the places it
-      needs to reach in the workspace that you're designing for it, then you'd
-      like to use global IK. Some of the motion planning strategies that we'll
-      study below will also separate their computation into an offline
-      "building" phase to make the online "query" phase much faster.</p>
+      <p>这实际上是一个极其重要的问题。
+      许多逆运动学应用都是离线运行的，
+      并没有严格的实时性要求。
+      想象一下，
+      如果你想生成训练数据，
+      用于训练一个学习逆运动学的神经网络；
+      那么这将是全局 IK 的一个完美应用场景。
+      又或者，
+      如果你想进行工作空间分析（workspace analysis），
+      以验证机器人是否能够到达你为其设计的工作空间中的所有目标位置，
+      那么你也会希望使用全局 IK。
+      我们之后将要研究的一些运动规划策略，
+      也会将其计算过程划分为一个离线“构建（building）”阶段，
+      从而使在线“查询（query）”阶段变得快得多。</p>
 
-      <p>In my experience, general-purpose global nonlinear solvers -- for
-      instance, based on mixed-integer nonlinear programming (MINLP) approaches
-      or the interval arithmetic used in <a href="https://en.wikipedia.org/wiki/Satisfiability_modulo_theories">satisfiability-modulo-theories (SMT)</a>
-      solvers -- typically don't scale the complexity of a full manipulator.
-      But if we only slightly restrict the class of costs and constraints that
-      we support, then we can begin to make progress.
+      <p>根据我的经验，通用型全局非线性求解器——
+      例如基于混合整数非线性规划（mixed-integer nonlinear programming, MINLP）的方法，
+      或者使用
+      <a href="https://en.wikipedia.org/wiki/Satisfiability_modulo_theories">可满足性模理论（satisfiability-modulo-theories, SMT）</a>
+      求解器中的区间算术方法——
+      通常无法扩展到完整机械臂问题的复杂度。
+      但如果我们只是稍微限制所支持的代价函数与约束条件类别，
+      那么就可以开始取得进展。
       </p>
 
-      <p>Drake provides an implementation of the <a
+      <p>Drake 提供了
+      <elib>Dai17</elib> 中描述的
+      <a
       href="https://drake.mit.edu/doxygen_cxx/classdrake_1_1multibody_1_1_global_inverse_kinematics.html">GlobalInverseKinematics</a>
-      approach described in <elib>Dai17</elib> using mixed-integer convex
-      optimization. The solution times are on the order of a few seconds; it
-      can solve a full constrained bimanual problem in well under a minute.
-      <elib>Trutman22</elib> solves the narrow version of the problem (just
-      end-effector poses and joint limits) using convex optimization via a
-      hierarchy of semi-definite programming relaxations; it would be very
-      interesting to understand how well this approach works with the larger
-      family of costs and constraints.</p>
+      方法的实现，
+      它使用混合整数凸优化（mixed-integer convex optimization）。
+      其求解时间大约在几秒量级；
+      它可以在远小于一分钟的时间内
+      求解一个完整的受约束双臂问题。
+      <elib>Trutman22</elib>
+      使用通过半正定规划松弛层级（hierarchy of semi-definite programming relaxations）
+      实现的凸优化，
+      来求解该问题的窄版本
+      （只包含末端执行器位姿和关节限位）。
+      理解这种方法在更大范围的代价函数与约束条件族上表现如何，
+      将会非常有趣。</p>
 
     </subsection>
 
     <subsection>
-      <h1>Inverse kinematics vs differential inverse kinematics</h1>
+      <h1>逆运动学与微分逆运动学（Inverse kinematics vs differential inverse kinematics）</h1>
 
-      <p>When should we use IK vs Differential IK?  IK solves a more global
-      problem, but is not guaranteed to succeed.  It is also not guaranteed to
-      make small changes to $q$ as you make small changes in the
-      cost/constraints; so you might end up sending large $\Delta q$ commands
-      to your robot.  Use IK when you need to solve the more global problem,
-      and the trajectory optimization algorithms we produce in the next section
-      are the natural extension to producing actual $q$ trajectories.
-      Differential IK works extremely well for incremental motions -- for
-      instance if you are able to design smooth commands in end-effector space
-      and simply track them in joint space.</p>
+      <p>什么时候应该使用 IK，
+      什么时候应该使用微分 IK？
+      IK 求解的是一个更全局的问题，
+      但并不保证一定成功。
+      它也不保证当你对代价函数 / 约束条件做小幅改变时，
+      $q$ 只会发生小幅变化；
+      因此你最终可能会向机器人发送很大的 $\Delta q$ 命令。
+      当你需要求解更全局的问题时，
+      可以使用 IK；
+      而我们将在下一节中构建的轨迹优化算法，
+      则是生成实际 $q$ 轨迹的自然扩展。
+      微分 IK 对于增量式运动非常有效——
+      例如，如果你能够在末端执行器空间中设计平滑命令，
+      并且只需要在关节空间中对其进行跟踪。</p>
 
     </subsection>
 
-    <subsection><h1>Grasp planning using inverse kinematics</h1>
+    <subsection><h1>使用逆运动学进行抓取规划（Grasp planning using inverse kinematics）</h1>
     
-      <p>In our first version of <a href="clutter.html#grasp_sampling">grasp
-      selection</a> using sampling, we put an objective that rewarded grasps
-      that were oriented with the hand grasping from above the object. This was
-      a (sometimes poor) surrogate for the problem that we really wanted to
-      solve: we want the grasp to be achievable given a "comfortable" position
-      of the robot. So a simple and natural extension of our grasp scoring
-      metric would be to solve an inverse kinematics problem for the grasp
-      candidate, and instead of putting costs on the end-effector orientation,
-      we can use the joint-centering cost directly as our objective.
-      Furthermore, if the IK problem returns infeasible, we should reject the
-      sample.</p>
+      <p>在我们第一个版本的基于采样的
+      <a href="clutter.html#grasp_sampling">抓取选择（grasp
+      selection）</a>中，
+      我们设置了一个目标函数，
+      用于奖励那些手部从物体上方进行抓取的朝向。
+      这其实只是我们真正想要解决的问题的一个
+      （有时并不理想的）替代指标：
+      我们希望抓取在机器人处于“舒适”姿态时是可实现的。
+      因此，对我们的抓取评分指标进行一个简单而自然的扩展，
+      就是为每个抓取候选求解一个逆运动学问题；
+      并且不再对末端执行器朝向设置代价，
+      而是直接使用关节居中代价作为目标函数。
+      此外，如果 IK 问题返回不可行，
+      我们就应该拒绝该样本。</p>
 
-      <p>There is a quite nice extension of this idea that becomes natural once
-      we take the optimization view, and it is a nice transition to the
-      trajectory planning we'll do in the next section.  Imagine if the task
-      requires us not only to pick up the object in clutter, but also to place
-      the object carefully in clutter as well. In this case, a good grasp
-      involves a pose for the hand relative to the object that
-      <i>simultaneously optimizes</i> both the pick configuration and the place
-      configuration. One can formulate an optimization problem with decision
-      variables for both $q_{pick}$ and $q_{place}$, with constraints enforcing
-      that ${}^OX^{G_{pick}} = {}^OX^{G_{place}}$. Of course we can still add
-      in all of our other rich costs and constraints, In the <a
-      href="pose.html#tri_dishloading">dish-loading project at TRI</a>, this
-      approach proved to be very important. Both picking up a mug in the sink
-      and placing it in the dishwasher rack are highly constrained, so we
-      needed the simultaneous optimization to find successful grasps.</p>
+      <p>一旦我们采用优化视角，
+      这个想法还可以得到一个非常漂亮的扩展，
+      并且它也是通向下一节轨迹规划的自然过渡。
+      想象一下，
+      如果任务不仅要求我们在杂乱环境中抓起物体，
+      还要求我们同样在杂乱环境中小心地放置物体。
+      在这种情况下，
+      一个好的抓取方式应该对应于手相对于物体的某个位姿，
+      并且这个位姿能够<i>同时优化</i>
+      抓取配置（pick configuration）
+      和放置配置（place configuration）。
+      我们可以构建一个优化问题，
+      其决策变量同时包括
+      $q_{pick}$ 和 $q_{place}$，
+      并加入约束，
+      强制满足
+      ${}^OX^{G_{pick}} = {}^OX^{G_{place}}$。
+      当然，
+      我们依然可以加入所有其它丰富的代价函数与约束条件。
+      在 <a
+      href="pose.html#tri_dishloading">TRI 的餐具装载项目（dish-loading project）</a>中，
+      这种方法被证明非常重要。
+      因为无论是在水槽中抓起杯子，
+      还是将其放入洗碗机架中，
+      都存在很强的约束，
+      因此我们需要这种联合优化（simultaneous optimization）
+      才能找到成功的抓取方式。</p>
       
-      <todo>Simple code example here</todo>
+      <todo>这里添加一个简单的代码示例</todo>
 
     </subsection>
 
   </section>
 
-  <!-- maybe section on collision detection / constraints? GJK? octrees? -->
+  <!-- 也许可以添加一节关于碰撞检测 / 约束的内容？GJK？八叉树？ -->
 
-  <section><h1>Kinematic trajectory optimization</h1>
+  <section><h1>运动学轨迹优化（Kinematic trajectory optimization）</h1>
   
-    <p>Once you understand the optimization perspective of inverse kinematics, then you
-    are well on your way to understanding kinematic trajectory optimization. Rather than
-    solving multiple inverse kinematics problems independently, the basic idea now is to
-    solve for a sequence of joint angles simultaneously in a single optimization. Even
-    better, let us define a parameterized joint trajectory, $q_\alpha(t)$, where
-    $\alpha$ is a vector of parameters. Then a simple extension to our inverse
-    kinematics problem would be to write something like \begin{align} \min_{\alpha,T} &
-    \quad T, \\ \subjto &\quad X^{G_{start}} = f_{kin}(q_\alpha(0)),\\ & \quad
-    X^{G_{goal}} = f_{kin}(q_\alpha(T)), \\ & \quad \forall t , \quad
-    \left|\dot{q}_\alpha(t)\right| \le v_{max} \label{eq:vel_limits}. \end{align} I read
-    this as "find a trajectory, $q_\alpha(t)$ for $t \in [0, T]$, that moves the gripper
-    from the start to the goal in minimum time".</p>
+    <p>一旦你理解了逆运动学的优化视角，
+    那么你其实已经走在理解运动学轨迹优化的正确道路上了。
+    基本思想是：
+    不再独立地求解多个逆运动学问题，
+    而是在一次优化中同时求解一系列关节角。
+    更进一步，
+    让我们定义一个参数化的关节轨迹
+    $q_\alpha(t)$，
+    其中 $\alpha$ 是一个参数向量。
+    那么，
+    对逆运动学问题的一个简单扩展
+    就可以写成如下形式：
+    \begin{align}
+    \min_{\alpha,T} &
+    \quad T, \\
+    \subjto &\quad X^{G_{start}} = f_{kin}(q_\alpha(0)),\\
+    & \quad X^{G_{goal}} = f_{kin}(q_\alpha(T)), \\
+    & \quad \forall t , \quad
+    \left|\dot{q}_\alpha(t)\right| \le v_{max}
+    \label{eq:vel_limits}.
+    \end{align}
+
+    我会将其理解为：
+    “寻找一条轨迹
+    $q_\alpha(t)$，
+    其中
+    $t \in [0, T]$，
+    使夹爪能够以最短时间
+    从起始位置移动到目标位置。”</p>
     
-    <p>The last equation, (\ref{eq:vel_limits}), represents velocity limits;
-    this is the only way we are telling the optimizer that the robot cannot
-    teleport instantaneously from the start to the goal. Apart from this line
-    which looks a little non-standard, it is almost exactly like solving two
-    inverse kinematics problems jointly, except instead of having the solver
-    take gradients with respect to $q$, we will take gradients with respect to
-    $\alpha$. This is easily accomplished using the chain rule.</p>
+    <p>最后一个方程
+    （\ref{eq:vel_limits}）
+    表示速度限制；
+    这是我们告诉优化器：
+    机器人无法瞬间从起点“传送”到终点的唯一方式。
+    除了这一行看起来稍微有些不太标准之外，
+    它几乎和联合求解两个逆运动学问题完全一样；
+    只不过现在，
+    求解器不再对 $q$ 求梯度，
+    而是对 $\alpha$ 求梯度。
+    这一点可以很容易地通过链式法则（chain rule）实现。</p>
 
-    <subsection><h1>Trajectory parameterizations</h1>
+    <subsection><h1>轨迹参数化（Trajectory parameterizations）</h1>
     
-      <p>The interesting question, then, becomes how do we actually
-      parameterize the trajectory $q(t)$ with a parameter vector $\alpha$?
-      These days, you might think that $q_\alpha(t)$ could be a neural network
-      that takes $t$ as an input, offers $q$ as an output, and uses $\alpha$ to
-      represent the weights and biases of the network. Of course you could, but
-      for inputs with a scalar input like this, we often take much simpler and
-      sparser parameterizations, often based on polynomials.</p>
+      <p>于是，
+      一个有趣的问题就变成了：
+      我们究竟应该如何使用参数向量 $\alpha$
+      来参数化轨迹 $q(t)$？
+      如今，
+      你可能会想到：
+      $q_\alpha(t)$ 可以是一个神经网络，
+      其输入为 $t$，
+      输出为 $q$，
+      而 $\alpha$ 则表示网络的权重与偏置。
+      当然你完全可以这么做，
+      但对于这种只有标量输入的问题，
+      我们通常会采用更加简单且更加稀疏的参数化方式，
+      往往基于多项式。</p>
 
-      <p>There are many ways one can parameterize a trajectory with
-      polynomials. For example in <i>dynamic</i> motion planning, <a
-      href="https://underactuated.csail.mit.edu/trajopt.html#direct_collocation">direct
-      collocation methods</a> use <a
-      href="https://drake.mit.edu/doxygen_cxx/classdrake_1_1trajectories_1_1_piecewise_polynomial.html">piecewise-cubic
-      polynomials</a> to represent the state trajectory, and the <a
-      href="https://underactuated.csail.mit.edu/trajopt.html#pseudo-spectral">pseudo-spectral
-      methods</a> use Lagrange polynomials. In each case, the choice of basis
-      functions is made so that algorithm can leverage a particular property of
-      the basis. In dynamic motion planning, a great deal of focus is on the integration accuracy of the dynamic equations to ensure that we obtain feasible solutions to the dynamic constraints.</p>
-
-      <p>When we are planning the motions of our fully-actuated robot arms, we
-      typically worry less about dynamic feasibility, and focus instead on the
-      kinematics. For <i>kinematic</i> trajectory optimization, the so-called
+      <p>有许多方法可以用多项式来参数化一条轨迹。
+      例如，在<i>动态</i>运动规划中，
       <a
-      href="https://drake.mit.edu/doxygen_cxx/classdrake_1_1trajectories_1_1_bspline_trajectory.html">B-spline
-      trajectory</a> parameterization has a few particularly nice properties
-      that we can leverage here:
-      <ul><li>The derivative of a B-spline is still a B-spline (the degree is
-      reduced by one), with coefficients that are linear in the original
-      coefficients.</li><li>The bases themselves are non-negative and sparse.
-      This gives the coefficients of the B-spline polynomial, which are
-      referred to as the <i>control points</i>, a strong geometric
-      interpretation.</li>
-      <li>In particular, the entire trajectory is guaranteed to lie inside the
-      convex hull of the active control points (the control points who's bases
-      are not zero).</li></ul>
-      Taken together this means that we can optimize over finitely
-      parameterized trajectories, but use the convex hull property to ensure
-      that limits on the joint positions and any of its derivatives are
-      satisfied $\forall t\in [0,T]$ using <i>linear</i> constraints.  This
-      sort of guarantee would be much more costly to obtain using most other
-      polynomial bases.</p>
-      
-      <todo>Write up the B-spline math here; and clean up the Drake
-      notation/implementation in the process. In particular, I want to purge
-      the use of symbolic from KinematicTrajectoryOptimization. My
-      `RussTedrake/drake:bsplinebasis_derivatives` branch has a start at
-      getting analytical derivatives for the trajopt workflow. </todo>
+      href="https://underactuated.csail.mit.edu/trajopt.html#direct_collocation">直接配点法（direct
+      collocation methods）</a>
+      使用
+      <a
+      href="https://drake.mit.edu/doxygen_cxx/classdrake_1_1trajectories_1_1_piecewise_polynomial.html">分段三次多项式（piecewise-cubic
+      polynomials）</a>
+      来表示状态轨迹，
+      而
+      <a
+      href="https://underactuated.csail.mit.edu/trajopt.html#pseudo-spectral">伪谱方法（pseudo-spectral
+      methods）</a>
+      则使用拉格朗日多项式（Lagrange polynomials）。
+      在每一种情况下，
+      基函数的选择都是为了让算法能够利用该基函数的某种特定性质。
+      在动态运动规划中，
+      很大一部分重点放在动力学方程的积分精度上，
+      以确保我们能够获得满足动力学约束的可行解。</p>
 
-      <p>Note that <a
-      href="https://en.wikipedia.org/wiki/B-spline">B-splines</a> are closely
-      related to <a
+      <p>当我们规划全驱动机械臂的运动时，
+      通常不会那么担心动力学可行性，
+      而是更关注运动学。
+      对于<i>运动学</i>轨迹优化，
+      所谓的
+      <a
+      href="https://drake.mit.edu/doxygen_cxx/classdrake_1_1trajectories_1_1_bspline_trajectory.html">B 样条轨迹（B-spline
+      trajectory）</a>
+      参数化在这里具有一些特别好的性质可供利用：
+      <ul><li>B 样条的导数仍然是 B 样条
+      （次数降低一阶），
+      并且其系数是原始系数的线性函数。</li>
+      <li>这些基函数本身是非负且稀疏的。
+      这使得 B 样条多项式的系数
+      （被称为<i>控制点（control points）</i>）
+      具有很强的几何解释。</li>
+      <li>特别地，
+      整条轨迹都保证位于活动控制点的凸包内
+      （活动控制点是指其基函数不为零的那些控制点）。</li></ul>
+      综合来看，
+      这意味着我们可以对有限参数化的轨迹进行优化，
+      同时利用凸包性质，
+      通过<i>线性</i>约束来确保关节位置及其任意导数的限制
+      对所有 $\forall t\in [0,T]$ 都成立。
+      使用大多数其它多项式基来获得这种保证，
+      代价通常会高得多。</p>
+      
+      <todo>在这里写出 B 样条的数学内容；
+      并在此过程中清理 Drake 的记号 / 实现。
+      特别是，我想从 KinematicTrajectoryOptimization 中清除 symbolic 的使用。
+      我的
+      `RussTedrake/drake:bsplinebasis_derivatives`
+      分支已经开始为 trajopt 工作流提供解析导数。</todo>
+
+      <p>注意，
+      <a
+      href="https://en.wikipedia.org/wiki/B-spline">B 样条（B-splines）</a>
+      与
+      <a
       href="https://en.wikipedia.org/wiki/B%C3%A9zier_curve">B&eacute;zier
-      curves</a>. But the "B" in "B-spline" actually just stands for "basis"
-      (no, I'm not kidding) and "<a
-      href="https://en.wikipedia.org/wiki/Composite_B%C3%A9zier_curve">B&eacute;zier splines</a>"
-      are slightly different.
+      曲线（B&eacute;zier curves）</a>
+      密切相关。
+      但 “B-spline” 中的 “B” 实际上只是代表 “basis（基）”
+      （不，我不是在开玩笑），
+      而
+      “<a
+      href="https://en.wikipedia.org/wiki/Composite_B%C3%A9zier_curve">B&eacute;zier splines</a>”
+      则略有不同。
       </p>
       
-      <todo>A simple interactive gui for moving around the control points and visualizing the spline.</todo>
+      <todo>制作一个简单的交互式 GUI，
+      用于移动控制点并可视化样条曲线。</todo>
 
     </subsection>
 
-    <subsection><h1>Optimization algorithms</h1>
+    <subsection><h1>优化算法（Optimization algorithms）</h1>
 
-      <p>The default <a
+      <p>Drake 中默认的
+      <a
       href="https://drake.mit.edu/doxygen_cxx/classdrake_1_1planning_1_1trajectory__optimization_1_1_kinematic_trajectory_optimization.html"><code>KinematicTrajectoryOptimization</code></a>
-      class in Drake optimizes a trajectory defined using a B-spline to
-      represent a path, $r(s)$ over the interval $s \in [0,1]$, plus an
-      additional scalar decision variable corresponding to the trajectory
-      duration, $T$. The final trajectory combines the path with the
-      time-rescaling: $q(t) = r(t/T).$ This is a particularly nice way to
-      represent a trajectory of unknown duration, and has the excellent feature
-      that the convex hull property can still be used. Velocity constraints are
-      still linear; constraints on acceleration and higher derivatives do
-      become nonlinear, but if satisfied they still imply strict bounds
-      $\forall t \in [0, T].$</p>
+      类会优化一条使用 B 样条定义的轨迹，
+      该 B 样条用于表示区间
+      $s \in [0,1]$
+      上的一条路径 $r(s)$，
+      另外还有一个标量决策变量，
+      对应于轨迹持续时间 $T$。
+      最终轨迹将路径与时间重标定（time-rescaling）结合起来：
+      $q(t) = r(t/T).$
+      这是一种特别适合表示未知持续时间轨迹的方式，
+      并且具有一个非常优秀的特性：
+      仍然可以使用凸包性质。
+      速度约束仍然是线性的；
+      对加速度以及更高阶导数的约束会变成非线性的，
+      但如果它们被满足，
+      仍然意味着对所有
+      $\forall t \in [0, T]$
+      都存在严格界限。</p>
 
-      <p>Since the <code>KinematicTrajectoryOptimization</code> is written
-      using Drake's <code>MathematicalProgram</code>, by default it will
-      automatically select what we think is the best solver given the available
-      solvers. If the optimization has only convex costs and constraints, it
-      will be dispatched to a convex optimization solver. But most often we add
-      in nonconvex <a
-      href="https://drake.mit.edu/doxygen_cxx/group__solver__evaluators.html">costs
-      and constraints from kinematics</a>. Therefore in most cases, the default
-      solver would again be the SQP-solver, SNOPT. You are free to experiment
-      with others!</p>
+      <p>由于 <code>KinematicTrajectoryOptimization</code>
+      是使用 Drake 的 <code>MathematicalProgram</code> 编写的，
+      因此默认情况下，
+      它会根据当前可用的求解器，
+      自动选择我们认为最合适的求解器。
+      如果该优化问题只包含凸代价函数和凸约束，
+      它就会被分派给一个凸优化求解器。
+      但大多数时候，
+      我们会加入来自运动学的非凸
+      <a
+      href="https://drake.mit.edu/doxygen_cxx/group__solver__evaluators.html">代价函数与约束</a>。
+      因此在大多数情况下，
+      默认求解器仍然会是 SQP 求解器 SNOPT。
+      你也可以自由尝试其它求解器！</p>
 
-      <p>One of the most interesting set of constraints that we can add to our
-      kinematic trajectory optimization problem is the <a
-      href="https://drake.mit.edu/doxygen_cxx/classdrake_1_1multibody_1_1_minimum_distance_lower_bound_constraint.html">MinimumDistanceLowerBoundConstraint</a>;
-      when the minimum distance between all potential collision pairs is
-      greater than zero then we have avoided collisions. Please note, though,
-      that these collision constraints can only be enforced at discrete
-      samples, $s_i \in [0,1]$, along the path. <i>They do not guarantee that
-      the trajectory is collision free $\forall t\in[0,T].$</i> It required
-      very special properties of the derivative constraints to leverage the
-      convex hull property; we do not have them for more general nonlinear
-      constraints. A common strategy is to add constraints at some modest
-      number of samples along the interval during optimization, then to check
-      for collisions more densely on the optimized trajectory before executing
-      it on the robot.</p>
+      <p>我们可以添加到运动学轨迹优化问题中的一组最有趣约束之一，
+      是
+      <a
+      href="https://drake.mit.edu/doxygen_cxx/classdrake_1_1multibody_1_1_minimum_distance_lower_bound_constraint.html">MinimumDistanceLowerBoundConstraint</a>；
+      当所有潜在碰撞对之间的最小距离都大于零时，
+      我们就避免了碰撞。
+      不过请注意，
+      这些碰撞约束只能在路径上的离散采样点
+      $s_i \in [0,1]$
+      处被施加。
+      <i>它们并不能保证轨迹在所有
+      $\forall t\in[0,T]$
+      上都是无碰撞的。</i>
+      要利用凸包性质，
+      需要导数约束具有非常特殊的性质；
+      对于更一般的非线性约束，
+      我们并不具备这些性质。
+      一种常见策略是：
+      在优化过程中，
+      在区间上数量适中的若干采样点处添加约束；
+      然后在将优化后的轨迹真正发送给机器人执行之前，
+      对该轨迹进行更密集的碰撞检查。</p>
 
-      <example><h1>Kinematic trajectory optimization for moving between shelves</h1>
+      <example><h1>用于在货架之间移动的运动学轨迹优化（Kinematic trajectory optimization for moving between shelves）</h1>
       
-        <p>As a warm-up, I've provided a simple example of the planar iiwa
-        reaching from the top shelf into the middle shelf.</p>
+        <p>作为热身，
+        我提供了一个简单示例：
+        平面 iiwa 机械臂从顶部货架伸到中间货架。</p>
 
         <script>document.write(notebook_link('trajectories', notebook="kinematic_trajectory_optimization"))</script>
       
-        <p>If you look carefully at the code, I actually had to solve this
-        trajectory optimization twice to get SNOPT to return a good solution
-        (unfortunately, since it is a local optimization, this can happen). For
-        this particular problem, the strategy that worked was to solve once
-        without the collision avoidance constraint, and then use that
-        trajectory as an initial guess for the problem with the collision
-        avoidance constraint.</p>
+        <p>如果你仔细查看代码，
+        会发现我实际上不得不求解这个轨迹优化问题两次，
+        才让 SNOPT 返回一个好的解
+        （遗憾的是，由于它是局部优化方法，
+        这种情况确实可能发生）。
+        对于这个特定问题，
+        有效的策略是：
+        先在没有避碰约束的情况下求解一次，
+        然后将得到的轨迹作为带避碰约束问题的初始猜测。</p>
 
-        <p>Another thing to notice in the code is the "visualization callback"
-        that I use to plot a little blue line for the trajectory as the
-        optimizer is solving. Visualization callbacks are implemented by e.g.
-        telling the solver about a cost function that depends on all of the
-        variables, and always returns zero cost; they get called every time the
-        solver evaluates the cost functions. What I've done here can definitely
-        slow down the optimization, but it's an excellent way to get some
-        intuition about when the solver is "struggling" to numerically solve a
-        problem. I think that the people / papers in this field with the
-        fastest and most robust solvers are highly correlated with people who
-        spend time visualizing and massaging the numerics of their solvers.</p>
+        <p>代码中另一个值得注意的地方，
+        是我用来在优化器求解过程中
+        为轨迹绘制一条蓝色小线的“可视化回调（visualization callback）”。
+        可视化回调可以这样实现：
+        例如，告诉求解器存在一个依赖于所有变量的代价函数，
+        但它总是返回零代价；
+        这样每当求解器评估代价函数时，
+        它都会被调用。
+        我在这里所做的事情确实可能拖慢优化过程，
+        但这是获得直觉的绝佳方式，
+        可以帮助你判断求解器什么时候正在“艰难地”进行数值求解。
+        我认为，在这个领域中，
+        那些拥有最快、最鲁棒求解器的人 / 论文，
+        与那些愿意花时间可视化并仔细调理求解器数值行为的人，
+        二者之间高度相关。</p>
 
       </example>
 
-      <example><h1>Kinematic trajectory optimization for clutter clearing</h1>
+      <example><h1>用于杂乱环境清理的运动学轨迹优化（Kinematic trajectory optimization for clutter clearing）</h1>
       
-        <p>We can use <code>KinematicTrajectoryOptimization</code> to do the
-        planning for our clutter clearing example, too. This optimization was
-        more robust, and did not require solving twice. I only seeded it with a
-        trivial initial trajectory to avoid solutions where the robot tried to
-        rotate 270 degrees around its base instead of taking the shorter
-        path.</p>
+        <p>我们也可以使用 <code>KinematicTrajectoryOptimization</code>
+        来为杂乱环境清理示例进行规划。
+        这个优化过程更加鲁棒，
+        并且不需要求解两次。
+        我只用一条平凡的初始轨迹作为种子，
+        以避免机器人试图绕其基座旋转 270 度，
+        而不是选择更短路径的解。</p>
 
         <script>document.write(notebook_link('trajectories', notebook="kinematic_trajectory_optimization"))</script>
       
       </example>
 
-      <todo>Show example(s) from TRI dish-loading.</todo>
+      <todo>展示来自 TRI 餐具装载项目的示例。</todo>
 
-      <p>There are a number of related approaches to kinematic trajectory
-      optimization in the motion planning literature, which differ either by
-      their parameterization or by the solution technique (or both). Some of
-      the more well-known include CHOMP
-      <elib>Ratliff09a</elib>, STOMP <elib>Kalakrishnan11a</elib>, and
-      KOMO<elib>Toussaint17</elib>.</p>
+      <p>在运动规划文献中，
+      有许多与运动学轨迹优化相关的方法，
+      它们的区别可能在于参数化方式，
+      也可能在于求解技术，
+      或者二者皆有。
+      其中一些较为知名的方法包括 CHOMP
+      <elib>Ratliff09a</elib>、STOMP <elib>Kalakrishnan11a</elib>
+      以及 KOMO<elib>Toussaint17</elib>。</p>
       
-      <p>KOMO, for instance, is one of a handful of trajectory optimization
-      techniques that use the <a
-      href="https://en.wikipedia.org/wiki/Augmented_Lagrangian_method">Augmented
-      Lagrangian method</a> of transcribing a constrained optimization problem
-      into an unconstrained problem, then using a simple but fast
-      gradient-based solver<elib>Toussaint14</elib>. Augmented-Lagrangian-based
-      approaches appear to be the most popular and successful these days; I
-      hope to provide a nice implementation in Drake soon! But one does have to
-      be careful in comparing these different solvers -- SNOPT may declare
-      failure if it cannot optimize the cost and satisfy constraints to the
-      default tolerances (around 1e-6), while an Augmented-Lagrangian approach
-      will never report failure and will rarely aim for this level of accuracy.
+      <p>例如，KOMO 是少数几种使用
+      <a
+      href="https://en.wikipedia.org/wiki/Augmented_Lagrangian_method">增广拉格朗日方法（Augmented
+      Lagrangian method）</a>
+      的轨迹优化技术之一。
+      这种方法将一个带约束优化问题转写为一个无约束问题，
+      然后使用简单但快速的基于梯度的求解器<elib>Toussaint14</elib>。
+      基于增广拉格朗日的方法
+      现在似乎是最受欢迎且最成功的一类方法；
+      我希望不久之后能在 Drake 中提供一个不错的实现！
+      但在比较这些不同求解器时必须小心——
+      如果 SNOPT 无法将代价函数优化到位
+      并使约束满足默认容差
+      （约为 1e-6），
+      它可能会声明失败；
+      而增广拉格朗日方法永远不会报告失败，
+      并且也很少会以这种精度水平为目标。
       </p>
 
-      <p>When kinematic trajectory optimizations succeed, they are an
-      incredibly satisfying solution to the motion planning problem. They give
-      a very natural and expressive language for specifying the desired motion
-      (with needing to sample nonlinear constraints as perhaps the one
-      exception), and they can be solved fast enough for online planning. The
-      only problem is: they don't always succeed. Because they are based on
-      nonconvex optimization, they are susceptible to local minima, and can
-      fail to find a feasible path even when one exists.</p>
+      <p>当运动学轨迹优化成功时，
+      它们是运动规划问题中一种令人非常满意的解决方案。
+      它们提供了一种非常自然且富有表达力的语言，
+      用于描述期望运动
+      （也许唯一的例外是需要对非线性约束进行采样），
+      并且它们的求解速度足够快，
+      可以用于在线规划。
+      唯一的问题是：
+      它们并不总是成功。
+      因为它们基于非凸优化，
+      所以容易受到局部极小值的影响，
+      即使存在可行路径，
+      也可能无法找到它。</p>
 
-      <example><h1>Local minima in collision-free trajectory optimization</h1>
-        <p>Consider the extremely simple example of finding the shortest path
-        for a point robot moving from the start (blue circle) to the goal
-        (green circle) in the image below, avoiding collisions with the red
-        box. Avoiding even the complexity of B-splines, we can write an
-        optimization of the form: \begin{aligned} \min_{q_0, ..., q_N} \quad &
-        \sum_{n=0}^{N-1} | q_{n+1} - q_n|_2^2 & \\ \text{subject to} \quad &
-        q_0 = q_{start} \\ & q_N = q_{goal} \\ & |q_n|_1 \ge 1 & \forall n,
-        \end{aligned} where the last line is the collision-avoidance constraint
-        saying that each sample point has to be <i>outside</i> of the
-        $\ell_1$-ball (my convenient choice for the geometry of the red box).
-        Alternatively, we can write a slightly more advanced constraint to
-        maintain that each <i></i>line segment</i> is outside of the obstacle
-        (rather than just the vertices). Here are some possible solutions to this optimization problem:
+      <example><h1>无碰撞轨迹优化中的局部极小值（Local minima in collision-free trajectory optimization）</h1>
+        <p>考虑一个极其简单的例子：
+        为一个点机器人寻找从起点（蓝色圆圈）到目标点（绿色圆圈）的最短路径，
+        如下图所示，同时避免与红色方框发生碰撞。
+        甚至先不考虑 B 样条的复杂性，
+        我们可以写出如下形式的优化问题：
+        \begin{aligned}
+        \min_{q_0, ..., q_N} \quad &
+        \sum_{n=0}^{N-1} | q_{n+1} - q_n|_2^2 & \\
+        \text{subject to} \quad &
+        q_0 = q_{start} \\
+        & q_N = q_{goal} \\
+        & |q_n|_1 \ge 1 & \forall n,
+        \end{aligned}
+        其中最后一行是避碰约束，
+        表示每个采样点都必须位于
+        $\ell_1$ 球<i>之外</i>
+        （这是我为红色方框几何形状所做的一个方便选择）。
+        或者，
+        我们也可以写出一个稍微更高级的约束，
+        用于保证每一条<i>线段</i>都位于障碍物之外
+        （而不仅仅是各个顶点）。
+        下面是这个优化问题的一些可能解：
         </p>
         
         <figure>
           <img height="250" src="data/redbox_shortest_path.png"/>
           <img height="250" src="data/redbox_shortest_path_local_minima.png"/>
         </figure>
-        <todo>Fix meshcat line width.</todo>
+        <todo>修复 meshcat 线宽。</todo>
           
-        <p>The solution on the left is the (global) minimum for the problem;
-        the solution on the right is clearly a local minima. Once a nonlinear
-        solver is considering paths that go right around the obstacle, it is
-        very unlikely to find a solution that goes left around the obstacle,
-        because the solution would have to get worse (violate the collision
-        constraint) before it gets better.</p> 
+        <p>左侧的解是该问题的（全局）最小值；
+        右侧的解显然是一个局部极小值。
+        一旦非线性求解器开始考虑从障碍物右侧绕行的路径，
+        它就很不可能再找到一条从障碍物左侧绕行的解，
+        因为在变得更好之前，
+        该解必须先变得更差
+        （即违反碰撞约束）。</p> 
 
-        <todo>Make a version of this with B-splines</todo>
+        <todo>制作一个使用 B 样条的版本</todo>
       </example>
 
-      <p>To deal with this limitation, the field of collision-free motion
-      planning has trended heavily towards sampling-based methods.</p>
+      <p>为了解决这一限制，
+      无碰撞运动规划领域已经明显转向了基于采样的方法。</p>
     </subsection>
 
   </section>
 
-  <section><h1>Sampling-based motion planning</h1>
+  <section><h1>基于采样的运动规划（Sampling-based motion planning）</h1>
 
-    <p>My aim is to have a complete draft of this section soon! In the mean
-      time, I strongly recommend the book by Steve LaValle<elib>LaValle06</elib>,
-      and checking out the <a href="https://ompl.kavrakilab.org/">Open Motion
-      Planning Library</a>. We have strong implementations of the most common
-      sampling-based algorithms</a> in Drake which are optimized for our
-      collision engines, and <a
-      href="https://github.com/RobotLocomotion/drake/issues/14431">hope to make
-      them publicly available soon</a>.</p>
+    <p>我的目标是尽快完成本节的完整草稿！
+      在此期间，
+      我强烈推荐 Steve LaValle 的书<elib>LaValle06</elib>，
+      以及查看
+      <a href="https://ompl.kavrakilab.org/">开放运动规划库（Open Motion
+      Planning Library）</a>。
+      我们在 Drake 中已经实现了最常见的
+      基于采样的算法</a>，
+      并针对我们的碰撞引擎进行了优化，
+      而且<a
+      href="https://github.com/RobotLocomotion/drake/issues/14431">希望很快将它们公开发布</a>。</p>
   
     <figure>
       <img height="200" class="invisible_on_hover" src="data/h5chess-static.gif"/>
@@ -808,196 +1044,272 @@ ik.AddPositionConstraint(
       <img height="200" class="invisible_on_hover" src="data/h6crouchchair-static.gif"/>
       <img height="200" src="data/h6crouchchair.gif">
 
-      <figcaption>Some incredible early (circa 2002) sampling-based motion planning
-      results <a href="http://www.kuffner.org/james/humanoid/planning.php">from
-      James Kuffner</a> (hover over the image to animate). These are kinematically complex and quite high dimensional.</figcaption>
+      <figcaption>一些令人难以置信的早期（大约 2002 年）
+      基于采样的运动规划成果，
+      来自
+      <a href="http://www.kuffner.org/james/humanoid/planning.php">James Kuffner</a>
+      （将鼠标悬停在图片上可播放动画）。
+      这些问题在运动学上非常复杂，
+      并且具有相当高的维度。</figcaption>
     </figure>
 
 
-    <subsection><h1>Rapidly-exploring random trees (RRT)</h1>
+    <subsection><h1>快速扩展随机树（Rapidly-exploring random trees, RRT）</h1>
     
-      <example><h1>The basic RRT</h1>
+      <example><h1>基础 RRT（The basic RRT）</h1>
     
         <script>document.write(notebook_link('trajectories', notebook="rrt"))</script>
       </example>
     
     </subsection>
 
-    <example><h1>The RRT "Bug Trap"</h1>
+    <example><h1>RRT “Bug Trap（虫洞陷阱）”</h1>
     
       <script>document.write(notebook_link('trajectories', notebook="rrt"))</script>
     </example>
     
     </subsection>
 
-    <subsection><h1>The Probabilistic Roadmap (PRM)</h1>
+    <subsection><h1>概率路网（Probabilistic Roadmap, PRM）</h1>
     </subsection>
 
-    <subsection><h1>Post-processing</h1>
+    <subsection><h1>后处理（Post-processing）</h1>
 
-      <p>Short-cutting, <a
+      <p>捷径优化（Short-cutting），
+      <a
       href="https://github.com/RobotLocomotion/drake/issues/11827">anytime
-      b-spline smoother</a></p>
+      B 样条平滑器（b-spline smoother）</a></p>
 
     </subsection>
 
-    <subsection><h1>Sampling-based planning in practice</h1>
+    <subsection><h1>实践中的基于采样的规划（Sampling-based planning in practice）</h1>
     
-      <p>There are many optimizations and heuristics which can dramatically
-      improve the effectiveness of these methods... (optimized collision
-      checking, weighted Euclidean distances, ...)</p>
+      <p>有许多优化技巧与启发式方法
+      能够显著提升这些方法的效果……
+      （优化后的碰撞检测、
+      加权欧氏距离等……）</p>
     
     </subsection>
 
   </section>
 
-  <section id="gcs"><h1>Motion Planning w/ Graphs of Convex Sets (GCS)</h1>
+  <section id="gcs"><h1>基于凸集图（Graphs of Convex Sets, GCS）的运动规划</h1>
 
-    <p>Trajectory optimization techniques allow for rich specifications of costs and
-    constraints, including derivative constraints on continuous curves, and can scale to
-    high-dimensional configuration spaces, but they are fundamentally based on local
-    (gradient-based) optimization and suffer from local mimima. Sampling-based planners
-    reason more globally and provide a notion of (probabilistic) completeness, but
-    struggle to accommodate derivative constraints on continuous curves and struggle in
-    high dimensions. Is there any way to get the best of both worlds?</p>
+    <p>轨迹优化技术允许我们以丰富的方式描述代价函数与约束条件，
+    包括连续曲线上的导数约束，
+    并且能够扩展到高维配置空间；
+    但它们本质上仍然依赖于局部（基于梯度）的优化，
+    因而会受到局部极小值问题的影响。
+    基于采样的规划器则从更全局的角度进行推理，
+    并提供了一种（概率意义上的）完备性概念，
+    但它们难以处理连续曲线上的导数约束，
+    并且在高维空间中也会遇到困难。
+    那么，
+    是否存在一种方法，
+    能够兼顾两者的优点呢？</p>
 
-    <p>My students and I have been working on new approach to motion planning
-    that attempts to bridge this gap. It builds on a general optimization
-    framework for mixing continuous optimization and combinatorial optimization
-    (e.g. on a graph), which we call "Graphs of Convex Sets" (GCS).</p>
+    <p>我和我的学生一直在研究一种新的运动规划方法，
+    试图弥合这一差距。
+    它建立在一个通用优化框架之上，
+    该框架用于混合连续优化与组合优化
+    （例如图上的组合优化），
+    我们称之为“凸集图（Graphs of Convex Sets, GCS）”。</p>
 
-    <p>To motivate it, let's think about why the PRM struggles to handle
-    continuous curvature constraints. During the roadmap construction phase, we
-    do a lot of work with the collision checker to certify that straight line
-    segments connecting two vertices are collision free (typically only up to
-    some sampling resolution, though it is possible to do better
-    <elib>Amice23</elib>). Then, in the online query phase, we search the discrete graph
-    to find a (discontinuous) piecewise-linear shortest path from the start to the goal.
-    Once we go to smooth that path or approximate it with a continuous curve, there is
-    no guarantee that this path is still collision free, and it certainly might not be
-    the shortest path. Because our offline roadmap construction only considered line
-    segments, it didn't leave any room for online optimization. This becomes even more
-    of a concern when we bring in dynamics -- paths that are kinematically feasible
-    might not be feasible once we have dynamic constraints. While sampling-based
-    planning <a href="https://ompl.kavrakilab.org/planners.html#control_planners">can be
-    adapted</a> to these so-called "kino-dynamic planning" or "control-based planning"
-    problems, for a number of <a
-    href="https://underactuated.mit.edu/planning.html">subtle reasons</a> these
-    algorithms have not been as successful as the purely kinematic sampling-based
-    planning versions.</p>
+    <p>为了说明它的动机，
+    让我们思考一下为什么 PRM 难以处理连续曲率约束。
+    在路网构建阶段，
+    我们会使用碰撞检测器做大量工作，
+    以证明连接两个顶点的直线段是无碰撞的
+    （通常只是在某种采样分辨率下成立，
+    尽管也可以做得更好
+    <elib>Amice23</elib>）。
+    然后，
+    在在线查询阶段，
+    我们搜索离散图，
+    以找到一条从起点到目标点的
+    （不连续的）分段线性最短路径。
+    一旦我们去平滑这条路径，
+    或者用一条连续曲线来近似它，
+    就无法保证这条路径仍然无碰撞，
+    当然它也未必仍然是最短路径。
+    因为我们的离线路网构建只考虑了线段，
+    所以它没有为在线优化留下任何空间。
+    当我们引入动力学时，
+    这一点会变得更加令人担忧——
+    在运动学上可行的路径，
+    一旦加入动力学约束后可能就不再可行。
+    虽然基于采样的规划
+    <a href="https://ompl.kavrakilab.org/planners.html#control_planners">可以被改造</a>
+    用于这些所谓的“运动-动力学规划（kino-dynamic planning）”
+    或“基于控制的规划（control-based planning）”问题，
+    但由于若干
+    <a
+    href="https://underactuated.mit.edu/planning.html">微妙原因</a>，
+    这些算法并没有像纯运动学的基于采样规划版本那样成功。</p>
 
-    <todo>Add a PRM => GCS plot here.</todo>
+    <todo>在这里添加一个 PRM => GCS 的图。</todo>
 
-    <p>A relatively small change to the PRM workflow is this: every time we pick a
-    sample, rather than just adding the configuration-space point to the graph, let's
-    expand that point into a (convex) region in configuration space. We'll happily pay
-    some offline computation in order to find nice big regions, because the payoff for
-    the online query phase is significant. First, we can make much sparser graphs -- a
-    small number of regions can cover a big portion of configuration space -- which also
-    allows us to scale to higher dimensions. But perhaps more importantly, now we have
-    the flexibility to optimize online over continuous curves, so long as they stay
-    inside the convex regions. This requires a generalization of the graph-search
-    algorithm which can jointly optimize the discrete path through the graph along with
-    the parameters of the continuous curves; this is exactly the generalization that GCS
-    provides.</p>
+    <p>对 PRM 工作流程做一个相对较小的改动是：
+    每当我们选取一个样本时，
+    不再只是把该配置空间点加入图中，
+    而是将这个点扩展为配置空间中的一个（凸）区域。
+    我们愿意付出一些离线计算成本，
+    来寻找足够好的大区域，
+    因为这会在在线查询阶段带来显著收益。
+    首先，
+    我们可以构建稀疏得多的图——
+    少量区域就可以覆盖配置空间中的很大一部分——
+    这也使我们能够扩展到更高维度。
+    但也许更重要的是，
+    现在我们有了在线优化连续曲线的灵活性，
+    只要这些曲线始终保持在凸区域内部即可。
+    这需要对图搜索算法进行推广，
+    使其能够联合优化穿过图的离散路径
+    以及连续曲线的参数；
+    而这正是 GCS 所提供的推广。</p>
 
-    <subsection><h1>Graphs of Convex Sets</h1>
+    <subsection><h1>凸集图（Graphs of Convex Sets）</h1>
     
-      <p>The GCS framework was originally introduced in
-      <elib>Marcucci21</elib>, and we have a mature <a
-      href="https://drake.mit.edu/doxygen_cxx/classdrake_1_1geometry_1_1optimization_1_1_graph_of_convex_sets.html">implementation
-      in Drake</a>. It is a general optimization framework for combining combinatorial
-      optimizations, like graph search, with continuous optimizations, like the
-      kinematic trajectory optimization we studied above. GCS can provide a continuous
-      extension to any "network flow" optimization (c.f. <elib>Ahuja93</elib>), but for
-      motion planning, the first problem we are interested in is shortest paths on a
-      graph.</p>
+      <p>GCS 框架最初由
+      <elib>Marcucci21</elib>
+      提出，
+      并且我们已经在
+      <a
+      href="https://drake.mit.edu/doxygen_cxx/classdrake_1_1geometry_1_1optimization_1_1_graph_of_convex_sets.html">Drake 中实现了成熟版本</a>。
+      它是一个通用优化框架，
+      用于将组合优化
+      （例如图搜索）
+      与连续优化
+      （例如我们前面研究的运动学轨迹优化）
+      结合起来。
+      GCS 可以为任何“网络流（network flow）”优化提供连续化扩展
+      （参见 <elib>Ahuja93</elib>），
+      但对于运动规划而言，
+      我们首先感兴趣的问题
+      是图上的最短路径问题。</p>
 
-      <p>Consider the very classical problem of finding the (weighted) shortest
-      path from a source, $s$, to a target, $t,$ on a graph, pictured on the
-      left. The problem is described by a set of vertices, a set of
-      (potentially directed) edges, and the cost of traversing each edge.
+      <p>考虑一个非常经典的问题：
+      在图中寻找从源点 $s$
+      到目标点 $t$
+      的（带权）最短路径，
+      如左图所示。
+      这个问题由一组顶点、
+      一组（可能有向的）边，
+      以及遍历每条边的代价所描述。
       <figure>
       <img width="49%" src="figures/shortest_path.svg"/>
       <img width="49%" src="figures/shortest_path_between_convex_sets.svg"/>
       </figure>
-      GCS provides a simple, but powerful generalization to this problem:
-      whenever we visit a vertex in the graph, we are also allowed to pick one
-      element out of a convex set associated with that vertex. Edge lengths are
-      allowed to be convex functions of the continuous variables in the
-      corresponding sets, and we can also write convex constraints on the edges
-      (which must be satisfied by any solution path).
+      GCS 为该问题提供了一个简单但强大的推广：
+      每当我们访问图中的一个顶点时，
+      我们还可以从与该顶点相关联的一个凸集中
+      选择一个元素。
+      边的长度允许成为对应集合中连续变量的凸函数，
+      同时我们也可以在边上编写凸约束
+      （这些约束必须由任何可行路径满足）。
       </p>
 
-      <p>The shortest path problem on a graph of convex sets can encode
-      problems that are NP-Hard, but these can be formulated as a mixed-integer
-      convex optimization (MICP). What makes the framework so powerful is that
-      this MICP has a very strong and efficient <i>convex relaxation</i>;
-      meaning that if you relax the binary variables to continuous variables
-      you get (nearly) the solution to the original MICP.  This means that you
-      can solve GCS problems to global optimality orders of magnitude faster
-      than previous transcriptions. But in practice, we find that <i>solving
-      only the convex relaxation</i> (plus a little rounding) is almost always
-      sufficient to recover the optimal solution. Nowadays, we almost never
-      solve the full MICP in our robotics applications of GCS.</p>
+      <p>凸集图上的最短路径问题
+      可以编码 NP-Hard 问题，
+      但它们可以被表述为混合整数凸优化（mixed-integer convex optimization, MICP）。
+      使这个框架如此强大的原因在于：
+      这个 MICP 拥有一个非常强且高效的<i>凸松弛（convex relaxation）</i>；
+      也就是说，
+      如果你将二值变量放松为连续变量，
+      那么你得到的将会是（几乎）原始 MICP 的解。
+      这意味着，
+      相比以往的转写方式，
+      你可以以快几个数量级的速度
+      将 GCS 问题求解到全局最优。
+      但在实践中，
+      我们发现<i>只求解凸松弛</i>
+      （再加上一点 rounding）
+      几乎总是足以恢复最优解。
+      如今，
+      在我们基于 GCS 的机器人应用中，
+      几乎从不再求解完整的 MICP。</p>
       
-      <p>You can find more details and examples about GCS in my <a
-      href="http://underactuated.mit.edu/optimization.html#gcs">underactuated notes</a>,
-      and a thorough and very readable treatment of GCS as a general tool for
-      mixed-discrete and continous optimization in <elib>Marcucci24a</elib>.</p>
+      <p>你可以在我的
+      <a
+      href="http://underactuated.mit.edu/optimization.html#gcs">欠驱动系统讲义（underactuated notes）</a>
+      中找到更多关于 GCS 的细节与示例，
+      并且在
+      <elib>Marcucci24a</elib>
+      中，
+      可以看到对 GCS 作为一种通用混合离散-连续优化工具的
+      非常完整且易读的论述。</p>
 
     </subsection>
 
-    <subsection><h1>GCS (Kinematic) Trajectory Optimization</h1>
+    <subsection><h1>GCS（运动学）轨迹优化（GCS (Kinematic) Trajectory Optimization）</h1>
     
-      <p>GCS provides a very general machinery for optimizing over the mixed
-      discrete/continuous optimization problems that are naturally represented on a
-      graph. But how do we transcribe the motion planning problem into a GCS? We first
-      presented the transcription I'll describe here in the paper titled "Motion
-      planning around obstacles with convex optimization" <elib>Marcucci23a</elib>. Since
-      we've already spent time in this chapter talking about the inherent nonconvexity
-      of the motion planning problem, you can see why we like this title! It should be
-      slightly surprising that we can use convex optimization to effectively solve these
-      problems to global optimality.</p>
+      <p>GCS 提供了一套非常通用的机制，
+      用于优化那些自然表示在图上的混合离散 / 连续优化问题。
+      但是，我们该如何将运动规划问题转写为一个 GCS 问题呢？
+      我们最早在题为“Motion planning around obstacles with convex optimization”
+      的论文中提出了这里将要描述的这种转写方式
+      <elib>Marcucci23a</elib>。
+      既然我们在本章前面已经花了不少时间讨论运动规划问题固有的非凸性，
+      你应该能理解为什么我们喜欢这个标题！
+      我们竟然能够使用凸优化来有效地将这些问题求解到全局最优，
+      这一点应该会让人略感惊讶。</p>
 
-      <p>Let us assume for a moment that we are given a convex decomposition of the
-      collision-free space. This is a strong assumption, which we will justify below.
+      <p>让我们暂时假设，
+      我们已经得到了无碰撞空间的一个凸分解。
+      这是一个很强的假设，
+      我们将在后面解释它的合理性。
       </p>
 
       <figure>
         <img width="49%" src="figures/gcs_simple_2d_obstacles.svg">
         <img width="49%" src="figures/gcs_simple_2d_regions.svg">
-        <figcaption><i>Left:</i> A simple 2D configuration-space with obstacles in red.
-        <i>Right:</i> A convex decomposition of the collision-free configuration space.
+        <figcaption><i>左图：</i>一个简单的二维配置空间，
+        其中红色区域表示障碍物。
+        <i>右图：</i>无碰撞配置空间的一个凸分解。
         </figcaption>
       </figure>
 
-      <p>Observe that if we have two points in the same convex collision-free region,
-      then we know that the straight line connecting them is also guaranteed to be
-      collision free. When points lie in the intersection of two C-space regions, then
-      they can connect continuous paths through multiple regions. This is the essence of
-      our transcription. What this implies is that for each visit to a vertex in the
-      GCS, then we want to pick <i>two points</i> in a C-space region, so that the path
-      lies in the region. So the convex sets in the GCS are not the C-space regions
-      themselves, they are the set with $2n$ variables for an $n$-dimensional
-      configuration space where the first $n$ and the last $n$ are both in the C-space
-      region. In set notation, we'd say it's the Cartesian product of the set with
-      itself. We form undirected edges between these sets iff the C-space regions
-      intersect, and we put a constraint on each edge saying that the second point in
-      the first set must be equal to the first point in the second set.</p>
+      <p>注意，
+      如果我们有两个点位于同一个凸的无碰撞区域内，
+      那么连接它们的直线也一定保证无碰撞。
+      当点位于两个 C 空间区域的交集中时，
+      它们就可以将穿过多个区域的连续路径连接起来。
+      这就是我们这种转写方法的核心。
+      这意味着，
+      对于 GCS 中每一次访问某个顶点，
+      我们都希望在一个 C 空间区域中选择<i>两个点</i>，
+      从而使路径位于该区域内。
+      因此，
+      GCS 中的凸集并不是 C 空间区域本身，
+      而是这样一个集合：
+      对于一个 $n$ 维配置空间，
+      它包含 $2n$ 个变量，
+      其中前 $n$ 个变量和后 $n$ 个变量
+      都位于该 C 空间区域中。
+      用集合记号来说，
+      它就是该集合与自身的笛卡尔积。
+      当且仅当两个 C 空间区域相交时，
+      我们在这些集合之间形成无向边；
+      并且我们在每条边上加入一个约束，
+      要求第一个集合中的第二个点
+      必须等于第二个集合中的第一个点。</p>
 
-      <example><h1>GcsTrajOpt in a simple 2D configuration space</h1>
+      <example><h1>简单二维配置空间中的 GcsTrajOpt（GcsTrajOpt in a simple 2D configuration space）</h1>
         
-        <p>Let's run GCS trajectory optimization on the simple configuration space
-        depicted above. I've put the start in the bottom left corner and the goal in the
-        top right. I'll run the algorithm twice, once with a minimum-distance objective,
-        and once with a minimum-time objective (and velocity constraints):</p>
+        <p>让我们在上图所示的简单配置空间中运行 GCS 轨迹优化。
+        我把起点放在左下角，
+        把目标点放在右上角。
+        我会运行该算法两次：
+        一次使用最小距离目标函数，
+        一次使用最小时间目标函数
+        （并加入速度约束）：</p>
 
         <figure>
         <img width="49%" src="figures/gcs_simple_2d_first_order_min_length.svg">
         <img width="49%" src="figures/gcs_simple_2d_first_order_min_time.svg">
-        <figcaption><i>Left:</i> The GcsTrajOpt solution with a minimum-distance cost.
-        <i>Right:</i> The GcsTrajOpt solution with a minimum-time cost (and velocity constraints).
+        <figcaption><i>左图：</i>带有最小距离代价的 GcsTrajOpt 解。
+        <i>右图：</i>带有最小时间代价
+        （以及速度约束）的 GcsTrajOpt 解。
         </figcaption>
         </figure>
 
@@ -1005,56 +1317,69 @@ ik.AddPositionConstraint(
         
       </example>
 
-      <p>We can generalize this significantly. Rather than just putting a line
-      segment in each set, we can use the convex hull property of Bezier curves
-      to guarantee that an entire continuous path of fixed degree lies inside
-      the set. Using the derivative properties of the Bezier curves, we can add
-      convex constraints on the velocities (e.g. velocity limits), and
-      guarantee that the curves are smooth even at the intersections between
-      regions. To define these velocities, though, we need to know something
-      about the rate at which we are traversing the path, so we also introduce
-      the time-scaling parameterization, much like we did in the kinematic
-      trajectory optimization above, with time scaling parameters in each
-      convex set.</p>
+      <p>我们可以对这一方法进行显著推广。
+      不再只是在每个集合中放置一条线段，
+      我们可以利用 Bezier 曲线的凸包性质，
+      来保证一整条固定次数的连续路径都位于该集合内部。
+      利用 Bezier 曲线的导数性质，
+      我们可以对速度添加凸约束
+      （例如速度限制），
+      并保证即使在区域交界处，
+      曲线也依然是光滑的。
+      不过，为了定义这些速度，
+      我们需要知道沿路径前进的速率信息，
+      因此我们也引入了时间缩放参数化，
+      很像我们在前面的运动学轨迹优化中所做的那样，
+      只不过这里是在每个凸集中引入时间缩放参数。</p>
 
-      <p>The result is a fairly rich trajectory optimization framework that
-      encodes many (but admittedly not all) of the costs and constraints that
-      we want for trajectory optimization in the GCS convex optimization
-      framework. For instance, we can write objectives that include:
+      <p>最终得到的是一个相当丰富的轨迹优化框架，
+      它在 GCS 凸优化框架中编码了许多
+      （当然不可否认，并不是全部）
+      我们希望用于轨迹优化的代价函数与约束条件。
+      例如，我们可以编写包含以下内容的目标函数：
       <ul>
-        <li>time (trajectory duration),</li>
-        <li>path length (approximated with an upper bound),</li>
-        <li>an upper bound on path "energy" (e.g. $\int |\dot{q}(t)|_2^2$),</li>
-      </ul> and constraints that include:
-      <ul>
-        <li>path derivative continuity (to arbitrary
-        degree),</li>
-        <li>velocity constraints (strictly enforced for all $t$, not just at
-        sample points),</li>
-        <li>additional convex position and/or path derivative constraints, such
-        as initial and final positions and velocities.</li>
+        <li>时间（轨迹持续时间），</li>
+        <li>路径长度（用一个上界来近似），</li>
+        <li>路径“能量”的一个上界
+        （例如 $\int |\dot{q}(t)|_2^2$），</li>
       </ul>
-      We automatically impose path continuity constraints, and the region
-      constraints (that the entire trajectory stays inside the union of the
-      C-space regions) which are guaranteed at all $t$, not just at sample points.
-      You can find the <a
-      href="https://drake.mit.edu/doxygen_cxx/classdrake_1_1planning_1_1trajectory__optimization_1_1_gcs_trajectory_optimization.html">implementation
-      in Drake here</a>.</p>
+      以及包含以下内容的约束：
+      <ul>
+        <li>路径导数连续性
+        （可达到任意阶），</li>
+        <li>速度约束
+        （对所有 $t$ 都严格施加，
+        而不仅仅是在采样点处），</li>
+        <li>额外的凸位置约束和 / 或路径导数约束，
+        例如初始与最终位置及速度。</li>
+      </ul>
+      我们会自动施加路径连续性约束，
+      以及区域约束
+      （即整条轨迹始终位于 C 空间区域并集内部），
+      并且这些约束保证对所有 $t$ 成立，
+      而不仅仅是在采样点处成立。
+      你可以在这里找到
+      <a
+      href="https://drake.mit.edu/doxygen_cxx/classdrake_1_1planning_1_1trajectory__optimization_1_1_gcs_trajectory_optimization.html">Drake 中的实现</a>。</p>
 
-      <example><h1>GcsTrajOpt in a simple 2D configuration space (cont.)</h1>
+      <example><h1>简单二维配置空间中的 GcsTrajOpt（续）（GcsTrajOpt in a simple 2D configuration space (cont.)）</h1>
         
-        <p>This is the result of running nearly the same minimum-time optimization as in
-        the example above, but this time we parameterize each segment with a fifth order
-        Bezier curve and a time scaling, and ask for continuity up to the fourth
-        derivative ("snap").</p>
+        <p>这是运行与上一个例子几乎相同的最小时间优化所得到的结果，
+        但这一次，
+        我们用五阶 Bezier 曲线和时间缩放
+        来参数化每一段轨迹，
+        并要求连续性一直达到四阶导数
+        （“snap”）。</p>
 
         <figure>
         <img width="60%" src="figures/gcs_simple_2d_fifth_order_min_time.svg">
         </figure>
 
-        <p>Inspection of the trajectory derivatives reveals that the velocities are
-        smooth and that they stay within the velocity bounds $[-1, 1]$ for the
-        <i>entire</i> trajectory; not just at sample points.</p>
+        <p>检查轨迹导数可以发现，
+        速度是光滑的，
+        并且在<i>整条</i>轨迹上都保持在速度界限
+        $[-1, 1]$ 以内；
+        而不仅仅是在采样点处满足。</p>
 
         <figure>
           <img width="60%" src="figures/gcs_simple_2d_fifth_order_min_time_velocities.svg">
@@ -1064,147 +1389,229 @@ ik.AddPositionConstraint(
         
       </example>
 
-      <p>Nonconvex trajectory optimization can, of course, consume richer costs and
-      constraints, but does not have the global optimization and completeness elements
-      that GCS can provide.  We are constantly adding more costs and constraints into
-      the GCS Trajectory Optimization framework -- some seemingly nonconvex constraints
-      actually have an exact convex reformulation, others have nice convex
-      approximations. This leads to a natural merger of the two techniques: we can use
-      convex approximations of more complex costs and constraints in the GCS convex
-      relaxation, but then use nonlinear optimization during in the rounding step to
-      handle the nonconvexity exactly once GCS selects the discrete path through the
-      graph to give a strong initial guess <elib>Wrangel24</elib>. This can be
-      accomplished in Drake via the
-      <code>use_in_transcription</code> option of the <code>AddCost</code> and <code>AddConstraint</code> methods of
-      GCS, and adding nonconvex constraints only to the <code>Transcription::kRestriction</code>. </p>
+      <p>当然，非凸轨迹优化能够处理更丰富的代价函数与约束条件，
+      但它不具备 GCS 所能提供的全局优化与完备性要素。
+      我们正在不断向 GCS 轨迹优化框架中加入更多代价函数与约束条件——
+      一些看似非凸的约束实际上具有精确的凸重构形式，
+      另一些则具有不错的凸近似。
+      这自然导致了两种技术的融合：
+      我们可以在 GCS 凸松弛中使用更复杂代价函数与约束条件的凸近似，
+      但一旦 GCS 选定了穿过图的离散路径，
+      并给出了一个强初始猜测，
+      就可以在 rounding 步骤中使用非线性优化，
+      精确处理非凸性 <elib>Wrangel24</elib>。
+      在 Drake 中，
+      这可以通过 GCS 的
+      <code>AddCost</code> 和 <code>AddConstraint</code> 方法中的
+      <code>use_in_transcription</code> 选项来实现，
+      并且只将非凸约束添加到
+      <code>Transcription::kRestriction</code> 中。</p>
 
-      <todo>Lots more examples</todo>
+      <todo>更多示例</todo>
 
     </subsection>
 
-    <subsection id="iris"><h1>Convex decomposition of (collision-free) configuration
-    space</h1>
+    <subsection id="iris"><h1>（无碰撞）配置空间的凸分解（Convex decomposition of (collision-free) configuration
+    space）</h1>
   
-      <p>Ok, so how do we obtain a convex decomposition of collision-free configuration
-      space? Let's start by taking the analogy with the PRM seriously. If we sample a
-      collision-free point in the configuration space, then what is the right way to
-      inflate that point into a convex region?</p>
+      <p>好吧，那么我们如何获得无碰撞配置空间的凸分解呢？
+      让我们先认真对待与 PRM 的类比。
+      如果我们在配置空间中采样到一个无碰撞点，
+      那么将这个点膨胀成一个凸区域的正确方式是什么呢？</p>
 
-      <p>The answer is simpler when we are dealing with convex geometries. In
-      my view, it is reasonable to approximate the geometry of a robot with
-      convex shapes in the Euclidean space, $\Re^3.$ Even though many robots
-      (like the iiwa) have nonconvex mesh geometries, we can often approximate
-      them nicely as the union of simpler convex geometries; sometimes these
-      are primitives like cylinders and spheres, alternatively we can perform a
-      convex decomposition directly on the mesh. But even when the geometries
-      are convex in the Euclidean space, it is generally <i>unreasonable</i> to
-      treat them as convex in the configuration space.</p>
+      <p>当我们处理凸几何体时，
+      答案会更简单。
+      在我看来，
+      用欧氏空间 $\Re^3$ 中的凸形状
+      来近似机器人的几何形状是合理的。
+      尽管许多机器人
+      （例如 iiwa）
+      具有非凸的网格几何，
+      但我们通常可以将它们很好地近似为
+      更简单凸几何体的并集；
+      有时这些凸几何体是圆柱体、球体等基本几何体，
+      另一种做法是直接对网格进行凸分解。
+      但是，即使这些几何体在欧氏空间中是凸的，
+      通常也<i>不合理</i>将它们视为配置空间中的凸集。</p>
       
-      <p>There are a few exceptions. If your configuration space only involves
-      translations, or if your robot geometry is invariant to rotations (e.g. a
-      point robot or a spherical robot), then the configuration space will
-      still be convex; this was one of the first key observations that cemented
-      the notion of configuration space as a core mathematical object in
-      robotics <elib>Lozano-Perez90</elib>. This can work for a mobile robot
-      (even a quadrotor approximated by a sphere). In this case, one can easily
-      compute the minimum Euclidean distance between any pairs of convex bodies
-      at the sample point, and for instance, inflate the point into a sphere of
-      the appropriate radius <elib>Shkolnik11a</elib>. In order to find bigger
-      regions, we have made heavy use of the Iterative Region Inflation by
-      Semidefinite Program (IRIS) algorithm introduced in <elib>Deits14</elib>
-      and <a
-      href="https://drake.mit.edu/doxygen_cxx/group__geometry__optimization.html#gafd8111a93cb3461e05bec3477ee736f6">implemented
-      in Drake</a>. This algorithm alternates between finding separating
-      hyperplanes and finding the maximum volume contained ellipse to "inflate"
-      the region to locally maximize (an efficient approximation of) the volume
-      of the region.</p>
+      <p>这里有少数例外。
+      如果你的配置空间只涉及平移，
+      或者如果你的机器人几何形状对旋转不变
+      （例如点机器人或球形机器人），
+      那么配置空间仍然会是凸的；
+      这是早期一些关键观察之一，
+      它巩固了配置空间作为机器人学中核心数学对象的概念
+      <elib>Lozano-Perez90</elib>。
+      这可以适用于移动机器人
+      （甚至是用球体近似的四旋翼）。
+      在这种情况下，
+      我们可以很容易地计算采样点处任意一对凸体之间的最小欧氏距离，
+      并且例如将该点膨胀成一个具有适当半径的球体
+      <elib>Shkolnik11a</elib>。
+      为了找到更大的区域，
+      我们大量使用了
+      <elib>Deits14</elib>
+      中提出的半正定规划迭代区域膨胀算法
+      （Iterative Region Inflation by Semidefinite Program, IRIS），
+      该算法也已
+      <a
+      href="https://drake.mit.edu/doxygen_cxx/group__geometry__optimization.html#gafd8111a93cb3461e05bec3477ee736f6">在 Drake 中实现</a>。
+      该算法会在寻找分离超平面
+      与寻找最大体积内含椭球之间交替进行，
+      从而“膨胀”该区域，
+      以局部最大化该区域体积的一个高效近似。</p>
 
-      <p>It is possible to extend the IRIS algorithm to find large convex regions in the more general (nonconvex) configuration space. We've done it in two ways:
+      <p>可以将 IRIS 算法扩展到更一般的
+      （非凸）配置空间中，
+      用于寻找较大的凸区域。
+      我们已经用三种方式实现了这一点：
       <ul>
-        <li><b>Using nonlinear programming (NP)</b>. In the IRIS-NP algorithm
-        <elib>Petersen23a</elib> (<a
-        href="https://drake.mit.edu/doxygen_cxx/group__geometry__optimization.html#ga3a51e0fec449a0abcf498f78a2a390a8">implemented
-        in Drake</a>), we replace the convex optimization for finding the closest
-        collision with a nonlinear optimization solver like SNOPT. We randomly sample
-        potential collisions in order to make the algorithm probabilistically sound; in
-        practice this algorithm is relatively fast but does not <i>guarantee</i> that
-        the region is completely collision free. We've recently dramatically improve the
-        performance of this pipeline with <a
-        href="https://github.com/orgs/RobotLocomotion/projects/5/views/1?pane=issue&itemId=75484893">IRIS-NP2</a>,
-        introduced in <elib>Werner24</elib>, with creates bigger regions with less faces
-        orders of magnitude faster than the original IRIS-NP.
+        <li><b>使用非线性规划（nonlinear programming, NP）</b>。
+        在 IRIS-NP 算法中
+        <elib>Petersen23a</elib>
+        （已
+        <a
+        href="https://drake.mit.edu/doxygen_cxx/group__geometry__optimization.html#ga3a51e0fec449a0abcf498f78a2a390a8">在 Drake 中实现</a>），
+        我们用类似 SNOPT 的非线性优化求解器，
+        来替代用于寻找最近碰撞的凸优化。
+        我们会随机采样潜在碰撞，
+        以使该算法在概率意义上可靠；
+        在实践中，
+        这个算法相对较快，
+        但并不<i>保证</i>该区域完全无碰撞。
+        最近，
+        我们通过
+        <a
+        href="https://github.com/orgs/RobotLocomotion/projects/5/views/1?pane=issue&itemId=75484893">IRIS-NP2</a>
+        显著提升了这一流程的性能。
+        IRIS-NP2 由 <elib>Werner24</elib> 提出，
+        相比原始 IRIS-NP，
+        它能够以快数个数量级的速度，
+        创建面数更少且更大的区域。
         </li>
-        <li><b>Using zero-order optimization (ZO)</b>. By replacing the nonlinear
-        optimization in IRIS-NP with a zeroth-order optimization (no gradients required;
-        it uses only samples), IRIS-ZO produces slightly smaller regions, but can be
-        trivially parallelized <elib>Werner24</elib>.</li>
-        <li><b>Using algebraic kinematics + sums-of-squares optimization</b>.
-        Leveraging the idea that the kinematics of most of our robots can be
-        expressed using (rational) polynomials, we can use tools from
-        polynomial optimization to search for rigorous certificates of
-        non-collision  <elib>Dai23</elib> (<a
-        href="https://drake.mit.edu/doxygen_cxx/classdrake_1_1geometry_1_1optimization_1_1_cspace_free_polytope.html">implemented
-        in Drake</a>). This method tends to be slower, but the results are
-        sound. The one sacrifice that we have to make here is that we find
-        convex regions in the <a
-        href="http://underactuated.mit.edu/lyapunov.html#stereographic">stereographic
-        projection</a> coordinates of the original space. In practice, this represents a slight warping of the coordinate system (and consequently a trajectory length) over the region.</li>
+
+        <li><b>使用零阶优化（zero-order optimization, ZO）</b>。
+        通过用零阶优化
+        （不需要梯度；只使用采样）
+        替换 IRIS-NP 中的非线性优化，
+        IRIS-ZO 会产生略小一些的区域，
+        但可以非常容易地并行化
+        <elib>Werner24</elib>。</li>
+
+        <li><b>使用代数运动学 + 平方和优化（algebraic kinematics + sums-of-squares optimization）</b>。
+        利用这样一个思想：
+        我们大多数机器人的运动学
+        都可以用（有理）多项式来表达，
+        我们可以使用多项式优化工具
+        来搜索严格的非碰撞证书
+        <elib>Dai23</elib>
+        （已
+        <a
+        href="https://drake.mit.edu/doxygen_cxx/classdrake_1_1geometry_1_1optimization_1_1_cspace_free_polytope.html">在 Drake 中实现</a>）。
+        这种方法通常更慢，
+        但其结果是可靠的。
+        我们在这里必须做出的一个牺牲是：
+        我们是在原始空间的
+        <a
+        href="http://underactuated.mit.edu/lyapunov.html#stereographic">立体投影（stereographic
+        projection）</a>
+        坐标中寻找凸区域。
+        在实践中，
+        这意味着坐标系
+        （因此也包括区域内的轨迹长度）
+        会发生轻微扭曲。</li>
       </ul></p>
 
-      <example><h1>IRIS in Configuration Space</h1>
+      <example><h1>配置空间中的 IRIS（IRIS in Configuration Space）</h1>
       
-        <p>Let's run the <code>IrisInConfigurationSpace</code> (aka IRIS-NP) algorithm
-        on the example of iiwa reaching into a shelf that we played with before. We will
-        use the full 7 degrees of freedom of the arm, and the original collision
-        geometry. I'd like for this example to demonstrate two things: (1) the mechanics
-        of using <code>IrisInConfigurationSpace</code> and (2) the fact that these IRIS
-        regions can cover a lot of volume, even when they are up against complicated
-        configuration-space geometries.</p>
+        <p>让我们在之前玩过的 iiwa 伸入货架的示例上，
+        运行 <code>IrisInConfigurationSpace</code>
+        （也就是 IRIS-NP）算法。
+        我们将使用机械臂完整的 7 个自由度，
+        以及原始碰撞几何。
+        我希望这个例子展示两件事：
+        （1）使用 <code>IrisInConfigurationSpace</code> 的具体机制；
+        （2）即使面对复杂的配置空间几何，
+        这些 IRIS 区域也能够覆盖很大的体积。</p>
 
         <center><img style="width:60%" src="data/shelf_ik.png"></center>
 
-        <p><code>IrisInConfigurationSpace</code> can be configured using a single seed
-        point; iterations of the algorithm will start with a small region around that
-        point and "inflate" it to maximize a local approximation of configuration space
-        volume. We can find a seed configuration, $q,$ that is reaching inside the top
-        shelf using <code>InverseKinematics</code>. But if we only run IRIS from there,
-        then the region it will find will not fill space inside the shelf, it will
-        instead creep out of the shelf in order to cover the much larger configuration
-        space outside of the shelf. To avoid this, we'll run IRIS twice; once with a
-        seed that is the "home configuration" of the robot, which will grow a region
-        outside the shelf. Then we'll run IRIS again with the IK seed inside the shelf,
-        but with an additional constraint using the first region as an obstacle (asking
-        that they do not overlap). This will force the second region to use the volume
-        inside the shelf to maximize volume.</p>
+        <p><code>IrisInConfigurationSpace</code>
+        可以只通过一个种子点（seed point）进行配置；
+        算法的迭代会从该点附近的一个小区域开始，
+        并不断“膨胀”它，
+        以最大化配置空间体积的局部近似。
+        我们可以使用 <code>InverseKinematics</code>
+        找到一个伸入顶部货架内部的种子配置 $q$。
+        但是如果我们只从那里运行 IRIS，
+        那么它找到的区域并不会填满货架内部空间，
+        而是会逐渐爬出货架，
+        去覆盖货架外部更大的配置空间。
+        为了避免这种情况，
+        我们将运行两次 IRIS：
+        第一次使用机器人的“home configuration（初始配置）”作为种子，
+        这样会生成一个位于货架外部的区域。
+        然后我们再次运行 IRIS，
+        使用位于货架内部的 IK 种子，
+        但这次额外加入一个约束，
+        将第一个区域视为障碍物
+        （要求两个区域不能重叠）。
+        这会迫使第二个区域
+        使用货架内部的体积来最大化自身体积。</p>
 
         <script>document.write(notebook_link('trajectories', notebook="iris_in_configuration_space"))</script>
 
-        <p>A different approach for obtaining this volume, which I now favor, is to
-        collect many configuration space samples in the region of interest using inverse
-        kinematics, then compute the <a
+        <p>另一种获取这部分体积的方法，
+        也是我现在更偏好的方法，
+        是：
+        使用逆运动学在感兴趣区域内收集大量配置空间样本，
+        然后计算
+        <a
         href="https://drake.mit.edu/doxygen_cxx/classdrake_1_1geometry_1_1optimization_1_1_hyperellipsoid.html#a0783f7f2e02468471d114e49cbbfa4fd"><code>MinimumVolumeCircumscribedEllipsoid</code></a>
-        to be used as the <a
+        （最小体积外接椭球），
+        并将其作为 IRIS 的
+        <a
         href="https://drake.mit.edu/doxygen_cxx/structdrake_1_1geometry_1_1optimization_1_1_iris_options.html#ae65f515b41261e98fb16dd1e810cba48"><code>starting_ellipse</code></a>
-        for IRIS. Then we run only one iteration of IRIS to get a nice region with a
-        notion of volume corresponding to covering this area of configuration space. This approach avoids the false constraint of using previous regions as obstacles (so leads to bigger regions), runs faster (due to using only one iteration of IRIS), and is more parallelizable.</p>
+        使用。
+        接着，
+        我们只运行一次 IRIS 迭代，
+        就可以得到一个不错的区域，
+        并且这个区域的“体积”概念
+        对应于覆盖该配置空间区域。
+        这种方法避免了将先前区域视为障碍物所带来的虚假约束
+        （因此会得到更大的区域），
+        运行速度也更快
+        （因为只需要运行一次 IRIS），
+        并且更容易并行化。</p>
 
         <script>document.write(notebook_link('trajectories', notebook="iris_in_configuration_space"))</script>
 
       </example>
 
-      <p>If we were to continue to follow the analogy with the PRM, then we could
-      imagine performing a convex decomposition of the space by sampling at random,
-      rejecting samples that are either in collision or in an existing IRIS region, and
-      then inflating any remaining samples. But in fact, we can do much better than this
-      -- we can cover a larger percentage of the configuration free space with the same
-      number of regions, or alternatively cover a similar volume with less regions. Our
-      current best algorithm for performing this convex decomposition proceeds by
-      computing a "minimum clique cover" of the "visibility graph"
-      <elib>Werner23</elib> (<a href="https://drake.mit.edu/doxygen_cxx/namespacedrake_1_1planning.html#ace53f3f8045d8eb96867bcd6eda63ed0">implemented in Drake</a>).</p>
+      <p>如果我们继续沿用与 PRM 的类比，
+      那么我们可能会想到：
+      通过随机采样来对空间进行凸分解，
+      拒绝那些处于碰撞状态、
+      或已经位于某个现有 IRIS 区域中的样本，
+      然后再对剩余样本进行膨胀。
+      但实际上，
+      我们可以做得比这更好——
+      我们可以用相同数量的区域覆盖更大比例的自由配置空间，
+      或者反过来，
+      用更少的区域覆盖相近体积。
+      我们目前用于执行这种凸分解的最佳算法，
+      是通过计算“可见图（visibility graph）”的
+      “最小团覆盖（minimum clique cover）”
+      来实现的
+      <elib>Werner23</elib>
+      （已
+      <a href="https://drake.mit.edu/doxygen_cxx/namespacedrake_1_1planning.html#ace53f3f8045d8eb96867bcd6eda63ed0">在 Drake 中实现</a>）。</p>
 
-      <example><h1>GcsTrajOpt in a simple 2D configuration space (cont.)</h1>
+      <example><h1>简单二维配置空间中的 GcsTrajOpt（续）（GcsTrajOpt in a simple 2D configuration space (cont.)）</h1>
         
-        <p>If we run the "minimum clique cover" algorithm with a coverage threshold of 96% of the configuration space on the simple 2D example, we obtain automatic decompositions like this:</p>
+        <p>如果我们在这个简单二维示例上运行“最小团覆盖（minimum clique cover）”算法，
+        并将覆盖阈值设为配置空间的 96%，
+        就会得到如下这样的自动分解：</p>
 
         <figure>
         <img width="60%" src="figures/gcs_simple_2d_clique_cover.svg">
@@ -1214,21 +1621,28 @@ ik.AddPositionConstraint(
         
       </example>
 
-      <p>In practice, it seems reasonably tractable to try to compute a quite dense
-      covering of the configuration space for 7-DOF manipulators, and perhaps even up to
-      say 10 degrees of freedom. But for higher dimensions, I think that trying to cover
-      every nook and cranny of the configuration space is a false goal. I strongly
-      prefer the idea of intializing the clique-cover algorithm with sample points that
-      represent the "important" regions of your configuration space. Sometimes we do
-      this by manual seeding (via calls to inverse kinematics), or alternatively, we can
-      do it by examining trajectories that come from teleop demonstrations, from
-      another planner (that can generate plans, but without the same guarantees), or
-      even from a reinforcement learning policy.</p>
+      <p>在实践中，
+      对于 7 自由度机械臂，
+      甚至也许直到大约 10 个自由度，
+      试图计算配置空间中相当稠密的覆盖似乎仍然是比较可行的。
+      但对于更高维度，
+      我认为试图覆盖配置空间中的每个角落和缝隙
+      是一个错误目标。
+      我强烈更倾向于这样一种想法：
+      使用能够代表配置空间中“重要”区域的采样点
+      来初始化团覆盖算法。
+      有时我们通过手动播种来做到这一点
+      （通过调用逆运动学），
+      或者也可以通过检查来自遥操作演示的轨迹、
+      来自另一个规划器的轨迹
+      （它可以生成规划，但不具备同样的保证），
+      甚至来自强化学习策略的轨迹来实现。</p>
 
-      <example><h1>The IRIS Builder</h1>
+      <example><h1>IRIS 构建器（The IRIS Builder）</h1>
 
-        <p>Here is a notebook that contains a handful of different tools for steering
-        the creation of your IRIS regions.</p>
+        <p>这里有一个 notebook，
+        其中包含若干不同工具，
+        用于引导你的 IRIS 区域生成过程。</p>
 
         <script>document.write(notebook_link('trajectories', notebook = "iris_builder"))</script>
       
@@ -1236,267 +1650,493 @@ ik.AddPositionConstraint(
 
     </subsection>
 
-    <subsection><h1>GcsTrajOpt Examples</h1>
+    <subsection><h1>GcsTrajOpt 示例（GcsTrajOpt Examples）</h1>
 
-      <example><h1>What's the right cost function for smooth curves?</h1>
+      <example><h1>用于光滑曲线的正确代价函数是什么？（What's the right cost function for smooth curves?）</h1>
 
         <script>document.write(notebook_link('trajectories', notebook="gcs_derivatives"))</script>
       
       </example>
 
-      <example><h1>iiwa reaching into shelves</h1>
+      <example><h1>iiwa 伸入货架（iiwa reaching into shelves）</h1>
       
         <script>document.write(notebook_link('trajectories', notebook = "iris_builder"))</script>
 
-        <!-- Pull this out into it's own notebook (without the building?). Add Savva's
-example, too?-->
+        <!-- 将其单独拆分成自己的 notebook（不包含构建部分？）。也加入 Savva 的示例？-->
       </example>
 
-      <!-- clutter clearing -->
+      <!-- 杂乱环境清理 -->
 
-      <example><h1>Bimanual iiwa</h1></example>
+      <example><h1>双臂 iiwa（Bimanual iiwa）</h1></example>
 
     </subsection>
 
-    <subsection><h1>Variations and Extensions</h1>
+    <subsection><h1>变体与扩展（Variations and Extensions）</h1>
     
-      <p>Fast path planning (FPP) <elib>Marcucci23</elib>. Many motion planning
-      instances don't need the full power of GCS; heuristic approximations can
-      often find very good solutions. Rather than solving the full GCS problem,
-      considering the discrete and continuous variables simultaneously, FPP
-      alternates between solving the discrete and continuous problems to find a
-      local minima. FPP is (typically) faster than
-      <code>GcsTrajectoryOptimization</code>, and by virtue of using
-      alternations, it can handle constraints on the derivatives (e.g.
-      acceleration constraints) which <code>GcsTrajectoryOptimization</code>
-      cannot handle. However, FPP is more limited on the class of convex
-      sets/constraints that it can support. (Drake implementation <a href="https://github.com/RobotLocomotion/drake/issues/20388">coming
-      soon</a>!)</p>
+      <p>快速路径规划（Fast path planning, FPP）
+      <elib>Marcucci23</elib>。
+      许多运动规划实例并不需要 GCS 的全部能力；
+      启发式近似通常就能找到非常好的解。
+      FPP 并不是求解完整的 GCS 问题，
+      即同时考虑离散变量和连续变量，
+      而是在离散问题与连续问题之间交替求解，
+      以找到一个局部极小值。
+      FPP 通常比
+      <code>GcsTrajectoryOptimization</code>
+      更快；
+      并且由于使用了交替求解，
+      它能够处理
+      <code>GcsTrajectoryOptimization</code>
+      无法处理的导数约束
+      （例如加速度约束）。
+      不过，
+      FPP 对其能够支持的凸集 / 约束类别更加受限。
+      （Drake 实现
+      <a href="https://github.com/RobotLocomotion/drake/issues/20388">即将推出</a>！）</p>
 
-      <p>GCS on a manifold including for mobile manipulation
-      <elib>Cohn23</elib>, and for bimanual manipulation
-      <elib>Cohn23a</elib>.</p>
+      <p>流形上的 GCS，
+      包括用于移动操作的 GCS
+      <elib>Cohn23</elib>，
+      以及用于双臂操作的 GCS
+      <elib>Cohn23a</elib>。</p>
 
-      <p>GCS with dynamic constraints. For discrete-time systems described by
-      piecewise-affine dynamics and convex objectives and constraints, GCS
-      provides the strongest formulations to date<elib>Marcucci21</elib>. It is
-      also possible to reason more directly about continuous dynamic
-      constraints over continuous curves (more coming soon!).</p>
+      <p>带动力学约束的 GCS。
+      对于由分段仿射动力学、
+      凸目标函数和凸约束描述的离散时间系统，
+      GCS 提供了迄今为止最强的形式化方法<elib>Marcucci21</elib>。
+      也可以更直接地在连续曲线上考虑连续动力学约束
+      （更多内容即将推出！）。</p>
 
-      <p>Planning through contact. Amazingly, we now have tight convex
-      relaxations for quasi-static manipulation with contact
-      <elib>Graesdal24</elib>. The initial examples are quite simple (so that
-      we could study the problem carefully, and defer the details of scaling
-      the solver), but you can expect much more from us in this direction very
-      soon.</p>
+      <p>通过接触进行规划。
+      令人惊讶的是，
+      我们现在已经拥有用于带接触准静态操作的紧凸松弛
+      <elib>Graesdal24</elib>。
+      最初的示例相当简单
+      （这样我们可以仔细研究该问题，
+      并暂时推迟求解器扩展细节），
+      但你很快就可以期待我们在这个方向上取得更多进展。</p>
 
-      <p>Planning under uncertainty (coming soon!).</p>
+      <p>不确定性下的规划（即将推出！）。</p>
 
-      <p>Task and motion planning (coming soon!). <elib>Kurtz23</elib> showed a
-      natural transcription from temporal logic to GCS.</p>
+      <p>任务与运动规划（即将推出！）。
+      <elib>Kurtz23</elib>
+      展示了从时序逻辑到 GCS 的一种自然转写方式。</p>
 
-      <p>GCS as a (feedback) policy (coming soon!).</p>
+      <p>作为（反馈）策略的 GCS（即将推出！）。</p>
     
     </subsection>
 
   </section>
   
-  <section id="topp"><h1>Time-optimal path parameterizations</h1>
+  <section id="topp"><h1>时间最优路径参数化（Time-optimal path parameterizations）</h1>
 
-    <todo>Finish these! Boyd's paper a bit more clear about the writing of the
-    convex objective. Tobia said he also has some notes on the higher
-    derivatives.</todo>
+    <todo>完成这些内容！
+    Boyd 的论文在凸目标函数写法方面更清晰一些。
+    Tobia 说他也有一些关于高阶导数的笔记。</todo>
 
-    <p>Once we have a motion plan, a natural question is: what is the fastest
-    that we can execute that plan, subject to velocity, acceleration, and
-    torque-limit constraints? </p>
+    <p>一旦我们有了一个运动规划，
+    一个自然的问题就是：
+    在速度、加速度和力矩限制约束下，
+    我们最快能够以多快的速度执行该规划？</p>
 
-    <!--
-    <p> Let's define a trajectory $\bq(t)$ defined over the interval $t \in
-    [t_0, t_f]$ via a <i>path parameterization</i>, ${\bf r}(s)$, and a <i>time
-    parameterization</i>, $t = h(s)$, such that $${\bf r}(s) = \bq(h(s)),
-    \text{ where }s \in [0,1], h(0) = t_0, h(1) = t_f.$$ We will require that
-    the time-scaling is monotonic, so $\forall s, h'(s) > 0,$ where $h'(s) =
-    \pd{h}{s}.$ We'll also use the shorthand $h''(s) = \pd{^2 h}{s^2},$ etc.
-    The advantage of this parameterization is that when ${\bf r}(s)$ is fixed,
-    many of the objectives and constraints that we might want to put on
-    $\bq(t)$ are actually convex constraints on $h(s).$ To see this, write
-    \begin{align*} {\bf r}'(s) &= \dot\bq(t) h'(s),\\ {\bf r}''(s) &=
-    \ddot{\bq}(t)h'(s)^2 + \dot{\bq}(t)h''(s).\end{align*}</p>
-    -->
+    <p>让我们通过<i>路径参数化</i> ${\bf r}(s)$
+    和<i>时间参数化</i> $t = h(s)$，
+    定义一条定义在区间
+    $t \in [t_0, t_f]$
+    上的轨迹 $\bq(t)$，
+    使得
+    $${\bf r}(s) = \bq(h(s)),
+    \text{ where }s \in [0,1], h(0) = t_0, h(1) = t_f.$$
+    我们要求时间缩放是单调的，
+    因此 $\forall s, h'(s) > 0,$
+    其中 $h'(s) =
+    \pd{h}{s}.$
+    我们还会使用简写
+    $h''(s) = \pd{^2 h}{s^2},$
+    等等。
+    这种参数化的优点在于：
+    当 ${\bf r}(s)$ 固定时，
+    我们可能希望施加在 $\bq(t)$ 上的许多目标函数和约束，
+    实际上都会变成关于 $h(s)$ 的凸约束。
+    为了看到这一点，写出
+    \begin{align*}
+    {\bf r}'(s) &= \dot\bq(t) h'(s),\\
+    {\bf r}''(s) &=
+    \ddot{\bq}(t)h'(s)^2 + \dot{\bq}(t)h''(s).
+    \end{align*}</p>
+
 
     <p>
-    To study this, let's once again define a trajectory $\bq(t)$ defined over
-    the interval $t \in [t_0, t_f]$ via a path parameterization, ${\bf r}(s)$,
-    and a time parameterization, $s(t)$, such that $$\bq(t) = {\bf r}(s(t)),
-    \text{ where }s(t) \in [0,1], s(t_0) = 0, s(t_f) = 1.$$ We will constrain
-    $\forall t \in [t_0, t_f], \dot{s}(t) > 0,$ so that the inverse mapping
-    from $s$ to $t$ always exists. The advantage of this parameterization is
-    that when ${\bf r}(s)$ is fixed, many of the objectives and constraints
-    that we might want to put on $\bq(t)$ are actually convex in the
-    derivatives of $s(t).$ To see this, using the shorthand ${\bf r}'(s) =
-    \pd{\bf r}{s}, {\bf r}''(s) = \pd{^2 {\bf r}}{s^2},$ etc., write
-    \begin{align*} \dot\bq &= {\bf r}'(s)\dot{s},\\ \ddot\bq(t) &= {\bf r}''(s)
-    \dot{s}^2 + {\bf r}'(s)\ddot{s}.\end{align*} Even more important/exciting,
-    substituting these terms into the <a
-    href="https://underactuated.mit.edu/multibody.html#manipulator">manipulator
-    equations</a> yields: $$\bu(s) = {\bf m}(s)\ddot{s} + {\bf c}(s)\dot{s}^2 +
-    \bar{\bf \tau}_g(s),$$ where $\bu(s)$ is the commanded torque at the scaled
-    time $s(t)$, and \begin{align} {\bf m}(s) &= {\bf M}({\bf r}(s)){\bf
-    r}'(s), \\ {\bf c}(s) &= {\bf M}({\bf r}(s)){\bf r}''(s) + \bC({\bf r}(s),
-    {\bf r}'(s)) {\bf r}'(s), \\ \bar{\bf \tau}_g(s) &= {\bf \tau}_g({\bf
-    r}(s)).\end{align}</p> 
+    为了研究这一点，
+    让我们再次通过路径参数化 ${\bf r}(s)$
+    和时间参数化 $s(t)$，
+    定义一条定义在区间
+    $t \in [t_0, t_f]$
+    上的轨迹 $\bq(t)$，
+    使得
+    $$\bq(t) = {\bf r}(s(t)),
+    \text{ where }s(t) \in [0,1], s(t_0) = 0, s(t_f) = 1.$$
+    我们将约束
+    $\forall t \in [t_0, t_f], \dot{s}(t) > 0,$
+    从而保证从 $s$ 到 $t$ 的逆映射始终存在。
+    这种参数化的优点在于：
+    当 ${\bf r}(s)$ 固定时，
+    我们可能希望施加在 $\bq(t)$ 上的许多目标函数和约束，
+    实际上关于 $s(t)$ 的导数是凸的。
+    为了看到这一点，
+    使用简写
+    ${\bf r}'(s) =
+    \pd{\bf r}{s}, {\bf r}''(s) = \pd{^2 {\bf r}}{s^2},$
+    等等，写出
+    \begin{align*}
+    \dot\bq &= {\bf r}'(s)\dot{s},\\
+    \ddot\bq(t) &= {\bf r}''(s)
+    \dot{s}^2 + {\bf r}'(s)\ddot{s}.
+    \end{align*}
+    更重要 / 更令人兴奋的是，
+    将这些项代入
+    <a
+    href="https://underactuated.mit.edu/multibody.html#manipulator">机械臂方程（manipulator
+    equations）</a>
+    可得：
+    $$\bu(s) = {\bf m}(s)\ddot{s} + {\bf c}(s)\dot{s}^2 +
+    \bar{\bf \tau}_g(s),$$
+    其中 $\bu(s)$ 是缩放时间 $s(t)$ 处的指令力矩，
+    并且
+    \begin{align}
+    {\bf m}(s) &= {\bf M}({\bf r}(s)){\bf
+    r}'(s), \\
+    {\bf c}(s) &= {\bf M}({\bf r}(s)){\bf r}''(s) + \bC({\bf r}(s),
+    {\bf r}'(s)) {\bf r}'(s), \\
+    \bar{\bf \tau}_g(s) &= {\bf \tau}_g({\bf
+    r}(s)).
+    \end{align}</p> 
     
-    <p>The next key step is to introduce a change of variables: $b(s(t)) =
-    \dot{s}^2(t)  ,$ and note<sup>&dagger;</sup> that $b'(s) = 2 \ddot{s}.$
+    <p>下一关键步骤是引入变量替换：
+    $b(s(t)) =
+    \dot{s}^2(t)  ,$
+    并注意到<sup>&dagger;</sup>
+    $b'(s) = 2 \ddot{s}.$
     <sidenote><sup>&dagger;</sup>
-    Because $\dot{b}(s) = b'(s)\dot{s}$ and $\dot{b}(s) =
-    2\dot{s}\ddot{s}.$</sidenote> We will use a parameterized trajectory to
-    represent $b(s)$ over the interval $s\in[0,1]$. Let's see that we can write
-    an extremely useful set of costs and constraints as convex functions of
-    $b(s)$, evaluated at sampled time points, $s_i = s(t_i)$:
-    <ul><li>Monotonicity constraint: $$b(s_i) \ge \epsilon \Rightarrow
+    因为 $\dot{b}(s) = b'(s)\dot{s}$
+    且 $\dot{b}(s) =
+    2\dot{s}\ddot{s}.$</sidenote>
+    我们将使用一条参数化轨迹
+    来表示区间 $s\in[0,1]$ 上的 $b(s)$。
+    让我们看看，
+    我们可以将一组极其有用的代价函数和约束，
+    写成关于 $b(s)$ 的凸函数，
+    并在采样时间点
+    $s_i = s(t_i)$
+    处进行求值：
+    <ul><li>单调性约束：
+    $$b(s_i) \ge \epsilon \Rightarrow
     \dot{s}(t_i) >
-    0.$$</li><li>Velocity limits are bounding-box constraints: $$\forall j,\,
+    0.$$</li>
+    <li>速度限制是边界框约束：
+    $$\forall j,\,
     \dot{q}_{min,j}^2 \le r'_j(s_i)^2 b(s_i) \le \dot{q}_{max,j}^2 \Rightarrow
     \dot{\bq}_{min} \le \dot{\bq}(t_i) \le \dot{\bq}_{max}.$$</li>
-    <li>Acceleration limits are linear constraints: $$ \ddot{\bq}_{min} \le
+    <li>加速度限制是线性约束：
+    $$ \ddot{\bq}_{min} \le
     {\bf r}''(s_i)b(s_i) + \frac{1}{2} {\bf r}'(s_i) b'(s_i) \le
     \ddot{\bq}_{max} \Rightarrow \ddot{\bq}_{min} \le \ddot\bq(t_i) \le
     \ddot\bq_{max}.$$
-    </li><li>Torque limits are linear constraints: \begin{gather*}\bu_{min} \le
+    </li>
+    <li>力矩限制是线性约束：
+    \begin{gather*}
+    \bu_{min} \le
     \frac{1}{2}{\bf m}(s_i)b'(s_i) + {\bf c}(s_i)b(s_i) + \bar{\bf \tau}_g(s_i)
-    \le \bu_{max} \Rightarrow\\ \bu_{min} \le \bu(t_i) \le
-    \bu_{max}.\end{gather*}</li><li>Minimizing the time duration is a convex
-    objective: $$t_f - t_0 = \int_{t_0}^{t_f} 1 dt = \int_0^1
-    \frac{1}{\sqrt{b(s)}} ds.$$ This looks nonconvex, but can be written using
-    ...
-    <!--
-    slack variables: $a(s) = \dot{s}$ with Lorentz cone (convex) constraints
-    $a(s) \ge \sqrt{b(s)}$, and work with $a(s)$ directly; as long as we're
-    always pushing down on $a(s)$. 
+    \le \bu_{max} \Rightarrow\\
+    \bu_{min} \le \bu(t_i) \le
+    \bu_{max}.
+    \end{gather*}</li>
+    <li>最小化时间持续长度是一个凸目标：
+    $$t_f - t_0 = \int_{t_0}^{t_f} 1 dt = \int_0^1
+    \frac{1}{\sqrt{b(s)}} ds.$$
+    这看起来是非凸的，
+    但可以通过松弛变量来写出：
+    $a(s) = \dot{s}$，
+    并使用洛伦兹锥（Lorentz cone）凸约束
+    $a(s) \ge \sqrt{b(s)}$，
+    然后直接使用 $a(s)$；
+    只要我们始终在把 $a(s)$ 往下压即可。
     
     $\min \int_0^1 \sigma(s) ds,
     \sigma(s) \sqrt{b(s)} \ge 1.$ --></li></ul>
-    Although we would like that a finite number of constraints could be
-    sufficient to imply that these constraints hold over the entire time
-    interval, $[t_0, t_f]$, in practice, we just enforce the constraints at a
-    sufficiently large number of sampled times and forgo the strict guarantees.
-    <!-- For instance, if we parameterize ${\bf r}(s)$ and $b(s)$ using Bezier
-    curves, enforce the constraints on the control points (of the higher-order
-    curves generated by the multiplicative combinations listed above), then we
-    can leverage the convex hull property of the Bezier curves, along with the
-    facts that Bezier curves are closed under derivatives, addition (via degree
-    elevation) and multiplication. We would have to use polynomial forms of the
-    manipulator equations. Even still, making this claim does assume a perfect
-    integration of $s(t) = \int_{t_0}^t \sqrt{b(s(t'))} dt'.$ --> </p>
+    尽管我们希望有限数量的约束
+    就足以推出这些约束在整个时间区间
+    $[t_0, t_f]$
+    上都成立，
+    但在实践中，
+    我们只是将这些约束施加在足够多的采样时间点上，
+    并放弃严格保证。
+    例如，
+    如果我们使用 Bezier 曲线来参数化
+    ${\bf r}(s)$ 和 $b(s)$，
+    并在控制点上施加约束
+    （这些控制点属于由上面列出的乘法组合所生成的更高阶曲线），
+    那么我们就可以利用 Bezier 曲线的凸包性质，
+    以及 Bezier 曲线在求导、加法
+    （通过升阶）和乘法下封闭这一事实。
+    我们还必须使用机械臂方程的多项式形式。
+    即便如此，
+    做出这一断言仍然假设了对
+    $s(t) = \int_{t_0}^t \sqrt{b(s(t'))} dt'$
+    的完美积分。</p>
     
-<!--    <p>\begin{gather*}t = h(s), \\\dot{t} = h'(s) \dot{s} = 1. \quad \dot{s}(t) = \frac{1}{h(s)}. \\ \ddot{t} = 0 = h''(s) \dot{s}^2 + h'(s) \ddot{s}.\end{gather*}</p>-->
+    <p>\begin{gather*}
+    t = h(s), \\
+    \dot{t} = h'(s) \dot{s} = 1. \quad
+    \dot{s}(t) = \frac{1}{h(s)}. \\
+    \ddot{t} = 0 = h''(s) \dot{s}^2 + h'(s) \ddot{s}.
+    \end{gather*}</p>
 
-    <p>These time-optimal path parameterizations (TOPP) were studied
-    extensively throughout the 1980's (e.g. <elib>Bobrow85</elib>) with bespoke
-    algorithms that, for instance, attempted to uncover all of the switching
-    times of the bang-bang trajectory.
+    <p>这些时间最优路径参数化
+    （time-optimal path parameterizations, TOPP）
+    在整个 20 世纪 80 年代得到了广泛研究
+    （例如 <elib>Bobrow85</elib>），
+    当时使用的是专门设计的算法，
+    例如试图找出 bang-bang 轨迹中的所有切换时刻。
     <elib>Verscheure09+Debrouwere13+Lipp14</elib>
-    made the connections to convex optimization that I've described here.
-    <elib>Pham18</elib> made a popular numerical implementation of this called
+    建立了我在这里所描述的
+    与凸优化之间的联系。
+    <elib>Pham18</elib>
+    提出了一个流行的数值实现，
+    称为
     <a
     href="https://drake.mit.edu/doxygen_cxx/classdrake_1_1multibody_1_1_toppra.html">TOPPRA</a>
-    (time-optimal path parameterizations based on reachability analysis). We
-    make heavy use of these ideas (and spell out the detailed
-    connections to the Bezier curve parameterization) in
-    <elib>Marcucci23a</elib>. You can find a <a
+    （基于可达性分析的时间最优路径参数化，
+    time-optimal path parameterizations based on reachability analysis）。
+    我们在
+    <elib>Marcucci23a</elib>
+    中大量使用了这些思想
+    （并详细说明了它们与 Bezier 曲线参数化之间的联系）。
+    你可以在 Drake 中找到
+    <a
     href="https://drake.mit.edu/doxygen_cxx/classdrake_1_1trajectories_1_1_path_parameterized_trajectory.html">PathParameterizedTrajectory</a>
-    class in Drake.</p>
+    类。</p>
     
-    <p>One common question is whether TOPP can be used to write convex
-    constraints on the <i>jerk</i> (or higher derivatives) of the trajectory,
-    <!--$${\bf r}'''(s) = \dddot{\bq}(t)h'(s)^3 + 3\ddot{\bq}(t)h'(s)h''(s) +
-    \dot{\bq}h'''(t).$$ -->
+    <p>一个常见问题是：
+    TOPP 是否可以用于对轨迹的<i>jerk（加加速度）</i>
+    （或更高阶导数）写出凸约束，
+    $${\bf r}'''(s) = \dddot{\bq}(t)h'(s)^3 + 3\ddot{\bq}(t)h'(s)h''(s) +
+    \dot{\bq}h'''(t).$$ 
     $$\dddot\bq(t) = {\bf r}'''(s) \dot{s}^3(t) + 3{\bf r}''(s) \dot{s}(t)
-    \ddot{s}(t) + {\bf r}'(s)\dddot{s}(t).$$ This comes up because many
-    industrial robot manipulators have jerk limits that must be respected.
+    \ddot{s}(t) + {\bf r}'(s)\dddot{s}(t).$$
+    这个问题之所以会出现，
+    是因为许多工业机械臂都有必须遵守的 jerk 限制。
     <elib>Debrouwere13</elib>
-    addressed a version of this question. (More soon...) <!-- We can impose
-    these with additional slack variables $j(s)$, and convex
-    rotated-Lorentz-cone constraints $j(s) \le a(s)b(s).$ -->
+    讨论了这一问题的一个版本。
+    （更多内容即将推出……）
+    我们可以通过额外的松弛变量 $j(s)$
+    以及凸的旋转洛伦兹锥约束
+    $j(s) \le a(s)b(s)$
+    来施加这些约束。
   </p>
 
   </section>
 
-  <section><h1>Exercises</h1>
-    <exercise><h1>Door Opening</h1>
-      <p> For this exercise, you will implement a optimization-based inverse kinematics solver to open a cupboard door. You will work exclusively in <script>document.write(notebook_link('trajectories', notebook='door_opening', link_text='this notebook'))</script>. You will be asked to complete the following steps: </p>
+  <section><h1>练习（Exercises）</h1>
+    <exercise><h1>开门（Door Opening）</h1>
+      <p>在本练习中，
+      你将实现一个基于优化的逆运动学求解器，
+      用于打开橱柜门。
+      你将完全在
+      <script>document.write(notebook_link('trajectories', notebook='door_opening', link_text='这个 notebook'))</script>
+      中完成工作。
+      你需要完成以下步骤：</p>
       <ol type="a">
-        <li> Write down the constraints on the IK problem of grabbing a cupboard handle.
+        <li>写出抓住橱柜把手这一 IK 问题的约束。
         </li>
-        <li> Formalize the IK problem as an instance of optimization. </li>
-        <li> Implement the optimization problem using MathematicalProgram.</li>
+        <li>将 IK 问题形式化为一个优化实例。</li>
+        <li>使用 MathematicalProgram 实现该优化问题。</li>
       </ol>
     </exercise>    
 
-    <exercise id="rrtExercise"><h1>RRT Motion Planning</h1>
-      <p> For this exercise, you will implement and analyze the RRT algorithm introduced in class. You will work exclusively in <script>document.write(notebook_link('trajectories', notebook='rrt_planning', link_text='this notebook'))</script>. You will be asked to complete the following steps: </p>
+    <exercise id="rrtExercise"><h1>RRT 运动规划（RRT Motion Planning）</h1>
+      <p>在本练习中，
+      你将实现并分析课堂上介绍的 RRT 算法。
+      你将完全在
+      <script>document.write(notebook_link('trajectories', notebook='rrt_planning', link_text='这个 notebook'))</script>
+      中完成工作。
+      你需要完成以下步骤：</p>
       <ol type="a">
-        <li> Implement the RRT algorithm for the Kuka arm.
+        <li>为 Kuka 机械臂实现 RRT 算法。
         </li>
-        <li> Answer questions regarding its properties. </li>
-        <li> Implement the RRT-Connect algorithm for the Kuka arm.</li>
+        <li>回答有关其性质的问题。</li>
+        <li>为 Kuka 机械臂实现 RRT-Connect 算法。</li>
       </ol>
     </exercise>    
 
-    <exercise><h1>Improving RRT Path Quality</h1>
-      <p>Due to the random process by which nodes are generated, the paths output by RRT can often look somewhat jerky (the "RRT dance" is the favorite dance move of many roboticists). There are many strategies to improve the quality of the paths and in this question we'll explore two. For the sake of this problem, we'll assume path quality refers to path length, i.e. that the goal is to find the shortest possible path, where distance is measured as Euclidean distance in joint space. </p>
+    <exercise><h1>改进 RRT 路径质量（Improving RRT Path Quality）</h1>
+      <p>由于节点是通过随机过程生成的，
+      RRT 输出的路径通常看起来会有些突兀、不够平滑
+      （“RRT 舞蹈”是许多机器人学家最喜欢的舞步）。
+      有许多策略可以改善路径质量，
+      在本题中我们将探索其中两种。
+      为了本题起见，
+      我们假设路径质量指的是路径长度，
+      也就是说目标是找到尽可能短的路径，
+      其中距离度量为关节空间中的欧氏距离。</p>
       <ol type="a">
-        <li> One strategy to improve path quality is to post-process paths via "shortcutting", which tries to replace existing portions of a path with shorter segments <elib>Geraerts04</elib>. This is often implemented with the following algorithm: 1) Randomly select two non-consecutive nodes along the path. 2) Try to connect them with a RRT's extend operator. 3) If the resulting path is better, replace the existing path with the new, better path. Steps 1-3 are repeated until a termination condition (often a finite number of steps or time). For this problem, we can assume that the extend operator is a straight line in joint space. Consider the graph below, where RRT has found a rather jerky path from $q_{start}$ to $q_{goal}$. There is an obstacle (shown in red) and $q_{start}$ and $q_{goal}$ are highlighted in blue (disclaimer: This graph was manually generated to serve as an illustrative example). 
+        <li>一种改善路径质量的策略是通过“捷径化（shortcutting）”
+        对路径进行后处理，
+        它会尝试用更短的线段替换路径中已有的部分
+        <elib>Geraerts04</elib>。
+        该方法通常使用如下算法实现：
+        1）沿路径随机选择两个非连续节点。
+        2）尝试用 RRT 的 extend 操作连接它们。
+        3）如果得到的新路径更好，
+        就用这条新的、更好的路径替换现有路径。
+        重复步骤 1-3，
+        直到满足终止条件
+        （通常是有限步数或时间限制）。
+        对于本题，
+        我们可以假设 extend 操作是在关节空间中的一条直线。
+        考虑下图：
+        RRT 已经找到了一条从 $q_{start}$ 到 $q_{goal}$ 的相当曲折的路径。
+        图中有一个障碍物（红色显示），
+        并且 $q_{start}$ 与 $q_{goal}$ 以蓝色高亮显示
+        （免责声明：该图是手动生成的，
+        用作说明性示例）。 
 
       <figure>
           <img style="width:80%", src="data/shortcutting.png"/>
       </figure>
-Name one pair of nodes for which the shortcutting algorithm would result in a shorter path (i.e. two nodes along our current solution path for which we could produce a shorter path if we were to directly connect them). You should assume the distance metric is the 2D Euclidean distance.</li><br/>
-        <li> Shortcutting as a post-processing technique, reasons over the existing path and enables local "re-wiring" of the graph. It is a heuristic and does not, however, guarantee that the tree will encode the shortest path. To explore this, let's zoom in one one iteration of RRT (as illustrated below), where $q_{sample}$ is the randomly generated configuration, $q_{near}$ was the closest node on the existing tree and $q_{new}$ is the RRT extension step from $q_{near}$ in the direction of q_sample. When the standard RRT algorithm (which you implemented in <a href="#rrtExercise">a previous exercise</a>) adds $q_{new}$ to the tree, what node is its parent? If we wanted our tree to encode the shortest path from the starting node, $q_{start}$, to each node in the tree, what node should be the parent node of $q_{new}$?</li>
+        说出一对节点，
+        对于这对节点，
+        捷径化算法会得到一条更短的路径
+        （也就是说，
+        它们是当前解路径上的两个节点，
+        如果我们直接连接它们，
+        就可以生成一条更短路径）。
+        你应该假设距离度量是二维欧氏距离。</li><br/>
+
+        <li>作为一种后处理技术，
+        捷径化会基于已有路径进行推理，
+        并允许对图进行局部“重连（re-wiring）”。
+        它是一种启发式方法，
+        但并不能保证这棵树会编码最短路径。
+        为了探索这一点，
+        让我们放大观察 RRT 的一次迭代
+        （如下图所示），
+        其中 $q_{sample}$ 是随机生成的配置，
+        $q_{near}$ 是现有树中距离最近的节点，
+        而 $q_{new}$ 是从 $q_{near}$ 朝向 q_sample 方向进行 RRT 扩展得到的节点。
+        当标准 RRT 算法
+        （你在<a href="#rrtExercise">前一个练习</a>中实现过）
+        将 $q_{new}$ 添加到树中时，
+        它的父节点是什么？
+        如果我们希望这棵树编码从起始节点
+        $q_{start}$
+        到树中每个节点的最短路径，
+        那么 $q_{new}$ 的父节点应该是哪一个节点？</li>
+
       <figure>
           <img style="width:60%", src="data/rrtstar_step.png"/>
       </figure>
       </ol>
-      This idea of dynamically "rewiring" to discover the minimum cost path (which for us is the shortest distance) is a critical aspect of the asymptotically optimal variant of RRT known as RRT* <elib>Karaman11</elib>. As the number of samples tends towards infinity RRT* finds the optimal path to the goal! This is unlike "plain" RRT, which is provably suboptimal (the intuition for this proof is that RRT "traps" itself because it cannot find better paths as it searches). 
+      这种动态“重连”以发现最小代价路径
+      （对我们而言就是最短距离路径）的思想，
+      是 RRT 的渐近最优变体 RRT*
+      <elib>Karaman11</elib>
+      的关键部分。
+      随着采样数量趋于无穷，
+      RRT* 会找到通向目标的最优路径！
+      这不同于“普通”RRT，
+      后者被证明是次优的
+      （该证明的直觉是：
+      RRT 会“困住”自己，
+      因为它在搜索过程中无法找到更好的路径）。
     </exercise> 
 
-    <exercise><h1>Decomposing Obstacle-Free Space with Convex Optimization</h1>
-      <p> For this exercise, you will implement part of the IRIS algorithm <elib>Deits14</elib>, which is used to compute large regions of obstacle-free space through a series of convex optimizations. These regions can be used by various planning methods that search for trajectories from start to goal while remaining collision-free. You will work exclusively in <script>document.write(notebook_link('trajectories', notebook='taskspace_iris', link_text='this notebook'))</script>. You will be asked to complete the following steps: </p>
+    <exercise><h1>使用凸优化分解无障碍空间（Decomposing Obstacle-Free Space with Convex Optimization）</h1>
+      <p>在本练习中，
+      你将实现 IRIS 算法
+      <elib>Deits14</elib>
+      的一部分。
+      该算法通过一系列凸优化，
+      用于计算无障碍空间中的大区域。
+      这些区域可以被各种规划方法使用，
+      以搜索从起点到目标点且保持无碰撞的轨迹。
+      你将完全在
+      <script>document.write(notebook_link('trajectories', notebook='taskspace_iris', link_text='这个 notebook'))</script>
+      中完成工作。
+      你需要完成以下步骤：</p>
       <ol type="a">
-        <li> Implement a QP that finds the closest point on an obstacle to an ellipse in free-space. </li>
-        <li> Implement the part of the algorithm that searches for a set of hyperplanes that separate a free-space ellipse from all the obstacles. </li>
+        <li>实现一个 QP，
+        用于寻找障碍物上距离自由空间椭圆最近的点。</li>
+        <li>实现算法中搜索一组超平面的部分，
+        这些超平面将自由空间椭圆与所有障碍物分离开来。</li>
       </ol>
 
     </exercise> 
 
-    <exercise><h1>Plan and Place</h1>
-      <p> For this exercise, you will build on the manipulating letter assets exercises from previous chapters. You will use RRT-Connect to plan and simulate a collision-free trajectory for manipulating your initial in a cluttered environment. Then, you will implement shortcutting to improve your path quality and reduce some of the "RRT Dance". You will work exclusively in <script>document.write(notebook_link('trajectories', notebook='5_plan_place_initials', link_text='this notebook'))</script>. You will be asked to complete the following steps: </p>
+    <exercise><h1>规划与放置（Plan and Place）</h1>
+      <p>在本练习中，
+      你将基于前几章中操作字母资产的练习继续开展工作。
+      你将使用 RRT-Connect 来规划并仿真一条无碰撞轨迹，
+      用于在杂乱环境中操作你名字首字母对应的物体。
+      然后，
+      你将实现捷径化，
+      以改善路径质量并减少一些“RRT 舞蹈”。
+      你将完全在
+      <script>document.write(notebook_link('trajectories', notebook='5_plan_place_initials', link_text='这个 notebook'))</script>
+      中完成工作。
+      你需要完成以下步骤：</p>
       <ol type="a">
-        <li> Define keyframe poses. </li>
-        <li> Implement an optimization-based inverse kinematics function that, for each keyframe pose, solves for a feasible robot configuration </li>
-        <li> Implement RRT-Connect. </li>
-        <li> Implement shortcutting. </li>
+        <li>定义关键帧位姿。</li>
+        <li>实现一个基于优化的逆运动学函数，
+        对于每个关键帧位姿，
+        求解一个可行的机器人配置。</li>
+        <li>实现 RRT-Connect。</li>
+        <li>实现捷径化。</li>
       </ol>
 
     </exercise> 
 
-    <exercise><h1>Iiwa Path Planning through Shelves Using IRIS and GCS in Joint Space</h1>
-      <p> For this exercise, you will practice finding large collision-free configuration-space regions with IRIS and planning a trajectory through them in joint space with GCS for the Kuka Iiwa manipulator. You will work in <script>document.write(notebook_link('trajectories', notebook='gcs_with_kuka_iiwa', link_text='this notebook'))</script>. You will be asked to complete the following steps: </p>
+    <exercise><h1>使用关节空间中的 IRIS 和 GCS 对 Iiwa 穿过货架进行路径规划（Iiwa Path Planning through Shelves Using IRIS and GCS in Joint Space）</h1>
+      <p>在本练习中，
+      你将练习使用 IRIS 寻找大的无碰撞配置空间区域，
+      并使用 GCS 在关节空间中穿过这些区域为 Kuka Iiwa 机械臂规划轨迹。
+      你将在
+      <script>document.write(notebook_link('trajectories', notebook='gcs_with_kuka_iiwa', link_text='这个 notebook'))</script>
+      中完成工作。
+      你需要完成以下步骤：</p>
       <ol type="a">
-        <li> Define and compute IRIS regions in joint space around your desired start and end points. </li>
-        <li> Formulate a GCS trajectory planning problem through your IRIS regions and solve it to plan Iiwa's joint space path. </li>
+        <li>围绕你期望的起点和终点，
+        在关节空间中定义并计算 IRIS 区域。</li>
+        <li>通过你的 IRIS 区域构建一个 GCS 轨迹规划问题，
+        并求解它来规划 Iiwa 的关节空间路径。</li>
       </ol>
 
-    </exercise> 
+    </exercise>
 
-    <exercise><h1>Trajectory Optimization Around a Shelf Exterior </h1>
-      <p> Through this exercise, you will better understand how the environment around the robot affects the techniques you use when formulating and solving your trajectory optimization problem. Specifically, we'll look at the effects of operating at the boundaries of the Iiwa's kinematic workspace and with complex collision constraints as you move the gripper around the outside of a shelf. You will work in <script>document.write(notebook_link('trajectories', notebook='kinematic_trajopt_around_shelf_iiwa', link_text='this notebook'))</script>. You will be asked to complete the following steps: </p>
+    <exercise><h1>货架外部周围的轨迹优化（Trajectory Optimization Around a Shelf Exterior）</h1>
+      <p>通过本练习，
+      你将更好地理解机器人周围环境
+      如何影响你在构建与求解轨迹优化问题时所使用的技术。
+      具体来说，
+      我们将研究：
+      当夹爪沿着货架外部移动时，
+      在 Iiwa 运动学工作空间边界附近运行、
+      以及复杂碰撞约束条件，
+      会带来哪些影响。
+      你将在
+      <script>document.write(notebook_link('trajectories', notebook='kinematic_trajopt_around_shelf_iiwa', link_text='这个 notebook'))</script>
+      中完成工作。
+      你需要完成以下步骤：</p>
       <ol type="a">
-        <li> Define and solve a kinematic trajectory optimization in the Kuka Iiwa's full joint space without collision constraints. </li>
-        <li> Add collision constraints to the prior formulation, use the prior "karate chop" trajectory as an initial guess, and diagnose why this second iteration fails to converge within the default solver parameters. </li>
-        <li> Investigate how a more informative initial guess will enable faster convergence to a solution. </li>
+        <li>在 Kuka Iiwa 的完整关节空间中，
+        定义并求解一个不包含碰撞约束的运动学轨迹优化问题。</li>
+
+        <li>在之前的形式化基础上加入碰撞约束，
+        使用之前的“karate chop（空手刀）”轨迹作为初始猜测，
+        并分析为什么第二次迭代无法在默认求解器参数下收敛。</li>
+
+        <li>研究更具信息量的初始猜测
+        如何能够使求解更快收敛到解。</li>
       </ol>
 
     </exercise> 

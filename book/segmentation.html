@@ -58,193 +58,80 @@ href="https://www.youtube.com/channel/UChfUOAhz7ynELF-s_1LPpWg">Lecture videos a
 <script type="text/javascript">document.write(notebook_header('segmentation'))
 </script>
 <!-- EVERYTHING ABOVE THIS LINE IS OVERWRITTEN BY THE INSTALL SCRIPT -->
-<chapter style="counter-reset: chapter 8"><h1>Object Detection and
-Segmentation</h1>
+<chapter style="counter-reset: chapter 8"><h1>目标检测与分割</h1>
 
-  <p>Our study of geometric perception gave us good tools for estimating the
-  pose of a known object.  These algorithms can produce highly accurate
-  estimates, but are still subject to local minima.  When the scenes get more
-  cluttered/complicated, or if we are dealing with many different object types,
-  they really don't offer an adequate solution by themselves.</p>
+  <p>我们对几何感知的研究，为估计已知物体的位姿提供了良好的工具。这些算法能够产生非常精确的估计，但仍然会受到局部极小值问题的影响。当场景变得更加杂乱/复杂，或者当我们需要处理许多不同类型的物体时，仅依靠这些方法本身已经无法提供充分的解决方案。</p>
 
-  <p>Deep learning has given us data-driven solutions that complement our
-  geometric approaches beautifully.  Finding correlations in massive datasets
-  has proven to be a fantastic way to provide practical solutions to these more
-  "global" problems like detecting whether the mustard bottle is even in the
-  scene, segmenting out the portion of the image / point cloud that is relevant
-  to the object, and even in providing a rough estimate of the pose that could
-  be refined with a geometric method.</p>
+  <p>深度学习为我们提供了数据驱动的解决方案，与几何方法形成了极佳的互补。通过在海量数据集中寻找相关性，深度学习已经被证明是一种极其有效的方式，用于解决这些更“全局性”的问题，例如检测芥末瓶是否真的存在于场景中、将图像/点云中与目标物体相关的部分分割出来，甚至还能提供一个粗略的位姿估计，并进一步通过几何方法进行精化。</p>
 
-  <p>There are many sources of information about deep learning on the internet,
-  and I have no ambition of replicating nor replacing them here.  But this
-  chapter does being our exploration of deep perception in manipulation, and I
-  feel that I need to give just a little context.</p>
+  <p>互联网上已经有大量关于深度学习的资料，而我并不打算在这里重复或取代它们。不过，本章确实开启了我们对机器人操作中深度感知的探索，因此我觉得仍然有必要提供一点背景知识。</p>
 
-  <section><h1>Getting to big data</h1>
+  <section><h1>迈向大数据</h1>
 
-    <subsection><h1>Crowd-sourced annotation datasets</h1>
+    <subsection><h1>众包标注数据集</h1>
     
-      <p>The modern revolution in computer vision was unquestionably fueled by
-      the availability of massive annotated datasets.  The most famous of all is
-      ImageNet, which eclipsed previous datasets with the number of images and
-      the accuracy and usefulness of the labels<elib>Russakovsky15</elib>.
-      Fei-fei Li, who led the creation of ImageNet has been giving talks that
-      give some nice historical perspective on how ImageNet came to be.  
-      <a href="https://youtu.be/0bb9EcaQupI">Here is one</a> (slightly) tailored
-      to robotics and even manipulation; you might start <a
-      href="https://youtu.be/0bb9EcaQupI?t=857">here</a>.  </p>
+      <p>现代计算机视觉革命毫无疑问是由大规模标注数据集的出现所推动的。其中最著名的无疑是 ImageNet，它凭借图像数量以及标签的准确性和实用性，远远超越了此前的数据集<elib>Russakovsky15</elib>。
+      主导 ImageNet 创建工作的 Fei-fei Li 一直在做一些演讲，从历史角度讲述 ImageNet 是如何诞生的。
+      <a href="https://youtu.be/0bb9EcaQupI">这里有一个演讲</a>，它（稍微）针对机器人学甚至机器人操作进行了调整；你也可以直接从<a
+      href="https://youtu.be/0bb9EcaQupI?t=857">这里</a>开始观看。</p>
 
-      <p><elib>Russakovsky15</elib> describes the annotations available in
-      ImageNet: <blockquote>... annotations fall into one of two categories: (1)
-      image-level annotation of a binary label for the presence or absence of an
-      object class in the image, e.g., "there are cars in this image" but "there
-      are no tigers," and (2) object-level annotation of a tight bounding box
-      and class label around an object instance in the image, e.g., "there is a
-      screwdriver centered at position (20,25) with width of 50 pixels and
-      height of 30 pixels".</blockquote></p>
+      <p><elib>Russakovsky15</elib> 描述了 ImageNet 中提供的标注类型：
+      <blockquote>……标注主要分为两类：（1）图像级标注，即对图像中某类物体是否存在给出二值标签，例如“这张图像中有汽车”，但“没有老虎”；（2）物体级标注，即围绕图像中的某个物体实例提供紧密的边界框及类别标签，例如“在位置 (20,25) 附近有一把螺丝刀，其宽度为 50 像素，高度为 30 像素”。</blockquote></p>
 
       <figure><img width="80%"
-      src="data/coco_instance_segmentation.jpeg"/><figcaption>A sample annotated
-      image from the COCO dataset, illustrating the difference between
-      image-level annotations, object-level annotations, and segmentations at
-      the class/semantic- or instance- level..</figcaption></figure>
+      src="data/coco_instance_segmentation.jpeg"/><figcaption>COCO 数据集中一个带标注的示例图像，展示了图像级标注、物体级标注，以及类别/语义级或实例级分割之间的区别。</figcaption></figure>
 
-      <p>In practice, ImageNet enabled object detection.  The COCO dataset
-      similarly enabled pixel-wise <i>instance-level</i>
-      segmentation <elib>Lin14a</elib>, where distinct instances of a class are
-      given a unique label (and also associated with the class label).  COCO has
-      fewer object categories than ImageNet, but more instances per category.
-      It's still shocking to me that they were able to get 2.5 million images
-      labeled at the pixel level.  I remember some of the early projects at MIT
-      when crowd-sourced image labeling was just beginning (projects like
-      LabelMe <elib>Russell08</elib>);  Antonio Torralba used to joke about how
-      surprised he was about the accuracy of the (nearly) pixel-wise annotations
-      that he was able to crowd-source (and that his mother was a particularly
-      prolific and accurate labeler)!</p>
+      <p>实际上，ImageNet 推动了目标检测的发展。类似地，COCO 数据集推动了像素级的<i>实例级</i>
+      分割 <elib>Lin14a</elib>，其中同一类别中的不同实例会被赋予唯一标签（同时也关联对应的类别标签）。COCO 的物体类别数量少于 ImageNet，但每个类别包含更多实例。
+      直到今天，我仍然觉得他们能够获得 250 万张像素级标注图像这件事令人震惊。我还记得 MIT 早期的一些项目，当时众包图像标注才刚刚起步（例如
+      LabelMe 项目 <elib>Russell08</elib>）；Antonio Torralba 曾经开玩笑地说，他对通过众包获得的（近乎）像素级标注精度感到非常惊讶（而且他的母亲是一位特别高产且准确的标注者）！</p>
 
-      <p>Instance segmentation turns out to be an very good match for the
-      perception needs we have in manipulation.  In the last chapter we found
-      ourselves with a bin full of YCB objects.  If we want to pick out only the
-      mustard bottles, and pick them out one at a time, then we can use a deep
-      network to perform an initial instance-level segmentation of the scene,
-      and then use our grasping strategies on only the segmented point cloud.
-      Or if we do need to estimate the pose of an object (e.g. in order to place
-      it in a desired pose), then segmenting the point cloud can also
-      dramatically improve the chances of success with our geometric pose
-      estimation algorithms.</p>
+      <p>事实证明，实例分割与机器人操作中的感知需求非常契合。在上一章中，我们面对的是一箱 YCB 物体。如果我们只想挑出芥末瓶，并且一次只抓取一个，那么就可以使用深度网络先对场景进行实例级分割，
+      然后仅在分割后的点云上应用抓取策略。或者，如果我们确实需要估计某个物体的位姿（例如为了将它放置到指定姿态），那么对点云进行分割也能够显著提高几何位姿估计算法的成功率。</p>
 
     </subsection>
 
-    <subsection><h1>Segmenting new classes via fine tuning</h1>
+    <subsection><h1>通过微调分割新类别</h1>
 
-      <p>The ImageNet and COCO datasets contain labels for <a
-      href="https://tech.amikelive.com/node-718/what-object-categories-labels-are-in-coco-dataset/">a
-      variety of interesting classes</a>, including cows, elephants, bears,
-      zebras and giraffes.  They have a few classes that are more relevant to
-      manipulation (e.g., plates, forks, knives, and spoons), but they don't
-      have a mustard bottle nor a can of potted meat like we have in the YCB
-      dataset.  So what are we do to?  Must we produce the same image annotation
-      tools and pay for people to label thousands of images for us?</p>
+      <p>ImageNet 和 COCO 数据集包含了<a
+      href="https://tech.amikelive.com/node-718/what-object-categories-labels-are-in-coco-dataset/">各种有趣类别</a>的标签，包括奶牛、大象、熊、斑马和长颈鹿。它们也包含少量与机器人操作更相关的类别（例如盘子、叉子、刀和勺子），但并没有像 YCB 数据集中那样的芥末瓶或午餐肉罐头。那么我们该怎么办？难道我们必须重新开发同样的图像标注工具，并花钱请人帮我们标注成千上万张图像吗？</p>
 
-      <p>One of the most amazing and magical properties of the deep
-      architectures that have been working so well for instance-level
-      segmentation is their ability to transfer to new tasks ("transfer
-      learning").  A network that was pre-trained on a large dataset like
-      ImageNet or COCO can be fine-tuned with a relatively much smaller amount
-      of labeled data to a new set of classes that are relevant to our
-      particular application.  In fact, the architectures are often referred to
-      as having a "backbone" and a "head" -- in order to train a new set of
-      classes, it is often possible to just pop off the existing head and
-      replace it with a new head for the new labels.  A relatively small amount
-      of training with a relatively small dataset can still achieve
-      surprisingly robust performance.  Moreover, it seems that training
-      initially on the diverse dataset (ImageNet or COCO) is actually important
-      to learn the robust perceptual representations that work for a broad
-      class of perception tasks.  Incredible!</p>
+      <p>这些在实例级分割中表现出色的深度架构，最令人惊叹且近乎神奇的特性之一，就是它们能够迁移到新任务上（“迁移学习”）。一个在 ImageNet 或 COCO 这样的大型数据集上预训练过的网络，可以用相对少得多的标注数据进行微调，以适应与我们特定应用相关的一组新类别。事实上，这些架构通常被称为具有一个“骨干网络”和一个“头部”——为了训练一组新类别，通常可以直接移除已有的头部，并替换成适用于新标签的新头部。即使使用相对较小的数据集进行相对少量的训练，仍然可以获得令人惊讶的鲁棒性能。此外，似乎最初在多样化数据集（ImageNet 或 COCO）上进行训练，对于学习适用于广泛感知任务的鲁棒感知表示实际上非常重要。太不可思议了！</p>
 
-      <p>This is great news!  But we still need some amount of labeled data for
-      our objects of interest.  The last few years have seen a number of
-      start-ups based purely on the business model of helping you get your
-      dataset labeled.  But thankfully, this isn't our only option.
+      <p>这是个好消息！但我们仍然需要一定数量的、针对目标物体的标注数据。过去几年中，出现了许多创业公司，它们的商业模式完全建立在帮助你完成数据集标注之上。但幸运的是，这并不是我们唯一的选择。
       </p>
     
     </subsection>
 
-    <subsection><h1>Annotation tools for manipulation</h1>
+    <subsection><h1>面向操作任务的标注工具</h1>
     
-      <p>Just as projects like LabelMe helped to streamline the process of
-      providing pixel-wise annotations for images downloaded from the web,
-      there are a number of tools that have been developed to streamline the
-      annotation process for robotics.  One of the earliest examples was
-      <a href="http://labelfusion.csail.mit.edu/">LabelFusion</a>, which combines geometric perception of point clouds
-      with a simple user interface to very rapidly label a large number of
-      images<elib>Marion17</elib>.</p>
+      <p>正如 LabelMe 这样的项目帮助简化了对从网络下载图像进行像素级标注的流程一样，也有许多工具被开发出来，用于简化机器人学中的标注流程。最早的例子之一是
+      <a href="http://labelfusion.csail.mit.edu/">LabelFusion</a>，它将点云的几何感知与简单的用户界面相结合，从而能够非常快速地标注大量图像<elib>Marion17</elib>。</p>
 
       <figure><img id="labelfusion" style="width:75%" src="data/labelfusion_multi_object_scenes.png" onmouseenter="this.src = 'https://github.com/RobotLocomotion/LabelFusion/raw/master/docs/fusion_short.gif'" onmouseleave="this.src = 'data/labelfusion_multi_object_scenes.png'"/>
-        <figcaption>A multi-object scene from <a
+        <figcaption>来自 <a
         href="http://labelfusion.csail.mit.edu/">LabelFusion</a>
-        <elib>Marion17</elib>.  (Mouse over for animation)</figcaption>
+        <elib>Marion17</elib> 的多物体场景。（鼠标悬停可查看动画）</figcaption>
       </figure>
       
-      <p>In LabelFusion, the user provides multiple RGB-D images of a static
-      scene containing some objects of interest, and the CAD models for those
-      objects. LabelFusion uses a dense reconstruction algorithm,
-      ElasticFusion<elib>Whelan16</elib>, to merge the point clouds from the
-      individual images into a single dense reconstruction; this is just
-      another instance of the point cloud registration problem.  The dense
-      reconstruction algorithm also localizes the camera relative to the point
-      cloud.  To localize a particlar object, like the drill in the image
-      above, LabelFusion provides a simple gui that asks the user to click on
-      three points on the model and three points in the scene to establish the
-      "global" correspondence, and then runs ICP to refine the pose estimate.
-      In addition to this one registration providing labeled poses in
-      <i>all</i> of the original images, the pixels from the CAD model can be
-      "rendered" on top of all of the images in the established pose giving
-      beautiful pixel-wise labels.</p>
+      <p>在 LabelFusion 中，用户提供包含若干目标物体的静态场景的多张 RGB-D 图像，以及这些物体的 CAD 模型。LabelFusion 使用一种稠密重建算法
+      ElasticFusion<elib>Whelan16</elib>，将各张图像中的点云合并为一个单一的稠密重建；这只是点云配准问题的另一个实例。该稠密重建算法还会定位相机相对于点云的位置。为了定位某个特定物体，例如上图中的电钻，LabelFusion 提供了一个简单的图形界面，要求用户在模型上点击三个点，并在场景中点击三个点，以建立“全局”对应关系，然后运行 ICP 来精化位姿估计。除了这一次配准能够在<i>所有</i>原始图像中提供带标签的位姿之外，还可以将 CAD 模型中的像素以已确定的位姿“渲染”到所有图像之上，从而得到精美的像素级标签。</p>
 
-      <p>Tools like LabelFusion can be use to label large numbers of images very
-      quickly (three clicks from a user produces ground truth labels in many
-      images).</p>
+      <p>像 LabelFusion 这样的工具可以非常快速地标注大量图像（用户点击三次，就能在许多图像中生成真实标签）。</p>
     
     </subsection>
 
-    <subsection><h1>Synthetic datasets</h1>
+    <subsection><h1>合成数据集</h1>
     
-      <p>All of this real world data is incredibly valuable.  But we have
-      another super powerful tool at our disposal: simulation!  Computer vision
-      researchers have traditionally been very skeptical of training perception
-      systems on synthetic images, but as game-engine quality physics-based
-      rendering has become a commodity technology, roboticists have been using
-      it aggressively to supplement or even replace their real-world datasets.
-      The annual robotics conferences now feature regular <a
-      href="https://sim2real.github.io/">workshops and/or debates</a> on the
-      topic of "sim2real".  For any specific scene or narrow class of objects,
-      we can typically generate accurate enough art assets (with material
-      properties that are often still tuned by an artist) and environment maps
-      / lighting conditions that rendered images can be highly effective in a
-      training dataset.  The bigger question is whether we can generate a
-      <i>diverse</i> enough set of data with distributions representative of
-      the real world to train robust feature detectors in the way that we've
-      managed to train with ImageNet.  But for many serious robotics groups,
-      synthetic data generation pipelines have significantly augmented or even
-      replaced real-world labeled data.</p>
+      <p>所有这些真实世界数据都极其宝贵。但我们手中还有另一个超级强大的工具：仿真！计算机视觉研究者传统上一直对使用合成图像训练感知系统非常怀疑，但随着游戏引擎级别的基于物理的渲染成为一种商品化技术，机器人学研究者已经积极地使用它来补充，甚至替代他们的真实世界数据集。如今，每年的机器人学会议都会定期围绕 “sim2real” 这一主题举办<a
+      href="https://sim2real.github.io/">研讨会和/或辩论</a>。对于任何特定场景或较窄类别的物体，我们通常可以生成足够精确的美术资源（其材料属性往往仍由美术人员调节），以及环境贴图/光照条件，使渲染图像在训练数据集中非常有效。更大的问题在于，我们是否能够生成一个足够<i>多样化</i>的数据集，其分布能够代表真实世界，从而像我们使用 ImageNet 训练那样训练出鲁棒的特征检测器。但对于许多严肃的机器人学团队而言，合成数据生成流水线已经显著增强，甚至取代了真实世界标注数据。</p>
 
-      <p>There is a subtle reason for this. Human annotations on real data,
-      although they can be quite good, are never perfect. Labeling errors can
-      put a ceiling on the total performance achievable by the learning
-      system<elib>Northcutt21</elib>. Even if we admit the gap between rendered
-      images and natural images, at some point the ability to generate
-      arbitrarily large datasets with perfect pixel-wise labels actually
-      enables training on synthetic datasets to surpass the performance
-      for training on real data even when evaluated on real-world test sets.
+      <p>这背后有一个微妙的原因。人类对真实数据的标注虽然可以相当好，但永远不可能完美。标注错误可能会限制学习系统所能达到的总体性能上限<elib>Northcutt21</elib>。即使我们承认渲染图像与自然图像之间存在差距，在某个阶段，能够生成任意大规模且具有完美像素级标签的数据集这一能力，实际上会使基于合成数据集的训练在真实世界测试集上的评估性能超过基于真实数据的训练。
       </p>
     
-      <p>For the purposes of this chapter, I aim to train an instance-level
-      segmentation system that will work well on our simulated images.  For
-      this use case, there is (almost) no debate!  Leveraging the pre-trained
-      backbone from COCO, I will use only synthetic data for fine tuning.</p>
+      <p>就本章而言，我的目标是训练一个实例级分割系统，使其能够在我们的仿真图像上良好工作。对于这个用例，几乎没有争议！我将利用来自 COCO 的预训练骨干网络，并只使用合成数据进行微调。</p>
 
-      <p>You may have noticed it already, but the <code>RgbdSensor</code> that we've been using in Drake actually has a "label image" output port that we haven't used yet.</p>
+      <p>你可能已经注意到了，我们一直在 Drake 中使用的 <code>RgbdSensor</code> 实际上有一个“标签图像”输出端口，只是我们还没有使用它。</p>
 
       <div>
         <script type="text/javascript">
@@ -256,252 +143,166 @@ Segmentation</h1>
         </script>
       </div>
       
-      <p>This output port exists precisely to support the perception training
-      use case we have here.  It outputs an image that is identical to the RGB
-      image, except that every pixel is "colored" with a unique instance-level
-      identifier.</p>
+      <p>这个输出端口正是为了支持我们这里的感知训练用例而存在的。它会输出一张与 RGB 图像相同的图像，只不过每个像素都会被用一个唯一的实例级标识符进行“着色”。</p>
 
       <figure><img style="width:100%" src="data/clutter_maskrcnn_labels.png"/>
-      <figcaption>Pixelwise instance segmentation labels provided by the "label
-      image" output port from <code>RgbdSensor</code>.  I've remapped the colors
-      to be more visually distinct.</figcaption> </figure>
+      <figcaption>由 <code>RgbdSensor</code> 的“标签图像”输出端口提供的逐像素实例分割标签。我已经重新映射了颜色，使它们在视觉上更容易区分。</figcaption> </figure>
 
-      <example><h1>Generating training data for instance segmentation</h1>
+      <example><h1>为实例分割生成训练数据</h1>
       
-        <p>I've provided a simple script that runs our "clutter generator" from
-        our bin picking example that drops random YCB objects into the bin.
-        After a short simulation, I render the RGB image and the label image,
-        and save them (along with some metadata with the instance and class
-        identifiers) to disk.</p>
+        <p>我提供了一个简单脚本，它会运行我们在料箱抓取示例中的“杂乱生成器”，将随机 YCB 物体丢入料箱中。经过短暂仿真后，我会渲染 RGB 图像和标签图像，并将它们（连同一些包含实例和类别标识符的元数据）保存到磁盘。</p>
 
-        <p>I've verified that this code <i>can</i> run on Colab, but to make a
-        dataset of 10k images using this un-optimized process takes about an
-        hour on my big development desktop. And curating the files is just
-        easier if you run it locally.  So I've provided this one as a python
-        script instead.</p>
+        <p>我已经验证过这段代码<i>可以</i>在 Colab 上运行，但如果用这个未经优化的流程生成一个包含 1 万张图像的数据集，在我的大型开发台式机上大约需要一个小时。而且如果在本地运行，整理文件也更容易。因此我把这个示例作为 Python 脚本提供。</p>
 
         <pysrc no_colab=True>segmentation/segmentation_data.py</pysrc>
       
-        <todo>Provide a colab version?</todo>
+        <todo>提供一个 Colab 版本？</todo>
 
-        <p>You can also feel free to skip this step!  I've uploaded the 10k
-        images that I generated <a
-        href="https://groups.csail.mit.edu/locomotion/clutter_maskrcnn_data.zip">here</a>.
-        We'll download that directly in our training notebook.</p>
+        <p>你也可以直接跳过这一步！我已经把自己生成的 1 万张图像上传到<a
+        href="https://groups.csail.mit.edu/locomotion/clutter_maskrcnn_data.zip">这里</a>。
+        我们会在训练 notebook 中直接下载它。</p>
 
       </example>
 
     </subsection>
 
-    <subsection><h1>Self-supervised learning</h1></subsection>
+    <subsection><h1>自监督学习</h1></subsection>
 
-    <subsection><h1>Even bigger datasets</h1>
+    <subsection><h1>更大规模的数据集</h1>
     
-      <p>With the rise of large language models (LLMs) came a very natural
-      question: how do we obtain a "foundation model" for computer vision? This
-      would be loosely defined as a model that had impressive zero-shot
-      prediction performance on basically any new image, without prompting and
-      a small number of interactions with a non-expert user replacing the need
-      for fine-tuning on a domain-specific dataset.</p>
+      <p>随着大语言模型（LLM）的兴起，一个非常自然的问题随之出现：我们如何获得一个用于计算机视觉的“基础模型”？这可以宽泛地定义为这样一种模型：它在基本上任何新图像上都具有出色的零样本预测性能，不需要提示，并且只需与非专家用户进行少量交互，就能替代在特定领域数据集上进行微调的需求。</p>
 
-      <p>Segment Anything <elib>Kirillov23</elib> came out earlier in 2023; it
-      is a foundation model for segmentation tasks. The associated dataset,
-      SA-1B, is dramatically larger that pre-existing datasets like COCO in
-      terms of the number of images,the resolution of the images, and the
-      number of labeled segmentations. It's enormous scale was enabled by a
-      "data-engine" which used increasingly powerful versions of the Segment
-      Anything models to provide initial segmentation labels; this output was
-      then passed to expert paid image labelers who could adjust/correct the
-      labels and add labels for increasingly obscure parts of the image that
-      the model had missed. Perhaps fine-tuning on our robot-specific datasets
-      is, or will soon be, a thing of the past.</p>
-
+      <p>Segment Anything <elib>Kirillov23</elib> 于 2023 年早些时候发布；它是一个用于分割任务的基础模型。其关联数据集 SA-1B 在图像数量、图像分辨率以及带标签分割数量方面，都远远大于 COCO 等已有数据集。它的巨大规模得益于一个“数据引擎”：该引擎使用越来越强大的 Segment Anything 模型版本来提供初始分割标签；随后这些输出会交给付费的专家图像标注人员，由他们调整/修正标签，并为模型遗漏的、越来越隐蔽的图像部分添加标签。也许，针对机器人特定数据集进行微调这件事，已经或很快就会成为过去。</p>
     </subsection>
 
   </section>
 
-  <section><h1>Object detection and segmentation</h1>
+  <section><h1>目标检测与分割</h1>
   
-    <p>There is a lot to know about modern object detection and segmentation
-    pipelines.  I'll stick to the very basics.</p>
+    <p>关于现代目标检测与分割流水线，有很多内容值得了解。这里我只介绍最基础的部分。</p>
     
-    <!-- nice overview slides at
-    http://cs231n.stanford.edu/slides/2020/lecture_12.pdf .  Videos at
+    <!-- 很好的概览幻灯片见
+    http://cs231n.stanford.edu/slides/2020/lecture_12.pdf。视频见
     https://www.youtube.com/watch?v=vT1JzLTH4G4&list=PL3FW7Lu3i5JvHM8ljYj-zLfQRF3EO8sYv&index=1
     -->
 
-    <p>For image recognition (see Figure 1), one can imagine training a standard
-    convolutional network that takes the entire image as an input, and outputs a
-    probability of the image containing a sheep, a dog, etc.  In fact, these
-    architectures can even work well for semantic segmentation, where the input
-    is an image and the output is another image; a famous architecture for this
-    is the Fully Convolutional Network (FCN) <elib>Long15</elib>.  But for
-    object detection and instance segmentation, even the number of outputs of
-    the network can change.  How do we train a network to output a variable
-    number of detections?</p>
+    <p>对于图像识别（见图 1），可以设想训练一个标准的卷积网络，它以整张图像作为输入，并输出该图像包含羊、狗等物体的概率。事实上，这些架构甚至可以很好地用于语义分割，其中输入是一张图像，输出则是另一张图像；这一方向中一个著名的架构是全卷积网络（Fully Convolutional Network, FCN）<elib>Long15</elib>。但对于目标检测和实例分割而言，网络输出的数量甚至可能发生变化。我们该如何训练一个网络，使其输出数量可变的检测结果呢？</p>
 
-    <p>The mainstream approach to this is to first break the input image up into
-    many (let's say on the order of 1000) overlapping regions that might
-    represent interesting sub-images.  Then we can run our favorite image
-    recognition and/or segmentation network on each subimage individually, and
-    output a detection for each region that that is scored as having a high
-    probability.  In order to output a tight bounding box, the detection
-    networks are also trained to output a "bounding box refinement" that selects
-    a subset of the final region for the bounding box.  Originally, these region
-    proposals were done with more traditional image preprocessing algorithms, as
-    in R-CNN (Regions with CNN Features)<elib>Girshick14</elib>.  But the "Fast"
-    and "Faster" versions of R-CNN replaced even these preprocessing with
-    learned "region proposal networks"<elib>Girshick15+Ren15</elib>.</p>
+    <p>解决这一问题的主流方法，是首先将输入图像划分为许多（比如大约 1000 个量级的）可能代表有趣子图像的重叠区域。然后，我们可以分别在每个子图像上运行自己喜欢的图像识别和/或分割网络，并为每个被判定为具有高概率的区域输出一个检测结果。为了输出紧密的边界框，检测网络还会被训练输出一个“边界框精化”结果，用于从最终区域中选择一个子集作为边界框。最初，这些候选区域是通过更传统的图像预处理算法生成的，如 R-CNN（Regions with CNN Features）<elib>Girshick14</elib>。但 “Fast” 和 “Faster” 版本的 R-CNN 甚至用学习得到的“区域候选网络”替代了这些预处理步骤<elib>Girshick15+Ren15</elib>。</p>
 
-    <p>For instance segmentation, we will use the very popular Mask R-CNN
-    network which puts all of these ideas, using region proposal networks and a
-    fully convolutional networks for the object detection and for the masks
-    <elib>He17</elib>.  In Mask R-CNN, the masks are evaluated in parallel from
-    the object detections, and only the masks corresponding to the most likely
-    detections are actually returned.  At the time of this writing, the latest
-    and most performant implementation of Mask R-CNN is available in the <a
+    <p>对于实例分割，我们将使用非常流行的 Mask R-CNN 网络，它将上述所有思想结合在一起，使用区域候选网络以及全卷积网络来完成目标检测和掩码预测
+    <elib>He17</elib>。在 Mask R-CNN 中，掩码与目标检测结果并行评估，并且实际返回的只是对应于最可能检测结果的那些掩码。在撰写本文时，最新且性能最好的 Mask R-CNN 实现位于 Facebook AI Research 的 <a
     href="https://github.com/facebookresearch/detectron2">Detectron2</a>
-    project from Facebook AI Research.  But that version is not quite as
-    user-friendly and clean as the original version that was released in the
-    PyTorch <a
+    项目中。但那个版本并不像最初发布在 PyTorch <a
     href="https://pytorch.org/vision/stable/index.html"><code>torchvision</code></a>
-    package; we'll stick to the <code>torchvision</code> version for our
-    experiments here.</p>
+    包中的版本那样用户友好且简洁；因此我们这里的实验将继续使用 <code>torchvision</code> 版本。</p>
 
-    <example><h1>Fine-tuning Mask R-CNN for bin picking</h1>
+    <example><h1>为料箱抓取微调 Mask R-CNN</h1>
 
-      <p>The following notebook loads our 10k image dataset and a Mask R-CNN
-      network pre-trained on the COCO dataset.  It then replaces the head of the
-      pre-trained network with a new head with the right number of outputs for
-      our YCB recognition task, and then runs just a 10 epochs of training with
-      my new dataset.</p>
+      <p>下面的 notebook 会加载我们的 1 万张图像数据集，以及一个在 COCO 数据集上预训练过的 Mask R-CNN 网络。然后，它会将预训练网络的头部替换为一个新的头部，使其输出数量适合我们的 YCB 识别任务，接着使用我的新数据集仅训练 10 个 epoch。</p>
 
       <p><a target="segmentation_train"
       href="https://colab.research.google.com/github/RussTedrake/manipulation/blob/master/book/segmentation/segmentation_train.ipynb"><img
       src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open
-      In Colab"/></a> (Training Notebook)
+      In Colab"/></a>（训练 Notebook）
       </p>
     
-      <p>Training a network this big (it will take about 150MB on disk) is not
-      fast.  I strongly recommend hitting play on the cell immediately after the
-      training cell while you are watching it train so that the weights are
-      saved and downloaded even if your Colab session closes.  But when you're
-      done, you should have a shiny new network for instance segmentation of the
-      YCB objects in the bin!</p>
+      <p>训练这么大的网络（它在磁盘上大约会占用 150MB）并不快。我强烈建议你在训练时，立即运行训练单元之后的那个单元，这样即使你的 Colab 会话关闭，权重也会被保存并下载下来。但当你完成后，你应该会得到一个崭新的网络，用于对料箱中的 YCB 物体进行实例分割！</p>
 
-      <p>I've provided a second notebook that you can use to load and evaluate
-      the trained model.  If you don't want to wait for your own to train, you
-      can examine the one that I've trained!</p>
+      <p>我还提供了第二个 notebook，你可以用它来加载并评估训练好的模型。如果你不想等待自己的模型完成训练，也可以查看我已经训练好的模型！</p>
 
       <p><a target="segmentation_inference"
       href="https://colab.research.google.com/github/RussTedrake/manipulation/blob/master/book/segmentation/segmentation_inference.ipynb"><img
       src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open
-      In Colab"/></a> (Inference Notebook)
+      In Colab"/></a>（推理 Notebook）
       </p>
     
       <figure><img style="width:50%" src="data/segmentation_detections.png"><img
-      style="width:50%" src="data/segmentation_mask.png"><figcaption>Outputs
-      from the Mask R-CNN inference.  (Left) Object detections.  (Right) One of
-      the instance masks.</figcaption></figure>
+      style="width:50%" src="data/segmentation_mask.png"><figcaption>Mask R-CNN 推理的输出结果。（左）目标检测结果。（右）其中一个实例掩码。</figcaption></figure>
 
     </example>
 
   </section>
 
-  <section><h1>Putting it all together</h1>
+  <section><h1>整合起来</h1>
 
-    <p>We can use our Mask R-CNN inference in a manipulation to do selective
-    picking from the bin...</p>
+    <p>我们可以在操作任务中使用 Mask R-CNN 推理，从料箱中进行选择性抓取……</p>
 
-    <!-- Segmented RGB => segmented point clouds -->
+    <!-- 分割后的 RGB => 分割后的点云 -->
 
-    <!-- Segmentation + ICP; Segmentation => antipodal grasps -->
+    <!-- 分割 + ICP；分割 => 对向抓取 -->
 
   </section>
 
-  <section><h1>Variations and Extensions</h1>
+  <section><h1>变体与扩展</h1>
   
-    <subsection><h1>Pretraining wth self-supervised learning</h1>
+    <subsection><h1>使用自监督学习进行预训练</h1>
 
-        <!-- autoencoders -->
+        <!-- 自编码器 -->
         <!-- simclr https://arxiv.org/abs/2002.05709 -->
         <!-- byob -->
         <!-- simsiam -->
         <!-- tcc https://arxiv.org/abs/1904.07846 -->
-        <!-- mention dense descriptors? -->
+        <!-- 提到 dense descriptors？ -->
 
     </subsection>
 
-    <subsection><h1>Leveraging large-scale models</h1>
+    <subsection><h1>利用大规模模型</h1>
 
-      <p>One of the goals for these notes is to consider "open-world"
-      manipulation -- making a manipulation pipeline that can perform useful
-      tasks in previously unseen environments and with unseen models. How can
-      we possibly provide labeled instances of every object the robot will ever
-      have to manipulate?</p>
+      <p>这些笔记的目标之一，是考虑“开放世界”操作——构建一条能够在此前未见过的环境中、面对未见过的模型时执行有用任务的操作流水线。我们怎么可能为机器人将来需要操作的每一个物体都提供带标签的实例呢？</p>
 
-      <p>The most dramatic examples of open-world reasoning have been coming
-      from the so-called "foundation models"<elib>Bommasani21</elib>.  The
-      foundation model that has been adopted most quickly into robotics
-      research is the large vision + text model, 
+      <p>开放世界推理中最引人注目的例子，来自所谓的“基础模型”<elib>Bommasani21</elib>。在机器人学研究中被最快采用的基础模型，是大型视觉 + 文本模型
       <a href="https://openai.com/blog/clip/">CLIP</a>
-      <elib>Radford21</elib>.</p>
+      <elib>Radford21</elib>。</p>
 
-      <p>More coming soon...</p>
+      <p>更多内容即将推出……</p>
 
-      <!-- GPT-3 and DALL-E https://openai.com/blog/dall-e/ -->
+      <!-- GPT-3 和 DALL-E https://openai.com/blog/dall-e/ -->
       <!-- CLIP; https://arxiv.org/pdf/2104.13921.pdf -->
-      <!-- kevin zakka's prototype of CLIP zero-shot object detector:
+      <!-- kevin zakka 的 CLIP 零样本目标检测器原型：
       https://drakedevelopers.slack.com/archives/C013AP7F5M5/p1627446717032400
       -->
     </subsection>
 
   </section>
 
-  <section><h1>Exercises</h1>
+  <section><h1>练习</h1>
 
-    <exercise><h1>Label Generation</h1>
+    <exercise><h1>标签生成</h1>
 
-      <p> For this exericse, you will look into a simple trick to automatically generate training data for Mask-RCNN. You will work exclusively in <script>document.write(notebook_link('segmentation', notebook='label_generation', link_text='this notebook'))</script>. You will be asked to complete the following steps: </p>
+      <p>在本练习中，你将研究一种简单技巧，用于为 Mask-RCNN 自动生成训练数据。你将完全在 <script>document.write(notebook_link('segmentation', notebook='label_generation', link_text='这个 notebook'))</script> 中完成工作。你需要完成以下步骤：</p>
 
       <ol type="a">
-        <li> Automatically generate mask labels from pre-processed point clouds.
+        <li> 从预处理后的点云中自动生成掩码标签。
         </li>
-        <li> Analyze the applicability of the method for more complex scenes.</li>
-        <li> Apply data augmentation techniques to generate more training data.</li>
+        <li> 分析该方法在更复杂场景中的适用性。</li>
+        <li> 应用数据增强技术生成更多训练数据。</li>
       </ol>
 
     </exercise>
 
-    <exercise><h1>Segmentation + Antipodal Grasping</h1>
+    <exercise><h1>分割 + 对向抓取</h1>
 
-      <p> For this exercise, you will use Mask-RCNN and our previously
-      developed antipodal grasp strategy to select a grasp given a point cloud.
-      You will work exclusively in <script>document.write(notebook_link('segmentation', notebook='segmentation_and_grasp', link_text='this notebook'))</script>. You will be asked to complete the
-      following steps: </p>
+      <p>在本练习中，你将使用 Mask-RCNN 以及我们之前开发的对向抓取策略，在给定点云的情况下选择一个抓取。你将完全在 <script>document.write(notebook_link('segmentation', notebook='segmentation_and_grasp', link_text='这个 notebook'))</script> 中完成工作。你需要完成以下步骤：</p>
 
       <ol type="a">
-        <li> Automatically filter the point cloud for points that correspond to
-        our intended grasped object</li>
-        <li> Analyze the impact of a multi-camera setup.</li>
-        <li> Consider why filtering the point clouds is a useful step in this
-        grasping pipeline.</li>
-        <li> Discuss how we could improve this grasping pipeline. </li>
+        <li> 自动过滤点云，只保留对应于我们目标抓取物体的点。</li>
+        <li> 分析多相机设置的影响。</li>
+        <li> 思考为什么过滤点云是该抓取流水线中的一个有用步骤。</li>
+        <li> 讨论我们可以如何改进这条抓取流水线。</li>
       </ol>
 
     </exercise>    
 
-    <exercise><h1>Vision-Language Segmentation</h1>
+    <exercise><h1>视觉-语言分割</h1>
 
-      <p> For this exercise, you will explore how Vision-Language Models (VLMs) and the Segment Anything Model (SAM) can be combined to achieve
-         language-driven object segmentation. You will work exclusively in 
-         <script>document.write(notebook_link('segmentation', notebook='segmentation_sam', link_text='this notebook'))</script>. You will be asked to complete the
-      following steps: </p>
+      <p>在本练习中，你将探索如何结合视觉-语言模型（VLM）和 Segment Anything Model（SAM）来实现由语言驱动的目标分割。你将完全在
+         <script>document.write(notebook_link('segmentation', notebook='segmentation_sam', link_text='这个 notebook'))</script> 中完成工作。你需要完成以下步骤：</p>
 
       <ol type="a">
-        <li> Analyze SAM's segmentation capabilities and understand its limitations in object identification</li>
-        <li> Use a Vision-Language Model to generate bounding boxes from natural language prompts</li>
-        <li> Combine VLM-generated bounding boxes with SAM to produce precise segmentation masks for specified objects</li>
+        <li> 分析 SAM 的分割能力，并理解其在目标识别方面的局限性。</li>
+        <li> 使用视觉-语言模型根据自然语言提示生成边界框。</li>
+        <li> 将 VLM 生成的边界框与 SAM 结合，为指定物体生成精确的分割掩码。</li>
       </ol>
 
     </exercise>    

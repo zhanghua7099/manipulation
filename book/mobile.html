@@ -56,341 +56,422 @@ href="https://www.youtube.com/channel/UChfUOAhz7ynELF-s_1LPpWg">Lecture videos a
 <script type="text/javascript">document.write(notebook_header('mobile'))
 </script>
 <!-- EVERYTHING ABOVE THIS LINE IS OVERWRITTEN BY THE INSTALL SCRIPT -->
-<chapter style="counter-reset: chapter 6"><h1>Mobile Manipulation</h1>
+<chapter style="counter-reset: chapter 6"><h1>移动操作（Mobile Manipulation）</h1>
 
-<p>So far we've focused primarily on table-top manipulation. You can bring
-many interesting objects / challenges to your robot that is fixed to the table,
-and this will continue to keep us busy for many chapters to come. But before we
-get too much further, I'd like to stop and ask -- what happens if the robot
-also has wheels (or legs!)?</p>
+<p>到目前为止，我们主要关注的是桌面操作（table-top manipulation）。
+你可以把许多有趣的物体和挑战带到固定在桌子上的机器人面前，
+而且在接下来的许多章节中，这仍然会让我们有很多内容可以研究。
+但在继续深入之前，我想先停下来问一个问题——如果机器人同时还拥有轮子（甚至腿！）会怎样呢？</p>
 
-<p>Many of the technical challenges in "mobile manipulation" are the same
-challenges we've been discussing for table-top manipulation. But there some
-challenges that are new, or at least are more urgent in the mobile setting.
-Describing those challenges, and some solutions, is my primary goal for this
-chapter.</p>
+<p>“移动操作（mobile manipulation）”中的许多技术挑战，
+与我们之前讨论的桌面操作中的挑战是相同的。
+但也有一些挑战是全新的，
+或者至少在移动场景中变得更加迫切。
+描述这些挑战以及一些解决方案，
+正是本章的主要目标。</p>
 
-<p>Most importantly, adding mobility to our manipulators can often help us
-increase the scope of our ambitions for our robots. Now we can think about
-robots moving through houses and accomplishing diverse tasks. It's time to send
-our creations out <a href="https://www.youtube.com/watch?v=WnTKllDbu5o">to
-discover (manipulate?) the world!</a></p>
+<p>最重要的是，为我们的操作机器人增加移动能力，
+通常能够帮助我们扩大对机器人能力的设想范围。
+现在，我们可以开始思考机器人在房屋中移动并完成各种不同任务的场景。
+是时候把我们的创造物送出去，
+<a href="https://www.youtube.com/watch?v=WnTKllDbu5o">去探索（操纵？）这个世界了！</a></p>
 
-<section><h1>A New Cast of Characters</h1>
+<section><h1>一组新的角色</h1>
 
 
 
 </section>
 
-<section><h1>What's different about perception?</h1>
+<section><h1>感知方面有什么不同？</h1>
 
-  <subsection><h1>Partial views / active perception</h1>
+  <subsection><h1>部分视角 / 主动感知</h1>
   
-    <p>We discussed some of the technical challenges that come with having only
-    partial views of the objects that you wish to manipulate <a
-    href="pose.html#partial_views">in the geometric perception chapter</a>. In
-    the table-top manipulation setting, we can typically put cameras looking
-    onto the table from all external angles, but our views can still be
-    occluded in clutter.</p>
+    <p>我们曾经讨论过，
+    当只能获得待操作物体的部分视角时所带来的一些技术挑战，
+    详见<a href="pose.html#partial_views">几何感知章节</a>。
+    在桌面操作场景中，
+    我们通常可以在桌子周围的各个外部角度布置摄像头进行观察，
+    但在杂乱环境中，
+    我们的视野仍然可能被遮挡。</p>
 
-    <p>When you're a mobile robot, we typically don't assume that you can fully
-    instrument your environment to the same extent. Typically we try to work
-    with only robot-mounted sensors, such as head-mounted cameras. Our <a
-    href="clutter.html#antipodal">antipodal grasping strategy</a> won't work
-    out of the box if we only see one side of each object.</p>
+    <p>当你是一个移动机器人时，
+    我们通常不会假设你能够像固定式系统那样，
+    对环境进行同等程度的全面布设与仪器化。
+    通常我们会尝试只使用安装在机器人本体上的传感器，
+    例如安装在头部的摄像头。
+    如果我们只能看到每个物体的一侧，
+    那么我们的<a href="clutter.html#antipodal">对向抓取（antipodal grasping）策略</a>
+    就无法直接使用。</p>
 
-    <p>The primary solution to this problem is to use machine learning. If you
-    only see one half of a mustard bottle, then the instantaneous sensor
-    readings simply don't contain enough information to plan a grasp;
-    somehow we must infer something about what the back of the object looks
-    like (aka "shape completion", though it need not be done explicitly). The
-    reason that you would have a good guess at what the back half of the
-    mustard bottle looks like is because you've interacted with mustard bottles
-    before -- it is the statistics of the objects you've interacted with that
-    provides the missing information. So learning isn't just a convenience
-    here, it's fundamental. We'll discuss learning-based perception soon!</p>
+    <p>这个问题的主要解决方案是使用机器学习。
+    如果你只能看到一个芥末瓶的一半，
+    那么瞬时传感器读数本身并不包含足够的信息来规划抓取；
+    我们必须以某种方式推断出物体背面的大致形状
+    （也称为“形状补全（shape completion）”，
+    虽然不一定需要显式完成）。
+    你之所以能够较好地猜测芥末瓶后半部分的样子，
+    是因为你以前接触过芥末瓶——
+    正是你过去交互过的物体统计特性，
+    提供了缺失的信息。
+    因此，在这里学习不仅仅是一种便利手段，
+    而是根本性的需求。
+    我们很快就会讨论基于学习的感知！</p>
 
-    <p>There is another mitigation, though, that is often available to a mobile
-    manipulator. Now that the cameras (and all of the sensors) are mobile, we
-    can actively move them in order to gather information / reduce uncertainty.
-    There is a rich literature for "active perception" and "planning under
-    uncertainty". [More to come]
+    <p>不过，还有另一种缓解方式，
+    而且对于移动操作机器人来说通常是可行的。
+    现在摄像头（以及所有传感器）都是可移动的，
+    我们可以主动移动它们，
+    以获取更多信息并降低不确定性。
+    关于“主动感知（active perception）”
+    和“在不确定性下进行规划（planning under uncertainty）”
+    已经有非常丰富的研究文献。
+    [后续还会继续讨论]
     </p>
   
   </subsection>
 
-  <subsection><h1>Unknown (potentially dynamic) environments</h1>
+  <subsection><h1>未知（且可能动态变化）的环境</h1>
 
-    <p>For table-top manipulation, we started by assuming known objects and
-    then discussed approaches (such as antipodal grasping) that could work on
-    unknown objects. But throughout that discussion, we always assumed that we
-    knew the geometry and location of the table / bins! For instance, we
-    actively cropped away the point cloud returns that hit the known
-    environment and left only points associated with the objects. That's a very
-    reasonable thing to do when your robot is bolted to the table, but we need
-    to relax that assumption once we go mobile, and start interacting with more
-    diverse / less known environments.</p>
+    <p>对于桌面操作，
+    我们一开始假设物体是已知的，
+    然后讨论了能够处理未知物体的方法
+    （例如对向抓取）。
+    但在整个讨论过程中，
+    我们始终假设自己知道桌子 / 箱体（bins）的几何形状与位置！
+    例如，
+    我们会主动裁剪掉击中已知环境的点云数据，
+    只保留与目标物体相关的点。
+    当机器人被固定在桌子上时，
+    这样做是非常合理的；
+    但一旦机器人具备移动能力，
+    并开始与更加多样化、更加未知的环境交互时，
+    我们就需要放宽这一假设。</p>
 
-    <p>One <i>could</i> try to model everything in the environment. We could do
-    object detection to recognize the table, and pose estimation (possibly
-    shape estimation) to fit a parametric table model to the observations. But
-    that's a difficult road to travel, especially in diverse and expansive
-    scenes. Is there an analogy to the antipodal grasping for objects that can
-    similarly reduce our need for explicit modeling of the environment?</p>
+    <p>一种做法是尝试对环境中的所有东西进行建模。
+    我们可以使用目标检测来识别桌子，
+    再通过位姿估计（甚至可能是形状估计）
+    将参数化的桌子模型拟合到观测结果上。
+    但这是一条非常困难的道路，
+    尤其是在多样且大规模的场景中。
+    是否存在一种类似于物体对向抓取的方法，
+    能够同样减少我们对环境显式建模的需求呢？</p>
 
-    <p>We'd like to have a representation of the environment that does not
-    require explicit object models, that supports the types of queries we need
-    for motion planning (for instance, fast collision detection and
-    minimum-distance computations), which we can update efficiently from our
-    raw sensor data, and which scales well to large scenes. Raw, merged point
-    clouds, for instance, are easy to update and don't require a model, but
-    would not be ideal for fast planning queries.</p>
+    <p>我们希望拥有一种环境表示方式：
+    它不需要显式的物体模型；
+    它能够支持运动规划所需的各种查询
+    （例如快速碰撞检测与最小距离计算）；
+    它能够从原始传感器数据中高效更新；
+    并且能够良好扩展到大型场景。
+    例如，
+    原始合并后的点云虽然易于更新、
+    且不需要模型，
+    但并不适合快速执行规划查询。</p>
 
-    <p>Voxel grids are a geometry representation that meets (almost all of)
-    our desiderata -- we actually used them already in order to efficiently
-    down-sample a point cloud. In this representation we discretize some finite
-    volume of 3D space into a grid of fixed-size cubes; let's say 1 cm$^3.$ We
-    mark each of these cubes as either occupied or unoccupied (or more
-    generally, we can have a probability of being occupied). Then, for
-    collision-free motion planning, we treat the occupied cubes as collision
-    geometry to be avoided. Many collision queries with voxel grids can be fast
-    (and are easily parallelized). In particular the sphere-on-voxel collision
-    query can be very fast, which is one of the reasons that you see a number
-    of collision geometries in the Drake models that are approximated with
-    densely packed spheres. <todo>Figure</todo> Updating a voxel grid with
-    points clouds is also efficient. In order to scale voxel representations to
-    have both fine resolution and to be able to represent very large scenes, we
-    can make use of clever data structures.</p>
+    <p>体素网格（voxel grids）是一种几何表示方式，
+    它满足了我们（几乎所有的）期望条件——
+    实际上，我们之前已经用过它们，
+    用来高效地下采样点云。
+    在这种表示中，我们将三维空间中的某个有限体积
+    离散化为由固定大小立方体组成的网格；
+    比如说，每个立方体为 1 cm$^3$。
+    我们将这些立方体中的每一个标记为已占据或未占据
+    （或者更一般地说，
+    我们可以为其赋予一个被占据的概率）。
+    然后，对于无碰撞运动规划，
+    我们把已占据的立方体视为需要避开的碰撞几何体。
+    许多基于体素网格的碰撞查询都可以非常快速
+    （并且很容易并行化）。
+    特别是球体与体素之间的碰撞查询可以非常快，
+    这也是你会在 Drake 模型中看到许多碰撞几何体
+    被密集排列的球体近似表示的原因之一。
+    <todo>图</todo>
+    使用点云来更新体素网格也很高效。
+    为了让体素表示既能具有精细分辨率，
+    又能表示非常大的场景，
+    我们可以利用一些巧妙的数据结构。</p>
 
     <example><h1>Octomap</h1>
     
-      <p>One particularly nice and efficient implementation of voxel grids at
-      scale for robotics is an algorithm / software package called Octomap
-      <elib>Hornung13</elib>...</p>
+      <p>在机器人学中，
+      一种特别好用且高效的大规模体素网格实现，
+      是一种名为 Octomap 的算法 / 软件包
+      <elib>Hornung13</elib>……</p>
 
-      <todo>multi-resolution, efficient collision queries, efficient ray cast, probabilistic updating, including for free space</todo>
+      <todo>多分辨率、高效碰撞查询、高效射线投射、概率更新，包括对自由空间的更新</todo>
     </example>
 
-    <p>Segmenting the visual scene into objects vs environment these days is
-    best done with machine learning; we'll implement segmentation pipelines soon.</p>
+    <p>如今，将视觉场景分割为物体与环境，
+    最好的方法是使用机器学习；
+    我们很快就会实现分割流水线。</p>
 
   </subsection>
 
-  <subsection><h1>Robot state estimation</h1>
+  <subsection><h1>机器人状态估计</h1>
 
-    <p>The biggest difference that comes up in perception for a mobile
-    manipulator is the need to estimate not only the state of the environment,
-    but the state of the robot. For instance, in our point cloud processing
-    algorithms so far, we have tacitly assumed that we know ${}^WX^C$, the pose
-    of the camera in the world. We could potentially invest in elaborote
-    calibration procedures, using known shapes and patterns, in order to
-    estimate (offline) these camera extrinsics. We've also take the kinematics
-    of the robot to be known -- this is a pretty reasonable assumption when the
-    robot is bolted to the table and all of the transforms between the world
-    and the end-effector are measured directly with high-accuracy encoders. But
-    these assumptions break down once the robot has a mobile base.</p>
+    <p>移动操作机器人在感知方面出现的最大差异，
+    是不仅需要估计环境的状态，
+    还需要估计机器人自身的状态。
+    例如，在目前为止的点云处理算法中，
+    我们一直默认自己知道 ${}^WX^C$，
+    也就是相机在世界坐标系中的位姿。
+    我们也许可以投入精细的标定流程，
+    使用已知形状和图案，
+    来（离线）估计这些相机外参。
+    我们还一直假定机器人的运动学是已知的——
+    当机器人固定在桌子上，
+    并且世界坐标系与末端执行器之间的所有变换
+    都能通过高精度编码器直接测量时，
+    这是一个相当合理的假设。
+    但一旦机器人拥有移动底盘，
+    这些假设就会失效。</p>
 
-    <p>State estimation for mobile robots has a strong history;
-    <elib>Thrun05</elib> is the canonical reference. Often these algorithms are
-    based on (approximate) recursive Bayesian filtering, or the closely related
-    smoothing algorithms <elib>Kaess08</elib>. Typically our mobile bases are
-    instrumented with range sensors and/or cameras in addition to the wheel
-    encoders and inertial measurement units (IMUs). The state estimation
-    pipeline fuses these noisy measurements together into a consistent
-    estimate. Indeed, one of the biggest lessons in mobile robots is the wheel
-    odometry alone is almost always insufficient for estimation; real wheels
-    slip and visual/range measurements provide an essential and independent set
-    of measurements.</p>
+    <p>移动机器人的状态估计有着深厚的历史；
+    <elib>Thrun05</elib> 是这一领域的经典参考文献。
+    这些算法通常基于（近似的）递归贝叶斯滤波，
+    或与之密切相关的平滑算法 <elib>Kaess08</elib>。
+    通常，除了轮式编码器和惯性测量单元（IMU）之外，
+    我们还会在移动底盘上配备距离传感器和 / 或摄像头。
+    状态估计流水线会将这些带噪声的测量融合在一起，
+    形成一个一致的估计。
+    事实上，移动机器人领域最重要的经验之一是：
+    仅靠车轮里程计几乎总是不足以完成估计；
+    真实的轮子会打滑，
+    而视觉 / 距离测量提供了一组关键且独立的测量信息。</p>
 
-    <p>Many things have changed since <elib>Thrun05</elib> was written.
-    Range-based sensors (lidar and depth cameras) have improved dramatically in
-    range, accuracy, and framerate, making the methods dramatically more
-    effective.</p> 
+    <p>自 <elib>Thrun05</elib> 写成以来，
+    许多事情已经发生了变化。
+    基于距离的传感器（激光雷达和深度相机）
+    在量程、精度和帧率方面都有了显著提升，
+    使得这些方法的效果大幅增强。</p> 
 
-    <example><h1>Simulating range sensors in Drake</h1>
+    <example><h1>在 Drake 中仿真距离传感器</h1>
     
     </example>
     
-    <p>Perhaps the biggest change, though, has been
-    the shift from a heavy dependence on range-based sensors / depth-cameras
-    towards increasingly powerful estimation algorithm which use only RGB
-    cameras. This is due to advances in visual-inertial
-    odometry<elib>Scaramuzza11</elib>, monocular depth
-    estimation<elib>Ming21</elib>, and dense 3D reconstruction / structure from
-    motion<elib>Mildenhall21+Kerbl23</elib>, to name a few.</p>
+    <p>不过，也许最大的变化是：
+    估计算法已经从严重依赖基于距离的传感器 / 深度相机，
+    转向越来越强大的、仅使用 RGB 摄像头的估计算法。
+    这得益于视觉-惯性里程计 <elib>Scaramuzza11</elib>、
+    单目深度估计 <elib>Ming21</elib>，
+    以及稠密三维重建 / 运动恢复结构
+    <elib>Mildenhall21+Kerbl23</elib> 等方面的进展。</p>
   </subsection>
 
 </section>
 
-<section><h1>What's different about motion planning?</h1>
+<section><h1>运动规划方面有什么不同？</h1>
 
-  <p>Let's start with an example of perhaps the simplest (given our toolbox so
-  far) to build ourselves a mobile manipulator.</p>
+  <p>让我们从一个例子开始：
+  也许这是用我们目前已有的工具箱，
+  自己构建移动操作机器人最简单的方式。</p>
 
-  <example><h1>iiwa on a prismatic base</h1>
+  <example><h1>棱柱底座上的 iiwa</h1>
   
-    <p>Let's take the iiwa model and add a few degrees of freedom to the base.
-    Rather than welding link 0 to the world, let's insert three prismatic
-    joints (connected by invisible, massless links) corresponding to motion in
-    $x$, $y$, and $z$. I'll allow $x$ and $y$ to be unbounded, but will set
-    modest joint limits on $z$. The first joint of the iiwa already rotates
-    around the base $z$ axis; I'll just remove the joint limits so that it can
-    rotate continuously. Simple changes, and now I have the essence of a mobile
-    robot.</p>
+    <p>我们取 iiwa 模型，
+    并给它的底座增加几个自由度。
+    不再把 link 0 焊接到世界坐标系上，
+    而是插入三个棱柱关节
+    （通过不可见、无质量的连杆连接），
+    分别对应 $x$、$y$ 和 $z$ 方向上的运动。
+    我会允许 $x$ 和 $y$ 不受边界限制，
+    但会给 $z$ 设置适度的关节限位。
+    iiwa 的第一个关节本来就绕底座的 $z$ 轴旋转；
+    我只需移除该关节的限位，
+    让它可以连续旋转。
+    这些改动很简单，
+    但现在我就得到了移动机器人的核心特征。</p>
 
     <script>document.write(notebook_link('mobile', notebook="mobile_iiwa"))</script>
 
   </example>
 
-  <p>Now let's ask: how do I have to change my motion planning tools to work
-  with this version of the iiwa? The answer is: not much! Our motion planning
-  tools were all quite general, and work with basically any kinematic robot
-  configuration. The mobile base that we've added here just adds a few more
-  joints to that kinematic tree, but otherwise fits directly into the
-  framework.</p>
+  <p>现在让我们问一个问题：
+  为了让运动规划工具适用于这个版本的 iiwa，
+  我需要做哪些修改？
+  答案是：不多！
+  我们的运动规划工具都相当通用，
+  基本上适用于任何运动学机器人构型。
+  我们在这里添加的移动底座，
+  只是给这棵运动学树多增加了几个关节，
+  除此之外可以直接纳入原有框架。</p>
 
-  <p>One possible consideration is that we have increased the number of degrees
-  of freedom (here from 7 to 10). Trajectory optimization algorithms, by
-  virtue(?) of being local to a trajectory, scale easily to high-dimensional
-  problems, so this is no problem. Sampling-based planners struggle more with
-  dimension, but RRTs should be fine in 10 dimensions. PRMs can definitely work
-  in 10 dimensions, too, but probably require an efficient implementation and
-  are starting to reach their limits.</p>
+  <p>一个可能需要考虑的问题是：
+  我们增加了自由度的数量
+  （这里从 7 个增加到了 10 个）。
+  轨迹优化算法由于（也许可以说正因为？）
+  是围绕某条轨迹进行局部优化的，
+  因而很容易扩展到高维问题，
+  所以这不是问题。
+  基于采样的规划器在维度增加时会更加吃力，
+  但 RRT 在 10 维空间中应该仍然没有问题。
+  PRM 当然也可以在 10 维空间中工作，
+  但可能需要高效的实现，
+  并且已经开始接近它的能力边界。</p>
 
-  <p>Another consideration which may be new for the mobile base is the
-  existence of a continuous joint (rotations around the $z$ axis do not have
-  joint limits). These can require some care in the planning stack. In a
-  sampling-based planner, typically the distance metric and extend operations
-  are adapted to consider edges that can wrap around $2\pi$. Nonconvex
-  trajectory optimization doesn't require algorithmic modifications, per se,
-  but does potentially suffer from local minima. For <a
-  href="trajectories.html#gcs">trajectory optimization with Graphs of Convex
-  Sets</a>, one simply needs to take care that the IRIS regions operate in a
-  local coordinate system and don't have a domain wider than $\pi$ in any
-  wrapping joint<elib>Cohn23</elib>. Failure to address this properly can
-  result in slightly absurd plans which take the long way around; <a
-  href="https://ggcs-anonymous-submission.github.io/meshcat/1CL-4CR/trajopt.html">here's
-  an example</a> of kinematic trajectory optimization finding a suboptimal
-  solution to navigating between the shelves, from <elib>Cohn23</elib>.</p>
+  <p>另一个对于移动底座来说可能较新的问题是：
+  连续关节的存在
+  （绕 $z$ 轴的旋转没有关节限位）。
+  这在规划栈中可能需要一些谨慎处理。
+  在基于采样的规划器中，
+  通常需要调整距离度量和扩展操作，
+  以考虑能够绕过 $2\pi$ 的边。
+  非凸轨迹优化本身并不一定需要算法层面的修改，
+  但确实可能受到局部极小值的影响。
+  对于<a href="trajectories.html#gcs">基于凸集图（Graphs of Convex Sets）的轨迹优化</a>，
+  只需要注意让 IRIS 区域工作在局部坐标系中，
+  并且在任何可环绕关节上的定义域宽度都不要超过 $\pi$
+  <elib>Cohn23</elib>。
+  如果没有正确处理这一点，
+  就可能得到有点荒谬的规划结果，
+  让机器人绕远路；
+  这里有一个<a href="https://ggcs-anonymous-submission.github.io/meshcat/1CL-4CR/trajopt.html">例子</a>，
+  展示了运动学轨迹优化在货架之间导航时，
+  找到了一个次优解，
+  该例来自 <elib>Cohn23</elib>。</p>
 
-  <p>What happens if instead of implementing the mobile manipulator using
-  prismatic joints, we're going to use wheels or legs? As we'll see, some
-  wheeled robots (and most legged robots) can provide our prismatic joints
-  abstraction directly, but others add constraints that we must consider during
-  motion planning.</p>
+  <p>如果我们不是用棱柱关节来实现移动操作机器人，
+  而是使用轮子或腿，
+  会发生什么呢？
+  正如我们将看到的，
+  一些轮式机器人（以及大多数腿式机器人）
+  可以直接提供我们的棱柱关节抽象；
+  但另一些机器人会引入一些约束，
+  而这些约束必须在运动规划过程中加以考虑。</p>
 
-  <subsection><h1>Wheeled robots</h1>
+  <subsection><h1>轮式机器人</h1>
 
-    <p>Even though real wheels do slip, we typically do motion planning with
-    the no-slip assumption, then use feedback control to follow the planned
-    path <elib part="Ch. 49">Siciliano16</elib>.</p>
+    <p>尽管真实的轮子确实会打滑，
+    但我们通常在无滑移假设下进行运动规划，
+    然后使用反馈控制来跟踪规划出的路径
+    <elib part="Ch. 49">Siciliano16</elib>。</p>
 
-    <subsubsection><h1>Holonomic drives</h1>
+    <subsubsection><h1>全向驱动</h1>
 
-      <example><h1>Mecanum drive kinematics</h1></example>
-      <example><h1>Simulating mecanum wheels in Drake</h1></example>
+      <example><h1>麦克纳姆轮驱动运动学</h1></example>
+      <example><h1>在 Drake 中仿真麦克纳姆轮</h1></example>
     
     </subsubsection>
 
-    <subsubsection><h1>Nonholonomic drives</h1>
+    <subsubsection><h1>非完整驱动</h1>
 
-      <p>Differential drive, Dubins car, Reeds-Shepp.</p>
+      <p>差速驱动、Dubins 车、Reeds-Shepp。</p>
 
-      <example><h1>Differential drive kinematics</h1></example>
+      <example><h1>差速驱动运动学</h1></example>
     
     </subsubsection>
 
   </subsection>
 
-  <subsection><h1>Legged robots</h1>
+  <subsection><h1>腿式机器人</h1>
       
-    <p>If your job is to do the planning and control for the legs of a robot,
-    then there is a <a href="https://underactuated.mit.edu">rich literature for
-    you to explore</a>. But if you are using a legged robot like <a
-    href="https://bostondynamics.com/products/spot/">Spot</a> to perform mobile
-    manipulation, and you're using the API provided by Boston Dynamics, then
-    (fortunately or unfortunately) you don't get to dive into the low-level
-    control of the legs. In fact, Spot provides an API that to first order
-    treats the legged platform as a holonomic base. (There are secondary
-    considerations, like the fact that the robots center of mass is limited by
-    dynamic constraints, and may deviate from your requested trajectory in
-    order to maintain balance).</p>
+    <p>如果你的工作是为机器人的腿部进行规划与控制，
+    那么这里有<a href="https://underactuated.mit.edu">大量丰富的文献可供你探索</a>。
+    但如果你使用的是像 <a
+    href="https://bostondynamics.com/products/spot/">Spot</a> 这样的腿式机器人来执行移动操作，
+    并且使用的是 Boston Dynamics 提供的 API，
+    那么（幸运或不幸的是）
+    你并不会深入到腿部的低层控制中。
+    事实上，Spot 提供的 API 在一阶近似下
+    将这个腿式平台视为一个全向底座。
+    （还有一些次要考虑因素，
+    例如机器人的质心会受到动态约束限制，
+    并且可能会偏离你请求的轨迹，
+    以保持平衡。）</p>
 
-    <example><h1>Mobile manipulation with Spot</h1>
+    <example><h1>使用 Spot 进行移动操作</h1>
     
     </example>
 
-    <p>Of course, things get much more interesting when you are performing
-    mobile manipulation on rough or intermitted terrain; this is where the
-    legged platform really shines!</p>
+    <p>当然，当你在崎岖或不连续的地形上执行移动操作时，
+    情况会变得有趣得多；
+    这正是腿式平台真正闪光的地方！</p>
 
   </subsection>
 
 </section>
 
-<section><h1>What's different about simulation?</h1>
+<section><h1>仿真方面有什么不同？</h1>
 
-  <p>Mobile manipulation encourages us to expand the scope of our simulation,
-  in addition to our autonomy algorithms. Rather than simulating a few objects
-  on a table top, now we start asking about simulating the robot in a more
-  expansive environment.</p>
+  <p>除了扩展我们的自主算法之外，
+  移动操作还促使我们扩大仿真的范围。
+  不再只是仿真桌面上的几个物体，
+  现在我们开始思考如何在更广阔的环境中仿真机器人。</p>
 
-  <p>When I've used the term "simulation" so far in these notes, I've been
-  focusing mostly on the enabling technologies, like the physics engine and the
-  rendering engine. In robotics today, there are only a handful of
-  mainstream simulators which people are using, such as NVidia Isaac/Omniverse,
-  MuJoCo, and Drake. (PyBullet was very popular but is no longer
-  actively maintained.) But there is another crop of tools which call
-  themselves "simulators" that build upon these engines (and/or more
-  traditional engines from computer games like Unity or Unreal) and offer
-  higher-level abstractions. I think of these as content aggregators, and feel
-  that they serve a very important role.</p>
+  <p>到目前为止，
+  当我在这些笔记中使用“仿真（simulation）”这个术语时，
+  我主要关注的是支撑性技术，
+  比如物理引擎和渲染引擎。
+  在当今机器人学中，
+  人们使用的主流仿真器只有少数几个，
+  例如 NVidia Isaac/Omniverse、MuJoCo 和 Drake。
+  （PyBullet 曾经非常流行，
+  但现在已经不再积极维护。）
+  不过，还有另一类自称为“仿真器”的工具，
+  它们建立在这些引擎之上
+  （和 / 或建立在 Unity 或 Unreal 这类更传统的电子游戏引擎之上），
+  并提供更高层次的抽象。
+  我把它们看作内容聚合器，
+  并认为它们发挥着非常重要的作用。</p>
 
   <example><h1>Sapien</h1></example>
   <example><h1>Behavior 1K</h1></example>
   <example><h1>Habitat 3.0</h1></example>
   <!--<example><h1>ThreeDWorld</h1></example>-->
 
-  <p>For my part, I hope that the problems specifications and assets from these
-  tools can be imported easily enough into Drake that we can use not only our
-  simulation engine, but also our perception, planning, and control tools to
-  solve them. We are gradually building out or support for loading from other
-  formats, or translating from other formats in order to facilitate this.</p>
+  <p>就我个人而言，
+  我希望这些工具中的问题定义与资源文件，
+  能够足够容易地导入到 Drake 中，
+  从而让我们不仅能够使用我们的仿真引擎，
+  还能够使用我们的感知、规划与控制工具来解决这些问题。
+  为了实现这一点，
+  我们正在逐步构建对其他格式的加载支持，
+  或者实现不同格式之间的转换支持。</p>
 
 </section>
 
-<section><h1>Navigation</h1>
+<section><h1>导航</h1>
 
-  <p>Most of the ideas we've covered in this chapter so far can be considered
-  relatively modest extensions to our existing manipulation toolbox. But there
-  are some important problems associated with navigating a mobile robot that
-  really don't come up in table-top manipulation.</p>
+  <p>到目前为止，
+  我们在本章中讨论的大多数想法，
+  都可以视为对现有操作工具箱相对温和的扩展。
+  但与移动机器人导航相关的一些重要问题，
+  在桌面操作中其实根本不会出现。</p>
 
-  <subsection><h1>Mapping (in addition to localization)</h1>
+  <subsection><h1>建图（以及定位）</h1>
   
   </subsection>
 
-  <subsection><h1>Identifying traversable terrain</h1>
+  <subsection><h1>识别可通行地形</h1>
   
   </subsection>
 
 </section>
 
 
-<section><h1>Exercises</h1>
-  <exercise><h1>Setting Up a Simulation</h1>
-    <p> For this exercise, you will load objects into a simulation to set up a useful manipulation scene.
-    You will work exclusively in <script>document.write(notebook_link('mobile', notebook='simulation_set_up', link_text='this notebook'))</script>. You will be asked to complete the following steps: </p>
+<section><h1>练习</h1>
+  <exercise><h1>搭建仿真环境</h1>
+    <p> 在这个练习中，
+    你将把物体加载到仿真中，
+    以构建一个有用的操作场景。
+    你将只在
+    <script>document.write(notebook_link('mobile', notebook='simulation_set_up', link_text='这个 notebook'))</script>
+    中完成本练习。
+    你需要完成以下步骤：</p>
     <ol type="a">
-      <li> Analyze the collision geometry of pre-defined SDF files. </li>
-      <li> Create your own simulation. </li>
+      <li> 分析预定义 SDF 文件中的碰撞几何体。 </li>
+      <li> 创建你自己的仿真环境。 </li>
     </ol>
   </exercise>    
 
-  <exercise><h1>Mobile Base Inverse Kinematics</h1>
-    <p> For this exercise, you will implement an inverse kinematics optimization for a manipulator with both a fixed and mobile base.
-    By removing position constraints on the base of our robot, we can solve the optimization much more easily.
-    You will work exclusively in <script>document.write(notebook_link('mobile', notebook='mobile_base_ik', link_text='this notebook'))</script>.</p>
+  <exercise><h1>移动底座逆运动学</h1>
+    <p> 在这个练习中，
+    你将为同时具有固定底座和移动底座的操作机器人，
+    实现一个逆运动学优化问题。
+    通过移除机器人底座的位置约束，
+    我们能够更加容易地求解该优化问题。
+    你将只在
+    <script>document.write(notebook_link('mobile', notebook='mobile_base_ik', link_text='这个 notebook'))</script>
+    中完成本练习。</p>
   </exercise>
 </section>
 

@@ -14,6 +14,7 @@ __pycache__/
 /.idea/
 /.ijwb/
 /.venv/
+/.pdf-tools/
 /.claude/
 /wandb/
 /bazel-*

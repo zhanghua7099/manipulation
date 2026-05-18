@@ -56,123 +56,170 @@ href="https://www.youtube.com/channel/UChfUOAhz7ynELF-s_1LPpWg">Lecture videos a
 <script type="text/javascript">document.write(notebook_header('spatial'))
 </script>
 <!-- EVERYTHING ABOVE THIS LINE IS OVERWRITTEN BY THE INSTALL SCRIPT -->
-<chapter class="appendix" style="counter-reset: chapter 0"><h1>Spatial Algebra</h1>
+<chapter class="appendix" style="counter-reset: chapter 0"><h1>空间代数</h1>
 
-<p>Throughout these notes we've introduced the basic rules of spatial algebra. I find
-myself looking back at them often! For ease of reference, I've compiled them again here.
-These make heavy use of our "<a href="pick.html#mongram">monogram notation</a>".</p>
+<p>在这些笔记中，我们已经介绍了空间代数的基本规则。我发现自己经常会回过头来查阅它们！为了方便参考，我在这里再次将它们整理汇总。
+这些内容大量使用了我们的“<a href="pick.html#mongram">单字母记号法（monogram notation）</a>”。</p>
 
-<p>The Drake documentation also has a very nice summary of the <a
-href="https://drake.mit.edu/doxygen_cxx/group__multibody__quantities.html">multibody
-quantities</a> and how they map to the monogram notation.</p>
+<p>Drake 文档中也有一份非常好的总结，介绍了<a
+href="https://drake.mit.edu/doxygen_cxx/group__multibody__quantities.html">多体系统中的量（multibody
+quantities）</a>以及它们如何映射到单字母记号法。</p>
 
-<section><h1>Position, Rotation, and Pose</h1></section>
+<section><h1>位置、旋转与位姿</h1></section>
 
-<p>As we introduced <a href="pick.html#spatial_algebra">here</a>, we use ${}^Bp^A_C$ to
-denote a position of point or frame $A$ relative to point or frame $B$ expressed in
-frame $C$. We use ${}^BR^A$ to denote the orientation of frame $A$ measured from frame
-$B$; unlike vectors, pure rotations do not have an additional "expressed in" frame.
-Similarly, we use ${}^BX^A$ to denote the pose/transform of frame $A$ measured from
-frame $B$. We do not use the "expressed in" frame subscript for pose; we always want the
-pose expressed in the reference frame.</p>
+<p>正如我们在<a href="pick.html#spatial_algebra">这里</a>介绍的那样，我们使用 ${}^Bp^A_C$
+表示点或坐标系 $A$ 相对于点或坐标系 $B$ 的位置，并且该位置在坐标系 $C$ 中表达。我们使用 ${}^BR^A$
+表示从坐标系 $B$ 测量得到的坐标系 $A$ 的朝向；与向量不同，纯旋转不需要额外的“在哪个坐标系中表达”的坐标系下标。
+类似地，我们使用 ${}^BX^A$ 表示从坐标系 $B$ 测量得到的坐标系 $A$ 的位姿/变换。
+对于位姿，我们不使用“表达于”的坐标系下标；我们始终希望位姿是在参考坐标系中表达的。</p>
 
 <p>
-  The basic rules of spatial algebra are as follows:  
+  空间代数的基本规则如下：  
   <ul>
-    <li>Positions expressed in the same frame can be added when their
-    reference and target symbols match: \begin{equation}{}^Ap^B_F + {}^Bp^C_F
-    = {}^Ap^C_F.\end{equation} Addition is commutative, and the additive
-    inverse is well defined: \begin{equation}{}^Ap^B_F = -
-    {}^Bp^A_F.\end{equation} Those should be pretty intuitive; make sure you
-    confirm them for yourself.</li>
-    <li>Multiplication by a rotation can be used to change the "expressed in"
-    frame: \begin{equation}{}^Ap^B_G = {}^GR^F {}^Ap^B_F.\end{equation}  You
-    might be surprised that a rotation alone is enough to change the
-    expressed-in frame, but it's true. The position of the expressed-in frame
-    does <i>not</i> affect the relative position between two points.</li>
-    <li>Rotations can be multiplied when their reference and target symbols
-    match: \begin{equation}{}^AR^B \: {}^BR^C = {}^AR^C.\end{equation}  The
-    inverse operation is also simply defined:
-    \begin{equation}\left[{}^AR^B\right]^{-1} = {}^BR^A.\end{equation} When
-    the rotation is represented as a rotation matrix, this is literally the
-    matrix inverse, and since rotation matrices are orthonormal, we also have
+    <li>当位置在同一个表达坐标系中表达，并且它们的参考符号与目标符号匹配时，可以相加：
+    \begin{equation}{}^Ap^B_F + {}^Bp^C_F
+    = {}^Ap^C_F.\end{equation}
+    加法满足交换律，并且其加法逆定义明确：
+    \begin{equation}{}^Ap^B_F = -
+    {}^Bp^A_F.\end{equation}
+    这些规则应该都比较直观；请务必自己验证一下。</li>
+
+    <li>与旋转相乘可以用来改变“表达于”的坐标系：
+    \begin{equation}{}^Ap^B_G = {}^GR^F {}^Ap^B_F.\end{equation}
+    你可能会惊讶，仅靠旋转就足以改变表达坐标系，但事实确实如此。
+    表达坐标系的位置 <i>不会</i> 影响两个点之间的相对位置。</li>
+
+    <li>当旋转的参考符号与目标符号匹配时，旋转可以相乘：
+    \begin{equation}{}^AR^B \: {}^BR^C = {}^AR^C.\end{equation}
+    其逆运算也有简单定义：
+    \begin{equation}\left[{}^AR^B\right]^{-1} = {}^BR^A.\end{equation}
+    当旋转被表示为旋转矩阵时，这实际上就是矩阵求逆；
+    并且由于旋转矩阵是正交归一的，我们还有
     $R^{-1}=R^T.$</li>
-    <li>Transforms bundle this up into a single, convenient notation when
-    positions are measured from a frame (and the same frame they are expressed
-    in): \begin{equation}{}^Gp^A = {}^GX^F {}^Fp^A = {}^Gp^F + {}^Fp^A_G
+
+    <li>当位置是相对于某个坐标系测量的（并且也在同一个坐标系中表达）时，
+    变换将这些关系整合为一种统一而方便的记号：
+    \begin{equation}{}^Gp^A = {}^GX^F {}^Fp^A = {}^Gp^F + {}^Fp^A_G
     = {}^Gp^F + {}^GR^F {}^Fp^A.\end{equation}</li>
-    <li>Transforms compose: \begin{equation}{}^AX^B {}^BX^C =
-    {}^AX^C,\end{equation}  and have an inverse
-    \begin{equation}\left[{}^AX^B\right]^{-1} = {}^BX^A.\end{equation}  Please
-    note that for transforms, we generally do
-    <i>not</i> have that $X^{-1}$ is $X^T,$ though it still has a simple form.
+
+    <li>变换可以复合：
+    \begin{equation}{}^AX^B {}^BX^C =
+    {}^AX^C,\end{equation}
+    并且存在逆变换：
+    \begin{equation}\left[{}^AX^B\right]^{-1} = {}^BX^A.\end{equation}
+    请注意，对于变换而言，我们通常
+    <i>并不</i> 有 $X^{-1}$ 等于 $X^T$，
+    尽管它仍然具有一种简单的形式。
   </li>
   </ul>
   </p>
 
-  <section><h1>Spatial velocity</h1>
+  <section><h1>空间速度</h1>
   
-    <todo>Add acceleration</todo>
+    <todo>添加加速度</todo>
     
-    <p>As we introduced <a href="pick.html#jacobian">here</a>, we represent the rate of
-    change in pose using a six-component vector for <a
-    href="https://drake.mit.edu/doxygen_cxx/group__multibody__spatial__vectors.html"><i>spatial
-    velocity</i></a>: \begin{equation}{}^AV^B_C = \begin{bmatrix} {}^A\omega^B_C \\
-    {}^A\text{v}^B_C \end{bmatrix}.\end{equation} ${}^AV^B_C$ is the spatial velocity
-    (also known as a "twist") of frame $B$ measured in frame $A$ expressed in frame $C$,
-    ${}^A\omega^B_C \in \Re^3$ is the
-    <i>angular velocity</i> (of frame $B$ measured in $A$ expressed in frame
-    $C$), and ${}^A\text{v}^B_C \in \Re^3$ is the <i>translational velocity</i>
-    (along with the same shorthands as for positions).  Spatial velocities fit nicely into our spatial
-    algebra:<ul>
-      <li>Velocities add when they are expressed in the same frame: \begin{gather}
-      {}^A\text{v}^B_F + {}^B\text{v}^C_F = {}^A\text{v}^C_F, \qquad {}^A\omega^B_F +
-      {}^B\omega^C_F = {}^A\omega^C_F,\end{gather} and have the additive inverse,
-      ${}^AV^C_F = - {}^CV^A_F,$.</li>
-      <li>Rotations can be used to change between the "expressed-in"
-      frames: \begin{equation} {}^A\text{v}^B_G = {}^GR^F {}^A\text{v}^B_F,
-      \qquad {}^A\omega^B_G = {}^GR^F {}^A\omega^B_F.\end{equation}
+    <p>正如我们在<a href="pick.html#jacobian">这里</a>介绍的那样，我们使用一个六维向量来表示位姿的变化率，
+    即<a
+    href="https://drake.mit.edu/doxygen_cxx/group__multibody__spatial__vectors.html"><i>空间速度（spatial
+    velocity）</i></a>：
+    \begin{equation}{}^AV^B_C = \begin{bmatrix} {}^A\omega^B_C \\
+    {}^A\text{v}^B_C \end{bmatrix}.\end{equation}
+    
+    ${}^AV^B_C$ 表示坐标系 $B$ 相对于坐标系 $A$ 测量得到、并在坐标系 $C$ 中表达的空间速度
+    （也称为“twist”）；
+    ${}^A\omega^B_C \in \Re^3$ 表示
+    <i>角速度（angular velocity）</i>
+    （即坐标系 $B$ 相对于坐标系 $A$ 的角速度，并在坐标系 $C$ 中表达）；
+    而 ${}^A\text{v}^B_C \in \Re^3$ 表示
+    <i>平移速度（translational velocity）</i>
+    （其简写规则与位置向量相同）。
+    
+    空间速度能够很好地融入我们的空间代数体系：
+    
+    <ul>
+      <li>当速度在同一个坐标系中表达时，可以相加：
+      \begin{gather}
+      {}^A\text{v}^B_F + {}^B\text{v}^C_F = {}^A\text{v}^C_F, \qquad
+      {}^A\omega^B_F +
+      {}^B\omega^C_F = {}^A\omega^C_F,
+      \end{gather}
+      并且存在加法逆元，
+      ${}^AV^C_F = - {}^CV^A_F,$。</li>
+
+      <li>旋转可以用来改变“表达于”的坐标系：
+      \begin{equation}
+      {}^A\text{v}^B_G = {}^GR^F {}^A\text{v}^B_F,
+      \qquad
+      {}^A\omega^B_G = {}^GR^F {}^A\omega^B_F.
+      \end{equation}
         </li>
-        <li>Translational velocities compose across frames with:
-        \begin{equation}{}^A\text{v}^C_F = {}^A\text{v}^B_F + {}^B\text{v}^C_F
-        + {}^A\omega^B_F \times {}^Bp^C_F.\end{equation} </li>
-      <li>This reveals that additive inverse for translational velocities is
-      not obtained by switching the reference and measured-in frames; it is
-      slightly more complicated: \begin{equation}-{}^A\text{v}^B_F =
-      {}^B\text{v}^A_F + {}^A\omega^B_F \times {}^Bp^A_F.\end{equation} .</li>
+
+        <li>平移速度在不同坐标系之间满足如下组合关系：
+        \begin{equation}
+        {}^A\text{v}^C_F =
+        {}^A\text{v}^B_F +
+        {}^B\text{v}^C_F
+        + {}^A\omega^B_F \times {}^Bp^C_F.
+        \end{equation}
+        </li>
+
+      <li>这表明，平移速度的加法逆元
+      并不能简单地通过交换参考坐标系与测量坐标系得到；
+      它会稍微复杂一些：
+      \begin{equation}
+      -{}^A\text{v}^B_F =
+      {}^B\text{v}^A_F +
+      {}^A\omega^B_F \times {}^Bp^A_F.
+      \end{equation} .</li>
     </ul>
   </p>    
 
   </section>
 
-  <section><h1>Spatial force</h1>
+  <section><h1>空间力</h1>
 
-    <p>As we introduced <a href="clutter.html#spatial_force">here</a>, we define a
-    six-component vector for <a
-    href="https://drake.mit.edu/doxygen_cxx/group__multibody__spatial__vectors.html"><i>spatial
-    force</i></a>, using the monogram notation:
-    \begin{equation}F^{B_p}_{{\text{name}},C} = \begin{bmatrix}
-    \tau^{B_p}_{\text{name},C} \\ f^{B_p}_{\text{name},C} \end{bmatrix} \quad \text{ or,
-    if you prefer } \quad \left[F^{B_p}_{\text{name}}\right]_C = \begin{bmatrix}
-    \left[\tau^{B_p}_{\text{name}}\right]_C \\ \left[f^{B_p}_{\text{name}}\right]_C
-    \end{bmatrix}.\end{equation} $F^{B_p}_{\text{name},C}$ is the named spatial force
-    applied to a point, or frame origin, $B_p$, expressed in frame $C$. The name is
-    optional, and the expressed in frame, if unspecified, is the world frame. For forces
-    in particular, it is recommended that we include the body, $B$, that the force is
-    being applied to in the symbol for the point $B_p$, especially since we will often
-    have equal and opposite forces.</p>
+    <p>正如我们在<a href="clutter.html#spatial_force">这里</a>介绍的那样，
+    我们使用单字母记号法定义一个六维向量来表示
+    <a
+    href="https://drake.mit.edu/doxygen_cxx/group__multibody__spatial__vectors.html"><i>空间力（spatial
+    force）</i></a>：
+    
+    \begin{equation}
+    F^{B_p}_{{\text{name}},C} =
+    \begin{bmatrix}
+    \tau^{B_p}_{\text{name},C} \\
+    f^{B_p}_{\text{name},C}
+    \end{bmatrix}
+    \quad \text{ 或者，如果你更喜欢 } \quad
+    \left[F^{B_p}_{\text{name}}\right]_C =
+    \begin{bmatrix}
+    \left[\tau^{B_p}_{\text{name}}\right]_C \\
+    \left[f^{B_p}_{\text{name}}\right]_C
+    \end{bmatrix}.
+    \end{equation}
+    
+    $F^{B_p}_{\text{name},C}$ 表示施加在点（或坐标系原点）$B_p$
+    上、并在坐标系 $C$ 中表达的具名空间力。
+    
+    其中，“名称（name）”是可选的；
+    如果未指定表达坐标系，则默认是在世界坐标系中表达。
+    
+    特别对于力而言，建议我们在点 $B_p$ 的符号中包含该力所施加到的刚体 $B$，
+    因为我们经常会遇到大小相等、方向相反的作用力与反作用力。</p>
       
-    <p id="spatial_force_algebra">Spatial forces fit neatly into our spatial algebra:
+    <p id="spatial_force_algebra">空间力能够整齐地融入我们的空间代数体系：
     <ul>
-      <li>Spatial forces add when they are applied to the same body in the
-      same frame, e.g.: \begin{equation}F^{B_p}_{\text{total},C}
+      <li>当空间力作用于同一个刚体、并在同一个坐标系中表达时，可以相加，例如：
+      \begin{equation}F^{B_p}_{\text{total},C}
       = \sum_i F^{B_p}_{i,C} .\end{equation}</li>
-      <li>Shifting a spatial force from one application point, $B_p$, to
-      another point, $B_q$, uses the cross product: \begin{equation} f^{B_q}_C
+
+      <li>将空间力从一个作用点 $B_p$ 平移到另一个点 $B_q$ 时，需要使用叉乘：
+      \begin{equation} f^{B_q}_C
       = f^{B_p}_C, \qquad \tau^{B_q}_C = \tau^{B_p}_C + {}^{B_q}p^{B_p}_C
       \times f^{B_p}_C.\label{eq:spatial_force_shift}\end{equation}</li>
-      <li>As with all spatial vectors, rotations can be used to change
-      between the "expressed-in" frames: \begin{equation} f^{B_p}_D = {}^DR^C
+
+      <li>与所有空间向量一样，旋转可以用来在不同的“表达于”坐标系之间进行转换：
+      \begin{equation} f^{B_p}_D = {}^DR^C
       f^{B_p}_C, \qquad \tau^{B_p}_D = {}^DR^C
       \tau^{B_p}_C.\end{equation}</li>
     </ul>
