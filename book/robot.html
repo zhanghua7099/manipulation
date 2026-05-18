@@ -58,379 +58,158 @@ href="https://www.youtube.com/channel/UChfUOAhz7ynELF-s_1LPpWg">Lecture videos a
 <!-- EVERYTHING ABOVE THIS LINE IS OVERWRITTEN BY THE INSTALL SCRIPT -->
 <chapter style="counter-reset: chapter 1"><h1>Let's get you a robot</h1>
       
-  <p>In this chapter we're going to outfit your <a
-  href="https://en.wikipedia.org/wiki/Mecha">mech</a>.  I want to make sure you
-  understand the robot hardware that we're using in these notes, and how it
-  compares to the other hardware available today.  You should also come away
-  with an understanding of how we simulate the robot and what commands you
-  can send to the robot interface.</p>
+  <p>在本章中，我们将为你的<a
+  href="https://en.wikipedia.org/wiki/Mecha">机甲</a>配备装备。我想确保你理解这些笔记中所使用的机器人硬件，以及它与当今其他可用硬件相比如何。你还应该在学完后理解我们如何仿真机器人，以及你可以向机器人接口发送哪些命令。</p>
     
-  <section><h1>Robot description files</h1>
+  <section><h1>机器人描述文件</h1>
   
-    <p>In the majority of the chapters, we'll make repeated use of just one or
-    two robot configurations. One of the great things about modern robotics is
-    that many of the tools we will develop over the course of these notes are
-    quite general, and can be transferred from one robot to another easily. I
-    could imagine a future version of these notes where you really do get to
-    build out your robot in this chapter, and use your customized robot for the
-    remaining chapters!</p>
+    <p>在大多数章节中，我们会反复使用一两种机器人配置。现代机器人学的一大优点是，我们将在这些笔记中开发的许多工具都相当通用，并且可以很容易地从一个机器人迁移到另一个机器人。我可以想象这些笔记未来的某个版本：你真的可以在本章中构建自己的机器人，并在后续章节中使用你的定制机器人！</p>
     
-    <p>The ability to easily simulate/control a variety of robots is made
-    possible in part by the proliferation of common file formats for describing
-    our robots.  Unfortunately, the field has not converged on a single
-    preferred format (yet), and each of them have their quirks. Drake currently
-    loads <a href="http://wiki.ros.org/urdf">Universal Robot Description
-    Format</a> (URDF), <a href="http://sdformat.org/">Simulation Description
-    Format</a> (SDF), and has limited support for the <a
+    <p>之所以能够轻松地仿真/控制各种机器人，部分原因在于用于描述机器人的通用文件格式已经大量普及。遗憾的是，这个领域尚未收敛到单一的首选格式（至少目前还没有），而且每种格式都有自己的怪癖。Drake 目前可以加载 <a href="http://wiki.ros.org/urdf">通用机器人描述格式</a>（URDF）、<a href="http://sdformat.org/">仿真描述格式</a>（SDF），并且对 <a
     href="https://mujoco.readthedocs.io/en/latest/XMLreference.html">MuJoCo
-    format</a> (MJCF). The Drake developers have been trying to upstream
-    improvements to SDF rather than start yet another format, but we do have a
-    very simple YAML specification called <a
+    格式</a>（MJCF）提供有限支持。Drake 开发者一直在尝试向上游贡献对 SDF 的改进，而不是再创建另一种格式；不过我们确实有一个非常简单的 YAML 规范，称为 <a
     href="https://drake.mit.edu/doxygen_cxx/structdrake_1_1multibody_1_1parsing_1_1_model_directives.html">Drake
-    Model Directives</a> which makes it very quick and easy to load multiple
-    robots/objects from these different file formats into one simulation; you
-    saw an example of this in the
-    <script>document.write(notebook_link('intro', 'intro', "introduction chapter notebook"))</script>.</p>
+    模型指令</a>，它可以非常快速、轻松地把来自这些不同文件格式的多个机器人/物体加载到同一个仿真中；你已经在
+    <script>document.write(notebook_link('intro', 'intro', "导论章节笔记本"))</script>中看到过这样的示例。</p>
 
   </section>
 
-  <section><h1>Arms</h1>
+  <section><h1>机械臂</h1>
 
-    <p>There appear to be a lot of robotics arms available on the market.  So
-    how does one choose?  Cost, reliability, usability, payload, range of
-    motion, ...; there are many important considerations.  And the choices we
-    might make for a research lab might be very different than the choices we
-    might make as a startup.</p>
+    <p>市场上似乎有很多机器人机械臂可供选择。那么该如何选择呢？成本、可靠性、可用性、负载能力、运动范围，……有许多重要的考虑因素。而我们为研究实验室所做的选择，可能会与我们作为创业公司时所做的选择非常不同。</p>
     
-    <example><h1>Robot arms</h1>
+    <example><h1>机器人机械臂</h1>
     
-      <p>I've put together a simple example to let you explore some of the
-      various robot arms that are popular today. Let me know if your favorite arm isn't on the list yet!</p>
+      <p>我整理了一个简单示例，让你可以探索当今一些流行的机器人机械臂。如果你最喜欢的机械臂还不在列表中，请告诉我！</p>
       
       <script>document.write(notebook_link('robot', notebook='inspector'))</script>
 
     </example>
 
-    <p>There is one particular requirement which, if we want our robot to
-    satisfy, quickly winnows the field to only a few viable platforms: that
-    requirement is joint-torque sensing and control.  Out of the
-    torque-controlled robots on the market, I've used the Kuka LBR iiwa robot
-    most often throughout these notes (I will try to use the lower case "iiwa"
-    to be <a
-    href="https://www.kuka.com/en-us/products/robotics-systems/industrial-robots/lbr-iiwa">consistent
-    with the manufacturer</a>, but it looks wrong to me every time!).  </p>
+    <p>有一个特别的需求，如果我们希望机器人满足它，那么可选的平台会迅速缩减到少数几个可行方案：这个需求就是关节力矩传感与控制。在市场上的力矩控制机器人中，我在这些笔记里最常使用的是 Kuka LBR iiwa 机器人（我会尽量使用小写 “iiwa”，以<a
+    href="https://www.kuka.com/en-us/products/robotics-systems/industrial-robots/lbr-iiwa">与制造商保持一致</a>，不过每次看到它我都觉得有点别扭！）。</p>
     
     <figure>
       <img width="60%" src="https://assets.robotsguide.com/images/7p2whiua/production/3be5a70e96f4e78937304338ac67aa090af3d5e8-2048x1536.jpg"/>
-      <figcaption><a href="https://www.kuka.com/en-us/products/robotics-systems/industrial-robots/lbr-iiwa">Kuka LBR iiwa robot</a>.  This one has a 7kg payload.</figcaption>
+      <figcaption><a href="https://www.kuka.com/en-us/products/robotics-systems/industrial-robots/lbr-iiwa">Kuka LBR iiwa 机器人</a>。这台机器人的负载能力为 7kg。</figcaption>
     </figure>
 
-    <p>It's not absolutely clear that the joint-torque sensing and control
-    feature is required, even for very advanced applications, but as a
-    researcher who cares a great deal about the contact interactions between my
-    robots and the world, I prefer to have the capability and explore whether I
-    need it rather than wonder what life might have been like. To better
-    understand why, let us start by understanding the difference between most
-    robots, which are position-controlled, and the handful of robots that have
-    accepted the additional cost and complexity to provide torque sensing and
-    control.</p>
+    <p>即使对于非常高级的应用来说，关节力矩传感与控制功能是否绝对必要，其实也并不完全明确。但作为一名非常关注机器人与世界之间接触交互的研究者，我更倾向于拥有这种能力，并去探索自己是否真的需要它，而不是事后猜想“如果当初有的话会怎样”。为了更好地理解这一点，让我们先了解一下：大多数机器人（位置控制机器人）与少数愿意承担额外成本和复杂度来提供力矩传感与控制功能的机器人之间，到底有什么区别。</p>
     
-    <subsection id="position-controlled"><h1>Position-controlled robots</h1>
+    <subsection id="position-controlled"><h1>位置控制机器人</h1>
 
-      <figure>
-        <img height="200px" src="https://cdn.radwell.com/productgoogleimages/5624b4018e1a428988e7054d459dfbfc.jpg" />
-        <img height="200px" src="https://assets.robotsguide.com/images/7p2whiua/production/04c40b7ea5658fbbdc8f983025c0e31933e306ce-2048x1536.jpg" />
-        <figcaption>Two popular position controlled manipulators.  (Left) The UR10 from Universal Robotics. (Right) The ABB Yumi.</figcaption>
-      </figure>
+    <figure>
+      <img style="width:45%; max-height:4cm; object-fit:contain;" src="https://cdn.radwell.com/productgoogleimages/5624b4018e1a428988e7054d459dfbfc.jpg" />
+      <img style="width:45%; max-height:4cm; object-fit:contain;" src="https://assets.robotsguide.com/images/7p2whiua/production/04c40b7ea5658fbbdc8f983025c0e31933e306ce-2048x1536.jpg" />
+      <figcaption>两种流行的位置控制机械臂。（左）Universal Robotics 的 UR10。（右）ABB Yumi。</figcaption>
+    </figure>
 
-      <p>Most robot arms today are "position controlled" -- given a desired
-      joint position (or joint trajectory), the robot executes it with
-      relatively high precision.  Basically all arms can be position controlled
-      -- if the robot offers a torque control interface (with sufficiently high
-      bandwidth) then we can certainly regulate positions, too.  In practice,
-      calling a robot "position controlled" is a polite way of saying that it
-      does not offer torque control.  Do you know why position control and not
-      torque control is the norm?</p>
+      <p>如今的大多数机器人机械臂都是“位置控制”的——给定一个期望关节位置（或关节轨迹），机器人会以相对较高的精度执行它。基本上，所有机械臂都可以进行位置控制——如果机器人提供了一个（带有足够高带宽的）力矩控制接口，那么我们当然也能够调节位置。实际上，把一个机器人称为“位置控制”，往往是一种比较委婉的说法，意思是它并不提供力矩控制。你知道为什么位置控制而不是力矩控制会成为主流吗？</p>
 
-      <p>Lightweight arms like the examples above are actuated with electric
-      motors.  For a reasonably high-quality electric motor (with windings
-      designed to minimize torque ripple, etc), we expect the torque that the
-      motor outputs to be directly proportional to the current that we apply:
-      $$\tau_{motor} = k_t i,$$ where $\tau_{motor}$ is the motor torque, $i$ is
-      the applied current, and $k_t$ is the "<a
-      href="https://en.wikipedia.org/wiki/Motor_constants">motor torque
-      constant</a>". (Similarly, applied voltage has a simple (affine)
-      relationship with the motor's steady-state velocity).  If we can control
-      the current, then why can we not control the torque?  
+      <p>像上面示例中的轻量级机械臂，通常由电动机驱动。对于质量相当不错的电机（例如绕组设计能够尽量减少力矩波动等），我们预期电机输出的力矩与施加的电流直接成正比：
+      $$\tau_{motor} = k_t i,$$
+      其中 $\tau_{motor}$ 是电机力矩，$i$ 是施加的电流，而 $k_t$ 是“<a
+      href="https://en.wikipedia.org/wiki/Motor_constants">电机力矩常数</a>”。（类似地，施加电压与电机稳态速度之间也存在简单的（仿射）关系）。如果我们能够控制电流，那么为什么不能直接控制力矩呢？  
       </p>
 
-      <p>The short answer is that to achieve reasonable cost and weight, we
-      typically choose small electric motors with large gear reductions, and
-      gear reductions come with a number of dynamic effects that are very
-      difficult to model -- including backlash, vibration, and friction. So the
-      simple relationship between current and torque breaks down.  Conventional
-      wisdom is that for large gear ratios (say $\gg 10$), the unmodeled terms
-      are significant enough that they cannot be ignored, and torque is no
-      longer simply related to current.</p>
+      <p>简短的答案是：为了实现合理的成本与重量，我们通常会选择较小的电动机，并搭配较大的减速比，而减速机构会带来许多极难建模的动力学效应——包括齿隙、振动和摩擦。因此，电流与力矩之间的简单关系就会失效。传统观点认为，当减速比较大（例如 $\gg 10$）时，这些未建模项已经足够显著，以至于无法忽略，此时力矩就不再与电流简单对应。</p>
+      
+      <subsubsection><h1>位置控制。</h1>
 
-      <subsubsection><h1>Position Control.</h1>
+        <p>在没有传动系统动力学良好模型的情况下，我们该如何克服这一挑战？调节<i>电机</i>的电流或速度，只需要在传动系统的电机侧安装传感器。要精确调节关节，我们通常需要在传动系统的输出侧增加更多传感器。重要的是，尽管由传动系统产生的力矩并不能被精确知道，但它们也不是任意的——例如，它们绝不会向系统中注入能量。最重要的是，我们可以确信，输入到电机中的电流与关节处的力矩，并最终与关节加速度之间，存在一种<i>单调递增</i>关系。请注意，我是谨慎地选择了“单调”这个词，它表示“非递减”，但<i>并不</i>意味着“严格递增”；例如，当某个关节从静止状态开始运动时，静摩擦会抵抗较小的力矩，而输出端不会产生任何加速度。</p>
 
-        <p>How can we overcome this challenge of not having a good model of the
-        transmission dynamics?  Regulating the current or speed <i>of the
-        motor</i> only requires sensors on the motor side of the transmission.
-        To accurately regulate the joint, we typically need to add more sensors
-        on the output side of the transmission. Importantly, although the
-        torques due to the transmission are not known precisely, they are also
-        not arbitrary -- for instance they will never add energy into the
-        system. Most importantly, we can be confident that there is a
-        <i>monotonically increasing</i> relationship between the current that
-        we put into the motor and the torque at the joint, and ultimately the
-        acceleration of the joint.  Note that I chose the term monotonic
-        carefully, meaning "non-decreasing" but <i>not</i>
-        implying "strictly increasing", because, for instance, when a joint is
-        starting from rest, static friction will resist small torques without
-        having any acceleration at the output.</p>
-
-        <p>The most common sensor to add to the joint is a position sensor --
-        typically an encoder or potentiometer -- these are inexpensive,
-        accurate, and robust.  In practice, we think of these as providing
-        (after some signal filtering/conditioning) accurate measurements of the
-        joint position and joint velocity -- joint accelerations can also be
-        obtained via differentiating twice but are generally considered more
-        noisy and less suitable for use in tight feedback loops.  Position
-        sensors are sufficient for accurately tracking desired position
-        trajectories of the arm.  For each joint, if we denote the joint
-        position as $q$ and we are given a desired trajectory $q^d(t)$, then I
-        can track this using <a
-        href="https://en.wikipedia.org/wiki/PID_controller">proportional-integral-derivative
-        (PID) control</a>: $$\tau = k_p (q^d - q) + k_d (\dot{q}^d - \dot{q}) +
-        k_i \int (q^d - q) dt,$$ with $k_p$, $k_d$, and $k_i$ being the
-        position, velocity, and integral gains.  PID control has a rich theory,
-        and a trove of knowledge about how to choose the gains, which I will
-        not reproduce here.  I will note, however, that when we simulate
-        position-controlled robots we often need to use different gains for the
-        physical robot and for our simulations. This is due to the transmission
-        dynamics, but also the fact that PID controllers in hardware typically
-        output voltage commands (via <a
-        href="https://en.wikipedia.org/wiki/Pulse-width_modulation">pulse-width
-        modulation</a>) instead of current commands. Closing this modeling gap
-        has traditionally not been a priority for robot simulation -- there are
-        enough other details to get right which dominate the "sim-to-real" gap
-        -- but I suspect that as the field matures the mainstream robotics
-        simulators will eventually capture this, too.</p>
+        <p>最常见的做法是在关节处添加位置传感器——通常是编码器或电位计——它们价格低廉、精度高且可靠。在实践中，我们认为这些传感器（经过一定的信号滤波/调理之后）能够提供关节位置和关节速度的精确测量；关节加速度也可以通过二次微分获得，但通常被认为噪声更大，也不太适合用于紧密反馈回路。位置传感器足以精确跟踪机械臂的期望位置轨迹。对于每个关节，如果我们将关节位置记为 $q$，并给定一个期望轨迹 $q^d(t)$，那么我可以使用<a
+        href="https://en.wikipedia.org/wiki/PID_controller">比例-积分-微分（PID）控制</a>来跟踪它：$$\tau = k_p (q^d - q) + k_d (\dot{q}^d - \dot{q}) +
+        k_i \int (q^d - q) dt,$$ 其中 $k_p$、$k_d$ 和 $k_i$ 分别是位置、速度和积分增益。PID 控制有丰富的理论基础，也有大量关于如何选择增益的知识，这里我不会重复展开。不过我要指出的是，当我们仿真位置控制机器人时，通常需要为实体机器人和仿真使用不同的增益。这是由于传动系统动力学造成的，同时也因为硬件中的 PID 控制器通常输出的是电压命令（通过<a
+        href="https://en.wikipedia.org/wiki/Pulse-width_modulation">脉宽调制</a>），而不是电流命令。弥合这一建模差距，传统上并不是机器人仿真的重点——还有足够多其他细节需要做好，它们更主导“仿真到现实”的差距——但我怀疑，随着该领域逐渐成熟，主流机器人仿真器最终也会捕捉到这一点。</p>
         
-        <p>Some of you are thinking, "I can train a neural network to model
-        <i>anything</i>, I'm not afraid of difficult-to-model transmissions!" I
-        do think there is reason to be optimistic about this approach; there
-        are a number of initial demonstrations in this direction (e.g.
-        <elib>Hwangbo19</elib>). This is not quite as useful as if we can have
-        a first-principles model that can generalize to new actuators from a
-        few parameters in a description file, but could be very productive.</p>
+        <p>你们中的一些人可能正在想：“我可以训练一个神经网络来建模<i>任何东西</i>，我才不怕难以建模的传动系统！”我确实认为这种方法有值得乐观的理由；在这个方向上已经有一些初步演示（例如
+        <elib>Hwangbo19</elib>）。这并不像拥有一个第一性原理模型那样有用，后者能够仅凭描述文件中的少量参数就泛化到新的执行器，但这种方法仍然可能非常有成效。</p>
 
-        <todo>Think through the implications of the PWM voltage command instead
-        of direct motor current.</todo>
+        <todo>仔细思考使用 PWM 电压命令而不是直接电机电流所带来的影响。</todo>
 
-        <todo>Add a simulation of a single joint against gravity with PID
-        control gains on sliders, following a sinusoidal trajectory.</todo>
+        <todo>添加一个单关节在重力作用下的仿真，通过滑块调节 PID 控制增益，并跟踪正弦轨迹。</todo>
 
       </subsubsection>
 
-      <subsubsection><h1>An aside: link dynamics with a transmission.</h1>
+      <subsubsection><h1>题外话：带传动系统的连杆动力学。</h1>
 
-        <p>One thing that might be surprising is that, despite the fact that
-        the joint dynamics of a manipulator are highly coupled and state
-        dependent, the PID gains are often chosen independently for each joint,
-        and are constant (not <a
-        href="https://en.wikipedia.org/wiki/Gain_scheduling">gain-scheduled</a>
-        ). Wouldn't you expect for the motor commands required for e.g. a robot
-        arm at full extension holding a milk jug might be very different than
-        the motor commands required when it is unloaded in a vertical hanging
-        position? Surprisingly, the required gains/commands might not be as
-        different as one would think.</p>
+        <p>有一件事可能会让人感到惊讶：尽管机械臂的关节动力学是高度耦合且依赖状态的，但 PID 增益往往仍然是针对每个关节独立选择的，并且是常数（而不是<a
+        href="https://en.wikipedia.org/wiki/Gain_scheduling">增益调度</a>的）。你难道不会认为，例如，一个完全伸展开并举着牛奶壶的机械臂，与一个在竖直悬挂位置且没有负载的机械臂，所需的电机命令会有很大不同吗？令人惊讶的是，所需的增益/命令可能并没有人们想象中那么不同。</p>
           
-        <p>Electric motors are most efficient at high speeds (often > 100 or
-        1,000 rotations per minute).  We probably don't actually want our robots
-        to move that fast even if they could!  So nearly all electric robots
-        have fairly substantial gear reductions, often on the order of 100:1;
-        the transmission output turns one revolution for every 100 rotations of
-        the motor, and the output torque is 100 times greater than the motor
-        torque.  For a gear ratio, $n$, actuating a joint $q$, we have
+        <p>电动机在高速下效率最高（通常超过每分钟 100 或 1000 转）。即便机器人真的能够运动得那么快，我们大概也并不希望它们真的这么快！因此，几乎所有电驱机器人都带有相当大的减速比，通常在 100:1 左右；也就是说，传动输出端每转一圈，电机实际上已经转了 100 圈，而输出力矩则是电机力矩的 100 倍。对于减速比为 $n$、驱动关节 $q$ 的传动系统，我们有
         $$q_{motor} = n q,\quad \dot{q}_{motor} = n \dot{q}, \quad
         \ddot{q}_{motor} = n \ddot{q}, \qquad \tau_{motor} = \frac{1}{n} \tau.$$
-        Interestingly, this has a fairly profound impact on the resulting
-        dynamics (given by $f = ma$), even for a single joint.  Writing the
-        relationship between joint torque and joint acceleration (no motors
-        yet), we can write $ma = \sum f$ in the rotational coordinates as
-        $$I_{arm} \ddot{q} = \tau_{gravity} + \tau,$$ where $I_{arm}$ is the
-        moment of inertia. For example, for a <a
+        有趣的是，这即使对于单个关节，也会对最终动力学（由 $f = ma$ 给出）产生相当深远的影响。先写出关节力矩与关节加速度之间的关系（暂时还不考虑电机），我们可以在旋转坐标中将 $ma = \sum f$ 写成
+        $$I_{arm} \ddot{q} = \tau_{gravity} + \tau,$$
+        其中 $I_{arm}$ 是转动惯量。例如，对于一个<a
         href="http://underactuated.mit.edu/pend.html"
-        target="underactuated">simple pendulum</a>, we might have $$ml^2
-        \ddot{q} = - mgl\sin{q} + \tau.$$  But the applied joint torque $\tau$
-        actually comes from the motor -- if we write this equation in terms of
-        motor coordinates we get: $$\frac{I_{arm}}{n} \ddot{q}_{motor} =
-        \tau_{gravity} + n\tau_{motor}.$$  If we divide through by $n$, and take
-        into account the fact that the motor itself has inertia (e.g. from the
-        large spinning magnets) that is not affected by the gear ratio, then we
-        obtain: $$\left(I_{motor} + \frac{I_{arm}}{n^2}\right) \ddot{q}_{motor}
+        target="underactuated">简单摆</a>，我们可能有
+        $$ml^2
+        \ddot{q} = - mgl\sin{q} + \tau.$$  
+        但施加到关节上的力矩 $\tau$ 实际上来自电机——如果我们用电机坐标来写这个方程，则得到：
+        $$\frac{I_{arm}}{n} \ddot{q}_{motor} =
+        \tau_{gravity} + n\tau_{motor}.$$  
+        如果两边同时除以 $n$，并考虑到电机本身也具有惯量（例如来自大型旋转磁体），而这个惯量并不会受到减速比影响，那么我们得到：
+        $$\left(I_{motor} + \frac{I_{arm}}{n^2}\right) \ddot{q}_{motor}
         = \frac{\tau_{gravity}}{n} + \tau_{motor}.$$</p>
           
-        <p>It's interesting to note that, even though the mass of the motors
-        might make up only a small fraction of the total mass of the robot, for
-        highly geared robots they can play a significant role in the dynamics
-        of the joints. We use the term <i>reflected inertia</i> to denote the
-        inertial load that is felt on the opposite side of a transmission, due
-        to the scaling effect of the transmission. The "reflected inertia" of
-        the arm at the motor is cut by the square of the gear ratio; or the
-        "reflected inertia" of the motor at the arm is multiplied by the square
-        of the gear ratio.  This has interesting consequences -- as we move to
-        the multi-link case, we will see that $I_{arm}$ is a <a
+        <p>值得注意的是，尽管电机的质量可能只占机器人总质量的一小部分，但对于高减速比机器人来说，它们在关节动力学中却可能起到重要作用。我们使用术语<i>反射惯量</i>（reflected inertia）来表示由于传动系统缩放效应，在传动系统另一侧感受到的惯性负载。机械臂在电机侧的“反射惯量”会被减速比的平方削弱；而电机在机械臂侧的“反射惯量”则会被减速比的平方放大。这会带来一些有趣的结果——当我们扩展到多连杆情况时，会发现 $I_{arm}$ 是一个<a
         href="http://underactuated.mit.edu/multibody.html"
-        target="underactuated">state-dependent function that captures the
-        inertia of the actuated link and also the inertial coupling of the
-        other joints in the manipulator</a>. $I_{motor}$, on the other hand, is
-        constant and only affects the local joint. For large gear ratios, the
-        $I_{motor}$ terms dominate the other terms, which has two important
-        effects: 1) it effectively diagonalizes the manipulator equations (the
-        inertial coupling terms are relatively small), and 2) the dynamics are
-        relatively constant throughout the workspace (the state-dependent terms
-        are relatively small). These effects make it relatively easy to tune
-        constant feedback gains for each joint individually that perform well
-        in all configurations.</p>
+        target="underactuated">依赖状态的函数，它不仅包含被驱动连杆的惯量，也包含机械臂其他关节之间的惯性耦合</a>。另一方面，$I_{motor}$ 是常数，并且只影响局部关节。对于较大的减速比，$I_{motor}$ 项会主导其他项，这会产生两个重要效果：1）它实际上使机械臂方程近似对角化（惯性耦合项相对较小）；2）动力学在整个工作空间中相对恒定（依赖状态的项相对较小）。这些效应使得我们能够相对容易地为每个关节单独调节固定反馈增益，并且在所有配置下都表现良好。</p>
 
-        <todo>The WSG is a great example of reflected inertia!</todo>
+        <todo>WSG 是反射惯量的一个很好的例子！</todo>
       </subsubsection>
 
     </subsection>
 
-    <subsection><h1>Torque-controlled robots</h1>
+    <subsection><h1>力矩控制机器人</h1>
 
-      <p>Although not as common, there are a number of robots that do support
-      direct control of the joint torques.  There are a handful of ways that
-      this capability can be realized.</p>  
+      <p>虽然并不那么常见，但确实有一些机器人支持对关节力矩的直接控制。实现这种能力有几种不同的方法。</p>  
         
-      <p>It <i>is</i> possible to actuate a robot using electric motors that
-      require only a small gear reduction (e.g. $\le$ 10:1) where the frictional
-      forces are negligible.  In the past, these "direct-drive
-      robots"<elib>Asada87</elib> had enormous motors and limited payloads.
-      More recently, robots like the <a
-      href="https://robots.ieee.org/robots/wam/">Barrett WAM</a> arm used cable
-      drives to keep the arm light by having large motors in the base.  And
-      just in the last few years, we've seen progress in high-torque outrunner
-      and frameless motors bringing in a new generation of low-cost,
-      "quasi-direct-drive" robots: e.g. MIT Cheetah <elib>Wensing17</elib>, <a
-      href="http://rll.berkeley.edu/blue/">Berkeley Blue</a>, and <a
-      href="https://www.halodi.com/">Halodi Eve</a>.</p>
+      <p>使用只需要较小减速比（例如 $\le$ 10:1）、且摩擦力可以忽略不计的电动机来驱动机器人，<i>确实</i>是可能的。过去，这些“直接驱动机器人”<elib>Asada87</elib>拥有巨大的电机和有限的负载能力。近些年来，像 <a
+      href="https://robots.ieee.org/robots/wam/">Barrett WAM</a> 这样的机械臂使用了缆索传动，通过把大型电机放在基座中来保持机械臂本体轻量化。而就在最近几年，高力矩外转子电机和无框电机方面的进展，催生了新一代低成本的“准直接驱动”机器人，例如 MIT Cheetah <elib>Wensing17</elib>、<a
+      href="http://rll.berkeley.edu/blue/">Berkeley Blue</a> 和 <a
+      href="https://www.halodi.com/">Halodi Eve</a>。</p>
 
-      <p>Hydraulic actuators provide another solution for generating large
-      torques without large transmissions.  Sarcos had a series of <a
-      href="https://www.youtube.com/watch?v=VDxWHNtZvyI">torque-controlled
-      arms</a> (and humanoids), and many of the most famous robots from <a
-      href="https://www.bostondynamics.com/robots">Boston Dynamics</a> are based
-      on hydraulics (though there is an increasing trend towards electric
-      motors).  These robots typically have a single central pump and each
-      actuator has a (lightweight) valve that can shunt fluid through the
-      actuator or through a bypass; the differential pressure across the
-      actuator is at least approximately related to the resulting
-      force/torque.</p>
+      <p>液压执行器提供了另一种无需大型传动机构即可产生大力矩的方案。Sarcos 曾开发过一系列<a
+      href="https://www.youtube.com/watch?v=VDxWHNtZvyI">力矩控制机械臂</a>（以及人形机器人），而 <a
+      href="https://www.bostondynamics.com/robots">Boston Dynamics</a> 的许多最著名机器人也基于液压系统（尽管如今越来越多地转向电动机）。这些机器人通常有一个集中式主泵，每个执行器都有一个（轻量级）阀门，可以让流体流经执行器或通过旁路分流；执行器两端的压差至少近似地与最终产生的力/力矩相关。</p>
 
-      <p>Another approach to torque control is to keep the large gear-ratio
-      motors, but add sensors to directly measure the torque at the joint side
-      of the actuator.  This is the approach used by the Kuka iiwa robot that we
-      use in the example throughout this text; the iiwa actuators have <a
-      href="https://en.wikipedia.org/wiki/Strain_gauge">strain gauges</a>
-      integrated into the transmission.  However there is a trade-off between
-      the stiffness of the transmission and the accuracy of the force/torque
-      measurement <elib>Kashiri17</elib> -- the iiwa transmission includes an
-      explicit "Flex Spline" with a stiffness around 5000 Nm/rad
-      <elib>Wedler12</elib>.  Taking this idea to an extreme, Gill Pratt
-      proposed "series-elastic actuators" that have even lower stiffness springs
-      in the transmission, and proposed measuring joint position on both the
-      motor and joint sides of the transmission to estimate the applied torques
-      <elib>Pratt95b</elib>.  For example, the <a
-      href="https://en.wikipedia.org/wiki/Baxter_(robot)">Baxter</a> and Sawyer
-      robots from Rethink used series-elastic actuators; I don't think they
-      ever published the spring stiffness values but similarly-motivated
-      series-elastic actuators from <a
-      href=http://docs.hebi.us/hardware.html>HEBI robotics are closer to 100
-      Nm/rad</a>.  Even for the iiwa actuators, the joint elasticity is
-      significant enough that the low-level controllers go to great length to
-      take it into account explicitly in order to achieve high-performance
-      control of the joints<elib>Albu-Schaffer07</elib>.  We will discuss these
-      details when we get to the chapter covering <a href="force.html">force
-      control</a>.</p>
+      <p>实现力矩控制的另一种方法是保留大减速比电机，但增加传感器来直接测量执行器关节侧的力矩。这正是我们在本文示例中使用的 Kuka iiwa 机器人所采用的方法；iiwa 执行器在传动系统中集成了<a
+      href="https://en.wikipedia.org/wiki/Strain_gauge">应变片</a>。然而，传动系统的刚度与力/力矩测量精度之间存在权衡 <elib>Kashiri17</elib>——iiwa 的传动系统包含一个显式的 “Flex Spline”，其刚度约为 5000 Nm/rad <elib>Wedler12</elib>。如果把这个思路推向极端，Gill Pratt 提出了“串联弹性执行器”，它在传动系统中使用刚度更低的弹簧，并提出同时测量传动系统电机侧和关节侧的位置，以估计所施加的力矩 <elib>Pratt95b</elib>。例如，Rethink 的 <a
+      href="https://en.wikipedia.org/wiki/Baxter_(robot)">Baxter</a> 和 Sawyer 机器人就使用了串联弹性执行器；我认为他们从未公布过弹簧刚度值，但由 <a
+      href=http://docs.hebi.us/hardware.html>HEBI robotics 开发、动机类似的串联弹性执行器接近 100
+      Nm/rad</a>。即使对于 iiwa 执行器来说，关节弹性也已经足够显著，以至于底层控制器需要非常仔细地显式考虑它，才能实现高性能的关节控制<elib>Albu-Schaffer07</elib>。等我们进入关于<a href="force.html">力控制</a>的章节时，会再讨论这些细节。</p>
 
     </subsection>
     
-    <subsection><h1>A proliferation of hardware</h1>
+    <subsection><h1>硬件的迅速扩增</h1>
     
-      <p>The low-cost torque-controlled arms that I mentioned above are just
-      the beginnings in what promises to be a massive proliferation of robotic
-      arms. During the pandemic, I saw a number of people using inexpensive
-      robots like the <a
+      <p>我上面提到的低成本力矩控制机械臂，只是机器人机械臂即将大规模扩增的开端。在疫情期间，我看到许多人在家中使用像 <a
       href="https://www.ufactory.cc/xarm-collaborative-robot">xArm</a>
-      at home. As demand increases, costs will continue to come down.</p>
+      这样的低成本机器人。随着需求增加，成本还会继续下降。</p>
       
-      <p>Let me just say that, compared to working on legged robots, where for
-      decades we did our research on laboratory prototypes built by graduate
-      students (and occasionally professors!) in the machine shop down the hall,
-      the availability of professionally engineered, high-quality, high-uptime
-      hardware is an absolute treat.  This also means that we can test
-      algorithms in one lab and have another lab perhaps at another university
-      testing algorithms on almost identical hardware; this facilitates levels
-      of repeatability and sharing that were impossible before. The fact that
-      the prices are coming down, which will mean many more similar robots in
-      many more labs/environments, is one of the big reasons why I am so
-      optimistic about the next few years in the field.</p>
+      <p>我只想说，与研究腿式机器人相比——过去几十年里，我们一直是在实验室原型机上开展研究，而这些原型机通常是研究生（有时也有教授！）在走廊尽头的机加工车间里制造出来的——如今能够获得经过专业工程设计、高质量且高运行时间的硬件，实在是一种享受。这也意味着，我们可以在一个实验室测试算法，而另一个实验室，也许是在另一所大学，可以在几乎相同的硬件上测试算法；这带来了以前不可能实现的可重复性和共享水平。价格正在下降，这意味着会有更多相似机器人出现在更多实验室/环境中；这也是我对该领域未来几年如此乐观的重要原因之一。</p>
       
-      <p>It's a good time to be working on manipulation!</p>
+      <p>现在正是研究操作的好时代！</p>
       
     </subsection>
     
-    <subsection><h1>Simulating the Kuka iiwa</h1>
+    <subsection><h1>仿真 Kuka iiwa</h1>
     
-      <p>It's time to simulate our chosen robotic arm.  The first step is to
-      obtain a robot description file (typically URDF or SDF). For convenience,
-      we <a
-      href="https://github.com/RobotLocomotion/models">ship</a>
-      the models for a few robots, including iiwa, with Drake.  If you're
-      interested in simulating a different robot, you can find either a URDF or
-      SDF describing most commercial robots somewhere online.  But a word of
-      warning: the quality of these models can vary wildly.  We've seen
-      surprising errors in even the kinematics (link lengths, geometries, etc),
-      but the dynamics properties (inertia, friction, etc) in particular are
-      often not accurate at all. Sometimes they are not even mathematically
-      consistent (e.g. it is possible to specify an inertial matrix in URDF/SDF
-      which is not physically realizable by any rigid body).  Drake will
-      complain if you ask it to load a file with this sort of violation; we
-      would rather alert you early than start generating bogus simulations.
-      There is also increasingly good support for exporting to a robot format
-      directly from CAD software like <a
-      href="http://wiki.ros.org/sw_urdf_exporter">Solidworks</a>.</p>
+      <p>现在是时候仿真我们选定的机器人机械臂了。第一步是获得一个机器人描述文件（通常是 URDF 或 SDF）。为方便起见，我们将包括 iiwa 在内的几个机器人模型随 Drake 一起<a
+      href="https://github.com/RobotLocomotion/models">发布</a>。如果你有兴趣仿真其他机器人，通常可以在网上某处找到描述大多数商用机器人的 URDF 或 SDF。但需要提醒一句：这些模型的质量可能差异极大。我们甚至在运动学方面（连杆长度、几何形状等）也见过令人惊讶的错误，而动力学属性（惯量、摩擦等）尤其常常完全不准确。有时它们甚至在数学上都不一致（例如，可以在 URDF/SDF 中指定一个并不能由任何刚体在物理上实现的惯性矩阵）。如果你要求 Drake 加载含有这类违规内容的文件，Drake 会报错；我们宁愿提前提醒你，也不愿开始生成虚假的仿真结果。如今也越来越好地支持从 <a
+      href="http://wiki.ros.org/sw_urdf_exporter">Solidworks</a> 等 CAD 软件直接导出为机器人格式。</p>
       
-      <p>Now we have to import this robot description file into our physics
-      engine.  In Drake, the physics engine is called
-      <code>MultibodyPlant</code>.  The term "plant" may seem odd but it is
-      pervasive; it is the word used in the controls literature to represent a
-      physical system to be controlled, which originated in the control of
-      chemical plants. This connection to control theory is very important to
-      me. Not many physics engines in the world go to the lengths that Drake
-      does to make the physics engine compatible with control-theoretic design
-      and analysis.</p>
+      <p>现在我们必须把这个机器人描述文件导入物理引擎。在 Drake 中，物理引擎称为
+      <code>MultibodyPlant</code>。“plant” 这个术语可能看起来有些奇怪，但它非常普遍；这是控制文献中用来表示待控制物理系统的词，起源于对化工厂的控制。与控制理论的这种联系对我来说非常重要。世界上没有多少物理引擎会像 Drake 这样下如此大的功夫，使物理引擎兼容控制理论中的设计与分析。</p>
       
-      <p>The <a
+      <p><a
       href="https://drake.mit.edu/doxygen_cxx/classdrake_1_1multibody_1_1_multibody_plant.html"><code>MultibodyPlant</code></a>
-      has a class interface with a rich library of methods to work with the
-      kinematics and dynamics of the robot. If you need to compute the location
-      of the center of mass, or a kinematic Jacobian, or any similar queries,
-      then you'll be using this class interface. A 
-      <code>MultibodyPlant</code> also implements the interface to be used as a
-      <code>System</code>, with input and output ports, in Drake's <a
-      href="https://medium.com/toyotaresearch/drake-model-based-design-in-the-age-of-robotics-and-machine-learning-59938c985515">systems
-      framework</a>. In order to simulate, or analyze, the combination of a
-      <code>MulitbodyPlant</code> with other systems like our perception, planning, and
-      control systems, we will be assembling <a
-      href="https://en.wikibooks.org/wiki/Control_Systems/Block_Diagrams">block
-      diagrams</a>.</p>
+      拥有一个类接口，其中包含丰富的方法库，可用于处理机器人的运动学和动力学。如果你需要计算质心位置、运动学雅可比矩阵，或任何类似的查询，那么你就会使用这个类接口。<code>MultibodyPlant</code> 还实现了可作为 <code>System</code> 使用的接口，在 Drake 的<a
+      href="https://medium.com/toyotaresearch/drake-model-based-design-in-the-age-of-robotics-and-machine-learning-59938c985515">系统框架</a>中具有输入端口和输出端口。为了仿真或分析 <code>MulitbodyPlant</code> 与其他系统（例如我们的感知、规划和控制系统）之间的组合，我们将会组装<a
+      href="https://en.wikibooks.org/wiki/Control_Systems/Block_Diagrams">框图</a>。</p>
       
       <div>
         <script src="htmlbook/js-yaml.min.js"></script>
@@ -460,26 +239,17 @@ output_ports:
         </script>
       </div> 
       
-      <p>As you might expect for something as complex and general as a physics
-      engine, it has many input and output ports; most of them are optional.
-      I'll illustrate the mechanics of using these in the following example.</p>
+      <p>正如你可能预期的那样，对于像物理引擎这样复杂而通用的东西，它有许多输入端口和输出端口；其中大多数都是可选的。我会在下面的示例中说明如何使用这些端口。</p>
       
-      <example><h1>Simulating the passive iiwa</h1>
+      <example><h1>仿真被动 iiwa</h1>
       
-        <p>It's worth spending a few minutes with this example, which should
-        help you understand not only the physics engine, but some of the basic
-        mechanics of working with simulations in Drake.</p>
+        <p>这个示例值得花几分钟仔细看看，它不仅能帮助你理解物理引擎，也能帮助你理解在 Drake 中进行仿真的一些基本机制。</p>
 
         <script>document.write(notebook_link('robot', notebook='simulation'))</script>
     
       </example>
       
-      <p>The best way to visualize the results of a physics engine is with a 2D
-      or 3D visualizer.  For that, we need to add the system which curates the
-      geometry of a scene; in Drake we call it the <code>SceneGraph</code>.
-      Once we have a <code>SceneGraph</code>, then there are a number of
-      different visualizers and sensors that we can add to the system to
-      actually render the scene.</p>
+      <p>可视化物理引擎结果的最佳方式，是使用 2D 或 3D 可视化器。为此，我们需要添加一个负责管理场景几何的系统；在 Drake 中，我们称它为 <code>SceneGraph</code>。一旦有了 <code>SceneGraph</code>，就可以向系统中添加多种不同的可视化器和传感器，以真正渲染场景。</p>
       
       <div>
         <script type="text/javascript">
@@ -496,99 +266,51 @@ output_ports:
         </script>
       </div>       
       
-      <example><h1>Visualizing the scene</h1>
+      <example><h1>可视化场景</h1>
       
-        <p>This example is far more interesting to watch.  Now we have the 3D visualization!</p>
+        <p>这个示例看起来有趣得多。现在我们有了 3D 可视化！</p>
 
         <script>document.write(notebook_link('robot', notebook='simulation'))</script>
 
       </example>
       
-      <p>You might wonder why <code>MultibodyPlant</code> doesn't handle the
-      geometry of the scene as well.  Well, there are many applications in
-      which we'd like to render complex scenes, and use complex sensors, but
-      supply custom dynamics instead of using the default physics engine.
-      Autonomous driving is a great example; in that case we want to populate a
-      <code>SceneGraph</code> with all of the geometry of the vehicles and
-      environment, but we often want to simulate the vehicles with very simple
-      vehicle models that stop well short of adding tire mechanics into our
-      physics engine. We also have a number of examples of this workflow in my
-      <a href="http://underactuated.mit.edu">Underactuated Robotics</a> course,
-      where we make extensive use of "simple models".</p>
+      <p>你可能会疑惑，为什么 <code>MultibodyPlant</code> 不同时处理场景的几何信息。原因是，在许多应用中，我们希望渲染复杂场景并使用复杂传感器，但又想提供自定义动力学，而不是使用默认物理引擎。自动驾驶就是一个很好的例子；在这种情况下，我们希望用车辆和环境的所有几何信息填充一个 <code>SceneGraph</code>，但通常又希望用非常简单的车辆模型来仿真车辆，而不是把轮胎力学也加入物理引擎中。我的 <a href="http://underactuated.mit.edu">欠驱动机器人学</a>课程中也有许多这种工作流程的示例，在那里我们大量使用“简单模型”。</p>
       
-      <p>We now have a basic simulation of the iiwa, but already some subtleties
-      emerge.  The physics engine needs to be told what torques to apply at the
-      joints.  In our example, we apply zero torque, and the robot falls down.
-      In reality, that never happens; in fact there is essentially never a
-      situation where the physical iiwa robot experiences zero torque at the
-      joints, even when the controller is turned off.  Like many mature
-      industrial robot arms, iiwa has mechanical brakes at each joint that are
-      engaged whenever the controller is turned off.  To simulate the robot with
-      the controller turned off, we would need to tell our physics engine about
-      the torques produced by these brakes.</p>
+      <p>现在我们已经有了 iiwa 的基本仿真，但一些微妙之处已经开始显现。物理引擎需要被告知要在关节上施加哪些力矩。在我们的示例中，我们施加零力矩，于是机器人倒下了。在现实中，这种情况永远不会发生；事实上，即使控制器关闭，实体 iiwa 机器人在关节处也基本上不会经历零力矩。和许多成熟的工业机器人机械臂一样，iiwa 的每个关节都有机械制动器，只要控制器关闭，这些制动器就会接合。若要仿真控制器关闭时的机器人，我们需要告诉物理引擎这些制动器产生的力矩。</p>
       
-      <p>In fact, even when the controller is turned on, and despite the fact
-      that it is a torque-controlled robot, we can never actually send zero
-      torques to the motors.  The iiwa software interface accepts "feed-forward
-      torque" commands, but it will always add these as additional torques to
-      its low-level controller which is compensating for gravity and the
-      motor/transmission mechanics.  This often feels frustrating, but probably
-      we don't actually want to get into the details of simulating the drive
-      mechanics.</p>
+      <p>事实上，即使控制器已经开启，并且尽管它是一台力矩控制机器人，我们也从来不能真正向电机发送零力矩。iiwa 的软件接口接受“前馈力矩”命令，但它总是会把这些命令作为附加力矩，叠加到其底层控制器之上；而这个底层控制器正在补偿重力以及电机/传动机构的力学效应。这常常让人感到沮丧，但我们大概并不真的想深入到仿真驱动机构力学细节的程度。</p>
       
-      <p>As a result, the simplest reasonable simulation we can provide of the
-      iiwa must include a simulation of Kuka's low-level controller.  We will
-      use the iiwa's "joint impedance control" mode, and will describe the
-      details of that once they become important for getting the robot to
-      perform better.  For now, we can treat it as given, and produce our
-      simplest reasonable iiwa simulation.</p>
+      <p>因此，我们能够为 iiwa 提供的最简单的合理仿真，必须包含对 Kuka 底层控制器的仿真。我们将使用 iiwa 的“关节阻抗控制”模式，并会在这些细节对让机器人表现得更好变得重要时再加以说明。现在，我们可以先把它当作已知条件，并生成我们最简单的合理 iiwa 仿真。</p>
       
-      <example><h1>Adding the iiwa low-level controller</h1>
+      <example><h1>添加 iiwa 底层控制器</h1>
 
-        <p>This example adds the iiwa controller and sets the desired <i>positions</i> (no longer the desired torques) to be the current state of the robot.  It's a more faithful simulation of the real robot.  I'm sorry that it is boring once again!</p>
+        <p>这个示例添加了 iiwa 控制器，并将期望<i>位置</i>（不再是期望力矩）设置为机器人的当前状态。它是对真实机器人的更忠实仿真。很抱歉，它又一次变得无聊了！</p>
 
         <script>document.write(notebook_link('robot', notebook='simulation'))</script>
         
       </example>
 
-      <p>As a final note, you might think that simulating the <i>dynamics</i> of
-      the robot is overkill, if our only goal is to simulate manipulation tasks
-      where the robot is moving only relatively slowly, and effects of mass,
-      inertia and forces might be less important than just the positions that
-      the robot (and the objects) occupy in space.  I would actually agree with
-      you.  But it's surprisingly tricky to get a <i>kinematic</i> simulation to
-      respect the basic rules of interaction; e.g. to know when the object gets
-      picked up or when it does not (see, for instance <elib>Pang18</elib>).
-      Currently, in Drake, we mostly use the full physics engine for simulation,
-      but often use simpler models for manipulation planning and control.</p>
+      <p>最后补充一点：如果我们的唯一目标只是仿真机器人运动相对缓慢的操作任务，而质量、惯性和力的影响可能没有机器人（以及物体）在空间中所占据的位置那么重要，那么你可能会认为仿真机器人的<i>动力学</i>有些过度。我其实会同意你的看法。但要让一个<i>运动学</i>仿真遵守基本的交互规则，却出人意料地棘手；例如，要知道物体什么时候被拿起，什么时候没有被拿起（例如参见 <elib>Pang18</elib>）。目前，在 Drake 中，我们主要使用完整的物理引擎进行仿真，但在操作规划和控制中经常使用更简单的模型。</p>
       
     </subsection>
 
   </section>
 
-  <section><h1>Hands</h1>
+  <section><h1>手</h1>
     
-    <p>You might have noticed that the iiwa model does not actually have a hand
-    attached; the robot ships with a mounting plate so that you can attach the
-    "end-effector" of your choice (and some options on access ports so you can
-    connect your end-effector to the computer without wires running down the
-    outside of the robot).  So now we have another decision to make: what hand
-    should we use?</p>
+    <p>你可能已经注意到，iiwa 模型实际上并没有安装手；机器人出厂时带有一个安装板，让你可以连接自己选择的“末端执行器”（并且还有一些接入端口选项，使你可以将末端执行器连接到计算机，而不需要让线缆沿着机器人外部垂下来）。所以现在我们又需要做一个决定：我们应该使用哪只手？</p>
     
-    <example><h1>Robot hands</h1>
+    <example><h1>机器人手</h1>
     
-      <p>We can explore different hand models in Drake using the same sort of
-      interface we used for the arms, though I don't have as many hand models
-      here yet.  Let me know if your favorite hand isn't on the list!</p>
+      <p>我们可以在 Drake 中使用与机械臂相同类型的接口来探索不同的手部模型，不过我这里的手部模型还没有那么多。如果你最喜欢的手还不在列表中，请告诉我！</p>
       
       <script>document.write(notebook_link('robot', notebook='inspector'))</script>
 
     </example>    
 
-    <p>It is interesting that, when it comes to robot end effectors, researchers
-    in manipulation tend to partition themselves into a few distinct camps.</p>
+    <p>有趣的是，当谈到机器人末端执行器时，操作研究者往往会把自己划分到几个截然不同的阵营中。</p>
     
-    <subsection><h1>Dexterous hands</h1>
+    <subsection><h1>灵巧手</h1>
     
       <figure>
         <table><tr><td>
@@ -597,69 +319,35 @@ output_ports:
         <img style="height:250px" src="figures/allegro_hand.png"/>
         </td></tr>
         </table>
-        <figcaption>Dexterous hands.  Left: the <a href="https://www.shadowrobot.com/dexterous-hand-series/">Shadow Dexterous Hand</a>.  Right: the <a href="https://wonikrobotics.com/en/">Allegro Hand</a>.</figcaption>
+        <figcaption>灵巧手。左：<a href="https://www.shadowrobot.com/dexterous-hand-series/">Shadow Dexterous Hand</a>。右：<a href="https://wonikrobotics.com/en/">Allegro Hand</a>。</figcaption>
       </figure>
 
-      <p>Of course, our fascination with the human hand is well placed, and we
-      dream of building robotic hands that are as dexterous and sensor-rich.
-      But the reality is that we aren't there yet.  Some people choose to pursue
-      this dream and work with the best dexterous hands on the market, and
-      struggle with the complexity and lack of robustness that ensues.  The famous <a href="https://openai.com/blog/learning-dexterity/">"learning dexterity"</a> project from OpenAI used the Shadow hand for playing with a Rubik's cube, and the work that had to go into the hand in order to support the endurance learning experiments was definitely a part of the story.  There is a chance that new manufacturing techniques could really disrupt this space -- videos like <a href="https://www.youtube.com/watch?v=cZuzXdMyJsA">this one of FLLEX v2</a> look amazing<elib>Kim19</elib> -- and I am very optimistic that we'll have more capable and robust dexterous hands in the not-so-distant future.</p>
+      <p>当然，我们对人类手的着迷是完全合理的，我们梦想着构建像人手一样灵巧且传感丰富的机器人手。但现实是，我们还没有达到那个水平。有些人选择追逐这个梦想，使用市场上最先进的灵巧手，并因此不得不面对随之而来的复杂性与缺乏鲁棒性。OpenAI 著名的 <a href="https://openai.com/blog/learning-dexterity/">“learning dexterity”</a> 项目就使用了 Shadow 手来操作魔方，而为了支持那些长时间学习实验，对手本身所做的大量工程工作显然也是整个故事的重要部分。新的制造技术有可能真正颠覆这一领域——像 <a href="https://www.youtube.com/watch?v=cZuzXdMyJsA">FLLEX v2 的这个视频</a> 看起来就非常惊艳<elib>Kim19</elib>——我也非常乐观地认为，在不太遥远的未来，我们将拥有能力更强、鲁棒性更高的灵巧手。</p>
       
     </subsection>
 
-    <subsection><h1>Simple grippers</h1>
+    <subsection><h1>简单夹爪</h1>
     
       <figure>
         <iframe width="420" height="330" src="https://www.youtube.com/embed/oyHWkQcin7I" frameborder="0" allow="accelerometer; encrypted-media; gyroscope; picture-in-picture" allowfullscreen pdf="no"></iframe>
-        <p pdf="only"><a href="https://www.youtube.com/embed/oyHWkQcin7I">Click here to watch the video.</a></p>
-        <figcaption>This video of tele-operation with the PR1 from Ken
-        Salisbury's group is now a classic example of doing amazingly useful
-        things with a very simple hand.  Check out their <a
-        href="https://sr.stanford.edu/?page_id=509">website</a> for more
-        videos, including sweeping, fetching a beer, and unloading a
-        dishwasher.</figcaption>
+        <p pdf="only"><a href="https://www.youtube.com/embed/oyHWkQcin7I">点击这里观看视频。</a></p>
+        <figcaption>这个由 Ken Salisbury 团队制作的 PR1 遥操作视频，如今已经成为使用非常简单的手完成极其有用任务的经典示例。查看他们的<a
+        href="https://sr.stanford.edu/?page_id=509">网站</a>可以看到更多视频，包括扫地、取啤酒和卸洗碗机等任务。</figcaption>
       </figure>
 
       <p><img style="width:150px;float:right;margin-left:10px"
-      src="figures/toy_robot_hand.jpg"/>Another camp points out that dexterous
-      hands are not necessary -- I can give you a simple gripper from the toy
-      store and you can still accomplish amazingly useful tasks around the home.
-      The PR1 videos above are a great demonstration of this.</p>
+      src="figures/toy_robot_hand.jpg"/>另一派观点认为，其实并不需要灵巧手——我甚至可以从玩具店给你一个简单夹爪，而你依然能够在家里完成许多极其有用的任务。上面的 PR1 视频就是这一点的绝佳展示。</p>
 
-      <p>Another important argument in favor of simple hands is the elegance
-      and clarity that comes from reducing the complexity.  If thinking clearly
-      about simple grippers helps us understand more deeply <i>why</i> we need
-      more dexterous hands (I think it will), then great.  For most of these
-      notes, a simple two-fingered gripper will serve our pedagogical goals the
-      best.  In particular, I've selected the Schunk WSG 050, which we have
-      used extensively in our research over the last few years.  We'll also
-      explore a few different end-effectors in later chapters, when they help
-      to explain the concepts.</p>
+      <p>支持简单手部的另一个重要理由，是减少复杂性所带来的优雅性与清晰性。如果对简单夹爪的深入思考，能够帮助我们更深刻地理解<i>为什么</i>我们需要更灵巧的手（我认为确实会如此），那就再好不过了。在这些笔记的大部分内容中，一个简单的双指夹爪最符合我们的教学目标。特别是，我选择了 Schunk WSG 050，它是我们过去几年研究中广泛使用的一款夹爪。我们也会在后续章节中探索几种不同的末端执行器，当它们有助于解释相关概念时。</p>
   
-      <p>To be clear: just because a hand is simple (few degrees of freedom)
-      does not mean that it is low quality.  On the contrary, the Schunk WSG is
-      a very high-quality gripper with force control and force measurement at
-      its single degree of freedom that surpasses the fidelity of the Kuka.  It
-      would be hard to achieve the same in a dexterous hand with many
-      joints.</p>
+      <p>需要明确的是：一个手部结构简单（自由度少）并不意味着它质量低。恰恰相反，Schunk WSG 是一款高质量夹爪，它在其单自由度上具备力控制和力测量能力，其精度甚至超过了 Kuka。要在具有许多关节的灵巧手中实现同样水平的性能，会非常困难。</p>
 
     </subsection>
 
-    <subsection><h1>Soft/underactuated hands</h1></subsection>
+    <subsection><h1>软体/欠驱动手</h1></subsection>
 
-      <p>Finally, the third and newest camp is promoting clever mechanical
-      designs for hands, which are often called "underactuated hands". The
-      basic idea is that, for many tasks, you might not need as many actuators
-      in your hand as you have joints. Many underactuated hands use a
-      cable-drive mechanism to close the fingers, where a single tendon can
-      cause multiple joints in the finger to bend. When designed correctly,
-      these mechanisms can allow the finger to <a
-      href="https://www.youtube.com/watch?v=C340gbK3sZc">conform passively to
-      the shape of an object being grasped</a> with no change in the actuator
-      command (c.f. <elib>Odhner14</elib>).  Cables are not required for this
-      concept to work; qualitatively similar behavior can be achieved using
-      clever rigid mechanical linkages, as well.</p>
+      <p>最后，第三个也是最新的阵营正在推动一些巧妙的手部机械设计，这类手通常被称为“欠驱动手”。基本思想是，对于许多任务来说，你的手中也许并不需要和关节数量一样多的执行器。许多欠驱动手使用缆索驱动机构来闭合手指，其中一根肌腱就可以让手指中的多个关节弯曲。如果设计得当，这些机构可以让手指在执行器命令不变的情况下，<a
+      href="https://www.youtube.com/watch?v=C340gbK3sZc">被动地贴合被抓取物体的形状</a>（参见 <elib>Odhner14</elib>）。要实现这一概念，并不一定需要缆索；使用巧妙的刚性机械连杆，也可以实现性质上类似的行为。</p>
       
       <figure>
         <table><tr><td>
@@ -668,23 +356,16 @@ output_ports:
         <img style="height:250px" src="figures/robotiq-3-finger-gripper.jpeg"/>
         </td></tr>
         </table>
-        <figcaption>Underactuated hands.  Left: the RightHand Robotics Reflex2 is a descendant of the i-HY hand<elib>Odhner14</elib>.  Right: the Robotiq 3-fingered gripper.</figcaption>
+        <figcaption>欠驱动手。左：RightHand Robotics Reflex2 是 i-HY 手的后继产品<elib>Odhner14</elib>。右：Robotiq 三指夹爪。</figcaption>
       </figure>
       
       <figure>
         <img width="560" src="figures/robotiq_3_finger_mechanism.jpeg">
-        <figcaption>A <a
-          href="https://blog.robotiq.com/3-finger-adaptive-gripper-simulation-data">clever mechanical linkage</a> allows the underactuated Robotiq 3-fingered gripper to comply to an object being grasped.</figcaption>
+        <figcaption>一种<a
+          href="https://blog.robotiq.com/3-finger-adaptive-gripper-simulation-data">巧妙的机械连杆机构</a>使欠驱动 Robotiq 三指夹爪能够顺应被抓取物体。</figcaption>
       </figure>
 
-      <p>Taking the idea of underactuation and passive compliance to an
-      extreme, recent years have also seen a number of hands (or at least
-      fingers) that are completely soft. The "soft robotics community" is
-      rapidly changing the state of the art in terms of robot fabrication, with
-      appendages, actuators, sensors, and even power sources that can be
-      completely soft. These technologies promise to improve durability,
-      decrease cost, and potentially be more safe for operating around
-      people.</p>
+      <p>如果把欠驱动和被动顺应性的思想推向极端，近年来也出现了许多完全柔软的手（或至少是手指）。“软体机器人社区”正在迅速改变机器人制造领域的技术水平，包括附肢、执行器、传感器，甚至电源都可以是完全柔软的。这些技术有望提高耐久性、降低成本，并且在与人共处运行时可能更加安全。</p>
 
       <figure>
         <table><tr><td>
@@ -693,115 +374,76 @@ output_ports:
           <img style="height:200px" src="figures/rbohand_disney.png"/>
         </td></tr>
         </table>
-        <figcaption>Underactuated hands.  Left: A <a href="https://doi.org/10.1038/d41586-018-02778-5">3D-printed soft hand from Harvard</a> (Image credit: Ryan Truby).  Right: The <a href="http://www.robotics.tu-berlin.de/menue/research/soft_hands/">RBO Hand 2</a> (Image credit: Disney Research Zurich).</figcaption>
+        <figcaption>欠驱动手。左：来自哈佛的<a href="https://doi.org/10.1038/d41586-018-02778-5">3D 打印软体手</a>（图片来源：Ryan Truby）。右：<a href="http://www.robotics.tu-berlin.de/menue/research/soft_hands/">RBO Hand 2</a>（图片来源：Disney Research Zurich）。</figcaption>
       </figure>
 
-      <p>Underactuated hands can be excellent examples of mechanical design
-      reducing the burden on the actuators / control system. Often these hands
-      are amazingly good at some range of tasks (most often "enveloping
-      grasps"), but not as general purpose.  It would be very hard to use one
-      of these to, for instance, button my shirt. They are, however, becoming more and more dexterous; check out the video below!</p>
+      <p>欠驱动手是机械设计减轻执行器/控制系统负担的优秀例子。通常，这类手在某一类任务上表现惊人地好（最常见的是“包络式抓握”），但通用性并不那么强。例如，要用其中一只手来帮我扣衬衫扣子，会非常困难。不过，它们也正在变得越来越灵巧；看看下面这个视频吧！</p>
 
       <figure>
         <iframe width="560" height="315" src="https://www.youtube.com/embed/Z6ECG3KHibI" frameborder="0"
           allow="accelerometer; encrypted-media; gyroscope; picture-in-picture" allowfullscreen pdf="no"></iframe>
-          <p pdf="only"><a href="https://www.youtube.com/embed/Z6ECG3KHibI">Click here to watch the video.</a></p>
+          <p pdf="only"><a href="https://www.youtube.com/embed/Z6ECG3KHibI">点击这里观看视频。</a></p>
         </figure>
   
 
-    <subsection><h1>Other end effectors</h1>
+    <subsection><h1>其他末端执行器</h1>
     
-      <p>Not all end effectors need to operate like dexterous or simplified
-      human hands. Many industrial applications these days are doing a form of
-      pick and place manipulation using vacuum grippers (also known as
-      suction-cup grippers). Suction cups work extremely well on many but not all objects. Some objects are too soft or porous to be suctioned effectively. Some objects are too fragile or heavy to be lifted from a vacuum at the top of the object, and must be supported from below. Some hands have suction in the palms to achieve an initial pick, but still use more traditional fingers to stabilize a grasp.</p>
+      <p>并不是所有末端执行器都需要像灵巧手或简化版人手那样工作。如今，许多工业应用正在使用真空夹爪（也称为吸盘夹爪）来执行一种拾取与放置操作。吸盘在许多物体上效果极好，但并不是对所有物体都适用。有些物体太软或太多孔，无法被有效吸附。有些物体太脆弱或太重，不能仅靠物体顶部的真空吸附来抬起，而必须从下方进行支撑。有些手掌中带有吸盘，用于实现初始拾取，但仍然使用更传统的手指来稳定抓握。</p>
 
-      <p>There are numerous other clever gripper technologies. One of my
-      favorites is the <a
-      href="https://www.creativemachineslab.com/jamming-gripper.html">jamming
-      gripper</a>.  These grippers are made of a balloon filled with coffee
-      grounds, or some other granular media; pushing down the balloon around an
-      object allows the granular media to flow around the object, but then
-      applying a vacuum to the balloon causes the granular media to "jam",
-      quickly hardening around the object to make a stable grasp
-      <elib>Brown10</elib>. </p>
+      <p>还有许多其他巧妙的夹爪技术。我最喜欢的其中之一是<a
+      href="https://www.creativemachineslab.com/jamming-gripper.html">颗粒堵塞夹爪</a>。这类夹爪由一个装满咖啡渣或其他颗粒介质的气球构成；将气球向下压到物体周围，可以让颗粒介质围绕物体流动，但随后对气球施加真空会使颗粒介质发生“堵塞”，迅速在物体周围硬化，从而形成稳定抓握
+      <elib>Brown10</elib>。</p>
 
       <figure>
         <iframe width="420" height="315" src="https://www.youtube.com/embed/bFW7VQpY-Ik" frameborder="0"
           allow="accelerometer; encrypted-media; gyroscope; picture-in-picture" allowfullscreen pdf="no"></iframe>
-          <p pdf="only"><a href="https://www.youtube.com/embed/-KxjVlaLBmk">Click here to watch the video.</a></p>
+          <p pdf="only"><a href="https://www.youtube.com/embed/-KxjVlaLBmk">点击这里观看视频。</a></p>
       </figure>
   
-      <p><a href="https://www.youtube.com/watch?v=r_HaJfANyT8">Here</a> is another clever design with actuated rollers at the finger tips to help with in-hand reorientation.</p>
+      <p><a href="https://www.youtube.com/watch?v=r_HaJfANyT8">这里</a>还有另一种巧妙设计，它在指尖配备了主动滚轮，以帮助实现手内重新定向。</p>
 
-      <p>Finally, a reasonable argument against dexterous hands is that even
-      humans often do some of their most interesting manipulation not with the
-      hand directly, but through tools. I particularly liked the response that
-      Matt Mason, one of the main advocates for simple grippers throughout the
-      years, gave to
-      <a href="https://youtu.be/LfWiBdOc2FI?t=4025">a question at the end of
-      one of our robotics seminars</a>: he argued that useful robots in e.g.
-      the kitchen will probably have special purpose tools that can be changed
-      quickly. In applications where the primary job of the dexterous hand is
-      to change tools, we might skip the complexity by mounting a "<a
-      href="https://blog.robotiq.com/bid/72926/Top-Manufacturers-of-Robotic-Tool-Changers">tool
-      changer</a>"
-      directly to the robot and using tool-changer-compatible tools.</p>
+      <p>最后，反对灵巧手的一个合理论点是：即使是人类，许多最有趣的操作也往往不是直接用手完成的，而是通过工具完成的。我特别喜欢 Matt Mason 多年来作为简单夹爪主要倡导者之一，在<a href="https://youtu.be/LfWiBdOc2FI?t=4025">我们一次机器人研讨会最后的一个问题</a>中给出的回答：他认为，例如厨房中的实用机器人，可能会配备可以快速更换的专用工具。在灵巧手的主要任务是更换工具的应用中，我们也许可以通过直接在机器人上安装一个“<a
+      href="https://blog.robotiq.com/bid/72926/Top-Manufacturers-of-Robotic-Tool-Changers">工具快换装置</a>”，并使用与工具快换装置兼容的工具，从而避开复杂性。</p>
 
     </subsection>
 
-    <subsection><h1>If you haven't seen it...</h1>
+    <subsection><h1>如果你还没看过它……</h1>
 
-      <p>One time I was attending an event where the registration form asked us
-      "what is your favorite robot of all time, real or fictional".  That is a
-      tough question for someone who loves robots! But the answer I gave was a super cool "high-speed multifingered hand" by
-      the <a href="http://ishikawa-vision.org/fusion/index-e.html">Ishikawa group</a>; a project that started turning out
-      amazing results back in 2004! They "overclocked" the hand -- sending more current for short durations than would be
-      reasonable for any longer applications -- and also used high-speed cameras to achieve these results. And they had a <a
-        href="http://ishikawa-vision.org/fusion/RubikManipulation/index-e.html">Rubik's cube demo</a>, too, in 2017.</p>
+      <p>有一次我参加一个活动，报名表问我们：“你最喜欢的机器人是什么，无论是真实的还是虚构的？”对于一个热爱机器人的人来说，这是个很难回答的问题！但我给出的答案是 <a href="http://ishikawa-vision.org/fusion/index-e.html">Ishikawa 团队</a>开发的一款超级酷的“高速多指手”；这个项目早在 2004 年就开始产生令人惊叹的成果了！他们对这只手进行了“超频”——在短时间内输入比任何长时间应用中合理值更大的电流——并且还使用高速摄像机来实现这些成果。他们在 2017 年也做了一个<a
+        href="http://ishikawa-vision.org/fusion/RubikManipulation/index-e.html">魔方演示</a>。</p>
 
       <figure>
       <iframe width="560" height="315" src="https://www.youtube.com/embed/-KxjVlaLBmk" frameborder="0"
         allow="accelerometer; encrypted-media; gyroscope; picture-in-picture" allowfullscreen pdf="no"></iframe>
-        <p pdf="only"><a href="https://www.youtube.com/embed/-KxjVlaLBmk">Click here to watch the video.</a></p>
+        <p pdf="only"><a href="https://www.youtube.com/embed/-KxjVlaLBmk">点击这里观看视频。</a></p>
       </figure>
       
-      <p>So good!</p>
+      <p>太棒了！</p>
 
     </subsection>
 
   </section>
 
-  <todo>Section on mobile manipulators.  PR-2. HSR. Fetch. Everyday robot. TTT.</todo>
+  <todo>关于移动操作机器人的小节。PR-2。HSR。Fetch。Everyday robot。TTT。</todo>
 
-  <section><h1>Sensors</h1>
+  <section><h1>传感器</h1>
   
-    <p>I haven't said much yet about sensors.  In fact, sensors are going to be
-    a major topic for us when we get to perception with (depth) cameras, and
-    when we think about <a
-    href="https://en.wikipedia.org/wiki/Tactile_sensor">tactile sensing</a>. But
-    I will defer those topics until we need them.</p>
+    <p>我还没有过多讨论传感器。事实上，当我们进入使用（深度）相机进行感知，以及思考<a
+    href="https://en.wikipedia.org/wiki/Tactile_sensor">触觉传感</a>时，传感器将成为我们的一个重要主题。但我会把这些主题推迟到真正需要它们时再讲。</p>
 
-    <p>For now, let us focus on the joint sensors on the robot.  Both the iiwa and the Schunk WSG provide joint feedback -- the iiwa driver gives "measured position", "estimated velocity", and "measured torque" at each of its seven joints; remember that joint accelerations are typically considered too noisy to rely on.  Similarly the Schunk WSG outputs "measured state" (position + velocity) and "measured force".  We can make all of these available as ports in a block diagram.</p>
+    <p>现在，让我们先关注机器人上的关节传感器。iiwa 和 Schunk WSG 都提供关节反馈——iiwa 驱动器会在其七个关节中的每一个上给出“测量位置”“估计速度”和“测量力矩”；请记住，关节加速度通常被认为噪声太大，不能依赖。类似地，Schunk WSG 输出“测量状态”（位置 + 速度）和“测量力”。我们可以把所有这些都作为端口提供给框图。</p>
   
   </section>
   
-  <section id="hardware_station"><h1>Putting it all together</h1>
+  <section id="hardware_station"><h1>把所有内容组合起来</h1>
   
-    <p>If you've worked through the examples, you've seen that a proper
-    simulation of our robot is more than just a physics engine -- it requires
-    assembling physics, actuator and sensor models, and low-level robot
-    controllers into a common framework.  In practice, in Drake, that means that
-    we are assembling increasingly sophisticated block diagrams.</p>
+    <p>如果你已经完成了这些示例，就会看到，对我们机器人的恰当仿真并不只是一个物理引擎——它需要把物理模型、执行器和传感器模型，以及底层机器人控制器组装到一个共同框架中。实际上，在 Drake 中，这意味着我们正在组装越来越复杂的框图。</p>
 
     <subsection><h1>HardwareStation</h1>
 
-    <p>One of the best things about the block-diagram modeling paradigm is the
-    power of abstraction and encapsulation.  We can assemble a
-    <code>Diagram</code> that contains all of the components necessary to
-    simulate our hardware platform and its environment, which we will refer to
-    affectionately as the "Hardware Station". The method <code>MakeHardwareStation</code> takes a YAML description of the scene and the robot hardware. For a yaml file describing the iiwa + WSG and some cameras, the resulting 
-    <code>HardwareStation</code> system looks like this:</p>
+    <p>框图建模范式最棒的事情之一，就是抽象和封装的力量。我们可以组装一个
+    <code>Diagram</code>，其中包含仿真我们的硬件平台及其环境所需的所有组件，我们会亲切地把它称为“Hardware Station”。<code>MakeHardwareStation</code> 方法会接收一个描述场景和机器人硬件的 YAML 文件。对于一个描述 iiwa + WSG 以及若干相机的 yaml 文件，最终得到的 
+    <code>HardwareStation</code> 系统看起来如下：</p>
     
     <div id="manipulation_station"/> <!-- deprecation shim -->
     <div id="hardware_station">
@@ -838,44 +480,33 @@ output_ports:
       </script>
     </div>
 
-    <p>The output ports labeled in in <b><span style="color:orange">orange</span></b> on the diagram above are "cheat ports" -- they are available in simulation, but cannot be available when running on the real robot (because they assume a ground-truth knowledge).</p>
+    <p>上图中用<b><span style="color:orange">橙色</span></b>标出的输出端口是“作弊端口”——它们在仿真中可用，但在真实机器人运行时不可用（因为它们假设能够获得真实值知识）。</p>
 
-    <example><h1>Hardware station in the teleop demo</h1>
+    <example><h1>遥操作演示中的 Hardware station</h1>
 
-      <p>The teleop notebook in the first chapter used the
-        <code>MakeHardwareStation</code> interface to set up the simulation.
-        Now you have a better sense for what is going on inside that subsystem!
-        Here is the link if you want to take a look at that example again:</p>
+      <p>第一章中的遥操作笔记本使用了
+        <code>MakeHardwareStation</code> 接口来搭建仿真。现在你应该更清楚这个子系统内部到底发生了什么！如果你想再次查看那个示例，链接如下：</p>
   
         <script>document.write(notebook_link('intro', 'intro'))</script>
   
     </example>
 
-    <example><h1>A bimanual manipulation station</h1>
+    <example><h1>双臂操作站</h1>
       
-      <p>By adding a few more lines to the YAML file, we can use the same 
-      <code>MakeHardwareStation</code> method to construct a bimanual
-      station:</p>
+      <p>通过向 YAML 文件中再添加几行，我们可以使用同一个 
+      <code>MakeHardwareStation</code> 方法来构建一个双臂操作站：</p>
 
       <script>document.write(notebook_link('robot', notebook='bimanual'))</script>
 
     </example>
     
-    <p>If there are other robots/drivers that you'd like to simulate, you can make local
-    modifications to the <code>station.py</code> file directly in the manipulation
-    repository associated with these notes, or just ask me and I can probably add them
-    quickly.</p>
+    <p>如果你还想仿真其他机器人/驱动器，可以直接在与这些笔记关联的 manipulation 仓库中对 <code>station.py</code> 文件进行本地修改，或者直接告诉我，我大概可以很快把它们加进去。</p>
 
     </subsection>
     <subsection><h1>HardwareStationInterface</h1>
-    <p>As you see in the examples, the <code>HardwareStation</code> diagram
-    itself is intended to be used as a <code>System</code> in additional
-    diagrams, which can include our perception, planning, and, higher-level
-    control systems.  This model also defines the abstraction between the
-    simulation and the real hardware.  By simply passing
-    <code>hardware=True</code> into the <code>MakeHardwareStation</code>
-    method, we instead construct an almost identical system, the
-    <code>HardwareStationInterface</code>.</p>
+    <p>正如你在示例中看到的，<code>HardwareStation</code> 图本身旨在作为一个 <code>System</code> 用于其他图中，这些图可以包含我们的感知、规划以及更高层次的控制系统。这个模型还定义了仿真与真实硬件之间的抽象边界。只需向 <code>MakeHardwareStation</code> 方法传入
+    <code>hardware=True</code>，我们就会构建出一个几乎相同的系统，即
+    <code>HardwareStationInterface</code>。</p>
   
     <div>
       <script type="text/javascript">
@@ -904,38 +535,17 @@ output_ports:
       </script>
     </div>    
   
-  <p>The <code>HardwareStationInterface</code> is also a diagram,
-  but rather than being made up of the simulation components like
-  <code>MultibodyPlant</code> and <code>SceneGraph</code>, it is made up of
-  systems that perform network message passing to interface with the small
-  executables that talk to the individual hardware drivers.  If you dig under
-  the covers, you will see that we use <a
-  href="https://lcm-proj.github.io/">LCM</a> for this instead of ROS messages,
-  primarily because LCM is a lighter-weight dependency for our public
-  repository (also because multicast UDP is a better choice that TCP/IP for the
-  driver level interface).  But many Drake developers/users use <a
-  href="https://github.com/RobotLocomotion/drake-ros">Drake in a ROS/ROS2
-  ecosystem</a>.</p>
+  <p><code>HardwareStationInterface</code> 也是一个图，
+  但它并不是由 <code>MultibodyPlant</code> 和 <code>SceneGraph</code> 这样的仿真组件构成，而是由一些执行网络消息传递的系统组成，用来与那些和各个硬件驱动程序通信的小型可执行程序进行接口对接。如果你深入查看内部实现，就会看到我们在这里使用的是 <a
+  href="https://lcm-proj.github.io/">LCM</a>，而不是 ROS 消息；主要原因是，对于我们的公共仓库来说，LCM 是一个更轻量级的依赖（另一个原因是，在驱动层接口中，多播 UDP 比 TCP/IP 更合适）。不过，许多 Drake 开发者/用户也在 <a
+  href="https://github.com/RobotLocomotion/drake-ros">ROS/ROS2 生态系统中使用 Drake</a>。</p>
     
-  <p>If you do have your own similar robot hardware available, and want to run
-  the hardware interface on your machines, I've started putting together a list
-  of drivers and bill of materials <a href="station.html">in the
-  appendix</a>.</p>
+  <p>如果你确实拥有类似的机器人硬件，并且想在自己的机器上运行硬件接口，我已经开始在<a href="station.html">附录</a>中整理一份驱动程序和物料清单。</p>
   </subsection>
   
-  <subsection><h1>HardwareStation stand-alone simulation</h1>
+  <subsection><h1>HardwareStation 独立仿真</h1>
   
-    <p>Using the <code>HardwareStation</code> workflow, it is easy to
-    transition from your development in simulation to running on the real
-    robot. One additional tool to support this workflow is the stand-alone
-    <code>hardware_sim</code> executable. This python script takes the same
-    YAML file as as input (via the command line), and starts up a simulation in
-    a separate process that acts just like the real robot hardware should...
-    sending and receiving the hardware side of the messages. This can be
-    valuable for testing that all of your logic still works with the message
-    passing layer adding some delay and non-determinism that we cleverly avoid
-    when we use <code>MakeHardwareStation(..., hardware=False)</code> in the
-    first stages of our development.</p>
+    <p>使用 <code>HardwareStation</code> 工作流程，可以很容易地从仿真中的开发过渡到真实机器人上运行。支持这一工作流程的另一个工具，是独立的 <code>hardware_sim</code> 可执行程序。这个 Python 脚本会接收同一个 YAML 文件作为输入（通过命令行），并在一个单独进程中启动仿真，其行为就像真实机器人硬件一样……发送和接收硬件侧的消息。这对于测试你的所有逻辑在加入消息传递层所带来的延迟和非确定性之后是否仍然有效很有价值；而在开发早期阶段，当我们使用 <code>MakeHardwareStation(..., hardware=False)</code> 时，会巧妙地避开这些问题。</p>
   
     <pre>
     <code class="bash">python3 drake/examples/hardware_sim/hardware_sim.py
@@ -946,18 +556,13 @@ output_ports:
 
 </section>
   
-<section><h1>More HardwareStation examples</h1>
+<section><h1>更多 HardwareStation 示例</h1>
 
-  <p>I love the projects that students put together for this class. To help
-  enable those projects (and your future projects, I hope), I will collect a
-  few more examples here of setting up the <code>HardwareStation</code> for
-  different hardware configurations. Expect this list to grow over time!</p>
+  <p>我非常喜欢学生们为这门课完成的项目。为了帮助实现这些项目（也希望能帮助你未来的项目），我会在这里收集更多示例，展示如何为不同的硬件配置搭建 <code>HardwareStation</code>。可以期待这个列表会随着时间不断增长！</p>
 
-  <example><h1>The iiwa with an Allegro hand</h1>
+  <example><h1>带 Allegro 手的 iiwa</h1>
 
-    <p>Here is a simple example of simulating the iiwa with the Allegro hand
-    attached instead of the Schunk WSG gripper. (Note that there are both left
-    and right versions of the Allegro hand available.)</p>
+    <p>这里有一个简单示例，展示如何仿真安装了 Allegro 手而不是 Schunk WSG 夹爪的 iiwa。（注意，Allegro 手有左手版和右手版可用。）</p>
 
     <script>document.write(notebook_link('robot', notebook='iiwa_with_allegro'))</script>
 
@@ -965,48 +570,48 @@ output_ports:
 
   </section>
 
-  <section><h1>Exercises</h1>
+  <section><h1>练习</h1>
 
-    <exercise><h1>Role of Reflected Inertia</h1>
+    <exercise><h1>反射惯量的作用</h1>
 
-      <p> For this exercise you will investigate the effect of reflected inertia on the joint-space dynamics of the robot, and how it affects simple position control laws. You will work exclusively in <script>document.write(notebook_link('robot', notebook='01_reflected_inertia', link_text='this notebook'))</script>. You will be asked to complete the following steps: </p>
+      <p>在这个练习中，你将研究反射惯量对机器人关节空间动力学的影响，以及它如何影响简单的位置控制律。你将完全在 <script>document.write(notebook_link('robot', notebook='01_reflected_inertia', link_text='这个笔记本'))</script> 中完成。你需要完成以下步骤：</p>
 
       <ol type="a">
-        <li> Derive the first-order state-space dynamics $\dot{\bx} = f(\bx, \bu)$ of a simple pendulum with a motor and gearbox. 
+        <li>推导带有电机和齿轮箱的简单摆的一阶状态空间动力学 $\dot{\bx} = f(\bx, \bu)$。
         </li>
-        <li> Compare the behavior of the direct-driven simple pendulum and the simple pendulum with a high-ratio gearbox, under the same position control law.</li>
+        <li>在相同的位置控制律下，比较直接驱动简单摆和带高减速比齿轮箱的简单摆的行为。</li>
       </ol>
     </exercise>
 
-    <exercise><h1>Input and Output Ports on the Manipulation Station</h1>
+    <exercise><h1>Manipulation Station 上的输入和输出端口</h1>
 
-      <p> For this exercise you will investigate how a manipulation station is abstracted in Drake's system-level framework. You will work exclusively in <script>document.write(notebook_link('robot', notebook='02_hardware_station_io', link_text='this notebook'))</script>. You will be asked to complete the following steps: </p>
+      <p>在这个练习中，你将研究操作站在 Drake 系统级框架中是如何被抽象的。你将完全在 <script>document.write(notebook_link('robot', notebook='02_hardware_station_io', link_text='这个笔记本'))</script> 中完成。你需要完成以下步骤：</p>
 
       <ol type="a">
-        <li> Learn how to probe into inputs and output ports of the manipulation station and evaluate their contents.
+        <li>学习如何探查操作站的输入和输出端口，并计算它们的内容。
         </li>
-        <li> Explore what different ports correspond to by probing their values.</li>
+        <li>通过探查端口值，探索不同端口分别对应什么。</li>
       </ol>
     </exercise>    
 
   </h1></section>
 
-    <exercise><h1>Direct Joint Teleop in Drake</h1>
+    <exercise><h1>Drake 中的直接关节遥操作</h1>
 
-      <p> For this exercise you will implement a method for controlling the joints of a robot in Drake. You will work exclusively in <script>document.write(notebook_link('robot', notebook='03_direct_joint_control', link_text='this notebook'))</script>, and should use the <script>document.write(notebook_link('intro', 'intro', link_text='example notebook in chapter 1'))</script> as a reference. You will be asked to complete the following steps: </p>
+      <p>在这个练习中，你将实现一种在 Drake 中控制机器人关节的方法。你将完全在 <script>document.write(notebook_link('robot', notebook='03_direct_joint_control', link_text='这个笔记本'))</script> 中完成，并应参考 <script>document.write(notebook_link('intro', 'intro', link_text='第 1 章中的示例笔记本'))</script>。你需要完成以下步骤：</p>
 
       <ol type="a">
-        <li> Replace the teleop interface in the chapter 1 example with different Drake functions that allow for directly controlling the joints of the robot.</li>
+        <li>将第 1 章示例中的遥操作接口替换为不同的 Drake 函数，使其能够直接控制机器人的关节。</li>
       </ol>
-    </exercise>   
+    </exercise>
 
-    <exercise><h1>PID Control in Drake</h1>
+    <exercise><h1>Drake 中的 PID 控制</h1>
 
-      <p> For this exercise you will implement a PID controller the joints of a robot in Drake. You will work exclusively in <script>document.write(notebook_link('robot', notebook='04_pid_controller', link_text='this notebook'))</script>. You will be asked to complete the following steps: </p>
+      <p>在这个练习中，你将为 Drake 中机器人的关节实现一个 PID 控制器。你将完全在 <script>document.write(notebook_link('robot', notebook='04_pid_controller', link_text='这个笔记本'))</script> 中完成。你需要完成以下步骤：</p>
 
       <ol type="a">
-        <li> Implementing a PD controller for the joints of the robot.</li>
-        <li> Extending the PD controller to a full PID controller.</li>
+        <li>为机器人的关节实现一个 PD 控制器。</li>
+        <li>将 PD 控制器扩展为完整的 PID 控制器。</li>
       </ol>
     </exercise>  
 

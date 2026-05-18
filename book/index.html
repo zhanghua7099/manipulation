@@ -73,341 +73,394 @@ href="https://www.youtube.com/channel/UChfUOAhz7ynELF-s_1LPpWg">Lecture  videos 
 
 
 <section id="table_of_contents">
-<h1>Table of Contents</h1>
+<h1>目录</h1>
 <ul>
-  <li><a href="#preface">Preface</a></li>
-  <li><a href="intro.html">Chapter 1: Introduction</a></li>
+  <li><a href="#preface">前言</a></li>
+  <li><a href="intro.html">第 1 章：简介</a></li>
   <ul>
-    <li><a href=intro.html#section1>Manipulation is more than pick-and-place</a></li>
-    <li><a href=intro.html#section2>Open-world manipulation</a></li>
-    <li><a href=intro.html#section3>Simulation</a></li>
-    <li><a href=intro.html#section4>These notes are interactive</a></li>
-    <li><a href=intro.html#section5>Model-based design and analysis</a></li>
-    <li><a href=intro.html#section6>Organization of these notes</a></li>
-    <li><a href=intro.html#section7>Exercises</a></li>
+    <li><a href=intro.html#section1>操作不仅仅是抓取与放置</a></li>
+    <li><a href=intro.html#section2>开放世界操作</a></li>
+    <li><a href=intro.html#section3>仿真</a></li>
+    <li><a href=intro.html#section4>这些笔记是交互式的</a></li>
+    <li><a href=intro.html#section5>基于模型的设计与分析</a></li>
+    <li><a href=intro.html#section6>本笔记的组织结构</a></li>
+    <li><a href=intro.html#section7>练习</a></li>
   </ul>
-  <li><a href="robot.html">Chapter 2: Let's get you a robot</a></li>
+
+  <li><a href="robot.html">第 2 章：让我们为你准备一台机器人</a></li>
   <ul>
-    <li><a href=robot.html#section1>Robot description files</a></li>
-    <li><a href=robot.html#section2>Arms</a></li>
+    <li><a href=robot.html#section1>机器人描述文件</a></li>
+    <li><a href=robot.html#section2>机械臂</a></li>
     <ul>
-      <li>Position-controlled robots</li>
+      <li>位置控制机器人</li>
       <ul>
-        <li>Position Control.</li>
-        <li>An aside: link dynamics with a transmission.</li>
+        <li>位置控制。</li>
+        <li>补充说明：带传动机构的连杆动力学。</li>
       </ul>
-      <li>Torque-controlled robots</li>
-      <li>A proliferation of hardware</li>
-      <li>Simulating the Kuka iiwa</li>
+      <li>力矩控制机器人</li>
+      <li>硬件设备的激增</li>
+      <li>Kuka iiwa 的仿真</li>
     </ul>
-    <li><a href=robot.html#section3>Hands</a></li>
+
+    <li><a href=robot.html#section3>机械手</a></li>
     <ul>
-      <li>Dexterous hands</li>
-      <li>Simple grippers</li>
-      <li>Soft/underactuated hands</li>
-      <li>Other end effectors</li>
-      <li>If you haven't seen it...</li>
+      <li>灵巧手</li>
+      <li>简单夹爪</li>
+      <li>柔性/欠驱动机械手</li>
+      <li>其他末端执行器</li>
+      <li>如果你还没见过的话……</li>
     </ul>
-    <li><a href=robot.html#section4>Sensors</a></li>
-    <li><a href=robot.html#hardware_station>Putting it all together</a></li>
+
+    <li><a href=robot.html#section4>传感器</a></li>
+    <li><a href=robot.html#hardware_station>整合所有组件</a></li>
     <ul>
       <li>HardwareStation</li>
       <li>HardwareStationInterface</li>
-      <li>HardwareStation stand-alone simulation</li>
+      <li>HardwareStation 独立仿真</li>
     </ul>
-    <li><a href=robot.html#section6>More HardwareStation examples</a></li>
-    <li><a href=robot.html#section7>Exercises</a></li>
+
+    <li><a href=robot.html#section6>更多 HardwareStation 示例</a></li>
+    <li><a href=robot.html#section7>练习</a></li>
   </ul>
-  <li><a href="pick.html">Chapter 3: Basic Pick and Place</a></li>
+
+  <li><a href="pick.html">第 3 章：基础抓取与放置</a></li>
   <ul>
-    <li><a href=pick.html#monogram>Monogram Notation</a></li>
-    <li><a href=pick.html#section2>Pick and place via spatial transforms</a></li>
-    <li><a href=pick.html#spatial_algebra>Spatial Algebra</a></li>
+    <li><a href=pick.html#monogram>字母符号表示法</a></li>
+    <li><a href=pick.html#section2>通过空间变换实现抓取与放置</a></li>
+    <li><a href=pick.html#spatial_algebra>空间代数</a></li>
     <ul>
-      <li>Representations for 3D rotation</li>
+      <li>三维旋转的表示方法</li>
     </ul>
-    <li><a href=pick.html#kinematics>Forward kinematics</a></li>
+
+    <li><a href=pick.html#kinematics>正向运动学</a></li>
     <ul>
-      <li>The kinematic tree</li>
-      <li>Forward kinematics for pick and place</li>
+      <li>运动学树</li>
+      <li>用于抓取与放置的正向运动学</li>
     </ul>
-    <li><a href=pick.html#jacobian>Differential kinematics (Jacobians)</a></li>
-    <li><a href=pick.html#section6>Differential inverse kinematics</a></li>
+
+    <li><a href=pick.html#jacobian>微分运动学（雅可比矩阵）</a></li>
+
+    <li><a href=pick.html#section6>微分逆运动学</a></li>
     <ul>
-      <li>The Jacobian pseudo-inverse</li>
-      <li>Invertibility of the Jacobian</li>
+      <li>雅可比伪逆</li>
+      <li>雅可比矩阵的可逆性</li>
     </ul>
-    <li><a href=pick.html#section7>Defining the grasp and pre-grasp poses</a></li>
-    <li><a href=pick.html#pick_and_place_trajectory>A pick and place trajectory</a></li>
-    <li><a href=pick.html#section9>Putting it all together</a></li>
-    <li><a href=pick.html#diff_ik_w_constraints>Differential inverse kinematics with
-  constraints</a></li>
+
+    <li><a href=pick.html#section7>定义抓取与预抓取位姿</a></li>
+    <li><a href=pick.html#pick_and_place_trajectory>抓取与放置轨迹</a></li>
+    <li><a href=pick.html#section9>整合所有组件</a></li>
+
+    <li><a href=pick.html#diff_ik_w_constraints>带约束的微分逆运动学</a></li>
     <ul>
-      <li>Pseudo-inverse as an optimization</li>
-      <li>Adding velocity constraints</li>
-      <li>Adding position and acceleration constraints</li>
-      <li>Joint centering</li>
-      <li>Tracking a desired pose</li>
-      <li>Alternative formulations</li>
+      <li>作为优化问题的伪逆</li>
+      <li>添加速度约束</li>
+      <li>添加位置与加速度约束</li>
+      <li>关节居中</li>
+      <li>跟踪目标位姿</li>
+      <li>其他形式</li>
     </ul>
-    <li><a href=pick.html#section11>Exercises</a></li>
+
+    <li><a href=pick.html#section11>练习</a></li>
   </ul>
-  <li><a href="pose.html">Chapter 4: Geometric Pose Estimation</a></li>
+
+  <li><a href="pose.html">第 4 章：几何位姿估计</a></li>
   <ul>
-    <li><a href=pose.html#section1>Cameras and depth sensors</a></li>
+    <li><a href=pose.html#section1>相机与深度传感器</a></li>
     <ul>
-      <li>Depth sensors</li>
-      <li>Simulation</li>
+      <li>深度传感器</li>
+      <li>仿真</li>
     </ul>
-    <li><a href=pose.html#section2>Representations for geometry</a></li>
-    <li><a href=pose.html#registration>Point cloud registration with known
-  correspondences</a></li>
-    <li><a href=pose.html#icp>Iterative Closest Point (ICP)</a></li>
-    <li><a href=pose.html#section5>Dealing with partial views and outliers</a></li>
+
+    <li><a href=pose.html#section2>几何表示方法</a></li>
+
+    <li><a href=pose.html#registration>已知对应关系的点云配准</a></li>
+
+    <li><a href=pose.html#icp>迭代最近点（ICP）</a></li>
+
+    <li><a href=pose.html#section5>处理局部视角与离群点</a></li>
     <ul>
-      <li>Detecting outliers</li>
-      <li>Point cloud segmentation</li>
-      <li>Generalizing correspondence</li>
-      <li>Soft correspondences</li>
-      <li>Nonlinear optimization</li>
+      <li>检测离群点</li>
+      <li>点云分割</li>
+      <li>推广对应关系</li>
+      <li>软对应关系</li>
+      <li>非线性优化</li>
       <ul>
-        <li>Precomputing distance functions</li>
+        <li>预计算距离函数</li>
       </ul>
-      <li>Global optimization</li>
+      <li>全局优化</li>
     </ul>
-    <li><a href=pose.html#section6>Non-penetration and "free-space" constraints</a></li>
+
+    <li><a href=pose.html#section6>非穿透与“自由空间”约束</a></li>
     <ul>
-      <li>Free space constraints as non-penetration constraints</li>
+      <li>将自由空间约束视为非穿透约束</li>
     </ul>
-    <li><a href=pose.html#section7>Tracking</a></li>
-    <li><a href=pose.html#section8>Putting it all together</a></li>
-    <li><a href=pose.html#section9>Looking ahead</a></li>
-    <li><a href=pose.html#exercises>Exercises</a></li>
+
+    <li><a href=pose.html#section7>跟踪</a></li>
+    <li><a href=pose.html#section8>整合所有组件</a></li>
+    <li><a href=pose.html#section9>展望未来</a></li>
+    <li><a href=pose.html#exercises>练习</a></li>
   </ul>
-  <li><a href="clutter.html">Chapter 5: Bin Picking</a></li>
+
+  <li><a href="clutter.html">第 5 章：料箱抓取</a></li>
   <ul>
-    <li><a href=clutter.html#section1>Generating random cluttered scenes</a></li>
+    <li><a href=clutter.html#section1>生成随机杂乱场景</a></li>
     <ul>
-      <li>Falling things</li>
+      <li>掉落物体</li>
     </ul>
-    <li><a href=clutter.html#section2>Static equilibrium with frictional contact</a></li>
+
+    <li><a href=clutter.html#section2>带摩擦接触的静力平衡</a></li>
     <ul>
-      <li>Spatial force</li>
-      <li>Collision geometry</li>
-      <li>Contact forces between bodies in collision</li>
-      <li>The Contact Frame</li>
-      <li>The (Coulomb) Friction Cone</li>
-      <li>Static equilibrium as an optimization problem</li>
+      <li>空间力</li>
+      <li>碰撞几何</li>
+      <li>碰撞物体之间的接触力</li>
+      <li>接触坐标系</li>
+      <li>（库仑）摩擦锥</li>
+      <li>作为优化问题的静力平衡</li>
     </ul>
-    <li><a href=clutter.html#section3>Contact simulation</a></li>
-    <li><a href=clutter.html#section4>Model-based grasp selection</a></li>
+
+    <li><a href=clutter.html#section3>接触仿真</a></li>
+
+    <li><a href=clutter.html#section4>基于模型的抓取选择</a></li>
     <ul>
-      <li>The contact wrench cone</li>
-      <li>Colinear antipodal grasps</li>
+      <li>接触力矩锥</li>
+      <li>共线对向抓取</li>
     </ul>
-    <li><a href=clutter.html#section5>Grasp selection from point clouds</a></li>
+
+    <li><a href=clutter.html#section5>基于点云的抓取选择</a></li>
     <ul>
-      <li>Point cloud pre-processing</li>
-      <li>Estimating normals and local curvature</li>
-      <li>Evaluating a candidate grasp</li>
-      <li>Generating grasp candidates</li>
+      <li>点云预处理</li>
+      <li>估计法向量与局部曲率</li>
+      <li>评估候选抓取</li>
+      <li>生成抓取候选</li>
     </ul>
-    <li><a href=clutter.html#section6>The corner cases</a></li>
-    <li><a href=clutter.html#task>Programming the Task Level</a></li>
+
+    <li><a href=clutter.html#section6>边界情况</a></li>
+
+    <li><a href=clutter.html#task>任务层编程</a></li>
     <ul>
-      <li>State Machines and Behavior Trees</li>
-      <li>Task planning</li>
-      <li>Large Language Models</li>
-      <li>A simple state machine for "clutter clearing"</li>
+      <li>状态机与行为树</li>
+      <li>任务规划</li>
+      <li>大型语言模型</li>
+      <li>用于“清理杂乱环境”的简单状态机</li>
     </ul>
-    <li><a href=clutter.html#section8>Putting it all together</a></li>
-    <li><a href=clutter.html#exercises>Exercises</a></li>
+
+    <li><a href=clutter.html#section8>整合所有组件</a></li>
+    <li><a href=clutter.html#exercises>练习</a></li>
   </ul>
-  <li><a href="trajectories.html">Chapter 6: Motion Planning</a></li>
+
+  <li><a href="trajectories.html">第 6 章：运动规划</a></li>
   <ul>
-    <li><a href=trajectories.html#section1>Inverse Kinematics</a></li>
+    <li><a href=trajectories.html#section1>逆运动学</a></li>
     <ul>
-      <li>From end-effector pose to joint angles</li>
-      <li>IK as constrained optimization</li>
-      <li>Global inverse kinematics</li>
-      <li>Inverse kinematics vs differential inverse kinematics</li>
-      <li>Grasp planning using inverse kinematics</li>
+      <li>从末端执行器位姿到关节角</li>
+      <li>作为约束优化的 IK</li>
+      <li>全局逆运动学</li>
+      <li>逆运动学与微分逆运动学</li>
+      <li>使用逆运动学进行抓取规划</li>
     </ul>
-    <li><a href=trajectories.html#section2>Kinematic trajectory optimization</a></li>
+
+    <li><a href=trajectories.html#section2>运动学轨迹优化</a></li>
     <ul>
-      <li>Trajectory parameterizations</li>
-      <li>Optimization algorithms</li>
+      <li>轨迹参数化</li>
+      <li>优化算法</li>
     </ul>
-    <li><a href=trajectories.html#section3>Sampling-based motion planning</a></li>
+
+    <li><a href=trajectories.html#section3>基于采样的运动规划</a></li>
     <ul>
-      <li>Rapidly-exploring random trees (RRT)</li>
-      <li>The Probabilistic Roadmap (PRM)</li>
-      <li>Post-processing</li>
-      <li>Sampling-based planning in practice</li>
+      <li>快速探索随机树（RRT）</li>
+      <li>概率路线图（PRM）</li>
+      <li>后处理</li>
+      <li>实际中的采样规划</li>
     </ul>
-    <li><a href=trajectories.html#gcs>Motion Planning w/ Graphs of Convex Sets (GCS)</a></li>
+
+    <li><a href=trajectories.html#gcs>基于凸集图（GCS）的运动规划</a></li>
     <ul>
-      <li>Graphs of Convex Sets</li>
-      <li>GCS (Kinematic) Trajectory Optimization</li>
-      <li>Convex decomposition of (collision-free) configuration
-    space</li>
-      <li>GcsTrajOpt Examples</li>
-      <li>Variations and Extensions</li>
+      <li>凸集图</li>
+      <li>GCS（运动学）轨迹优化</li>
+      <li>（无碰撞）构型空间的凸分解</li>
+      <li>GcsTrajOpt 示例</li>
+      <li>变体与扩展</li>
     </ul>
-    <li><a href=trajectories.html#topp>Time-optimal path parameterizations</a></li>
-    <li><a href=trajectories.html#section6>Exercises</a></li>
+
+    <li><a href=trajectories.html#topp>时间最优路径参数化</a></li>
+    <li><a href=trajectories.html#section6>练习</a></li>
   </ul>
-  <li><a href="mobile.html">Chapter 7: Mobile Manipulation</a></li>
+
+  <li><a href="mobile.html">第 7 章：移动操作</a></li>
   <ul>
-    <li><a href=mobile.html#section1>A New Cast of Characters</a></li>
-    <li><a href=mobile.html#section2>What's different about perception?</a></li>
+    <li><a href=mobile.html#section1>全新角色登场</a></li>
+
+    <li><a href=mobile.html#section2>感知有什么不同？</a></li>
     <ul>
-      <li>Partial views / active perception</li>
-      <li>Unknown (potentially dynamic) environments</li>
-      <li>Robot state estimation</li>
+      <li>局部视角 / 主动感知</li>
+      <li>未知（可能动态变化）的环境</li>
+      <li>机器人状态估计</li>
     </ul>
-    <li><a href=mobile.html#section3>What's different about motion planning?</a></li>
+
+    <li><a href=mobile.html#section3>运动规划有什么不同？</a></li>
     <ul>
-      <li>Wheeled robots</li>
+      <li>轮式机器人</li>
       <ul>
-        <li>Holonomic drives</li>
-        <li>Nonholonomic drives</li>
+        <li>完整约束驱动</li>
+        <li>非完整约束驱动</li>
       </ul>
-      <li>Legged robots</li>
+      <li>腿式机器人</li>
     </ul>
-    <li><a href=mobile.html#section4>What's different about simulation?</a></li>
-    <li><a href=mobile.html#section5>Navigation</a></li>
+
+    <li><a href=mobile.html#section4>仿真有什么不同？</a></li>
+
+    <li><a href=mobile.html#section5>导航</a></li>
     <ul>
-      <li>Mapping (in addition to localization)</li>
-      <li>Identifying traversable terrain</li>
+      <li>建图（除了定位之外）</li>
+      <li>识别可通行地形</li>
     </ul>
-    <li><a href=mobile.html#section6>Exercises</a></li>
+
+    <li><a href=mobile.html#section6>练习</a></li>
   </ul>
-  <li><a href="force.html">Chapter 8: Manipulator Control</a></li>
+
+  <li><a href="force.html">第 8 章：机械臂控制</a></li>
   <ul>
-    <li><a href=force.html#toolbox>The Manipulator-Control Toolbox</a></li>
-    <li><a href=force.html#section2>Assume your robot is a point mass</a></li>
+    <li><a href=force.html#toolbox>机械臂控制工具箱</a></li>
+
+    <li><a href=force.html#section2>假设你的机器人是一个质点</a></li>
     <ul>
-      <li>Trajectory tracking</li>
-      <li>(Direct) force control</li>
-      <li>Indirect force control</li>
-      <li>Hybrid position/force control</li>
+      <li>轨迹跟踪</li>
+      <li>（直接）力控制</li>
+      <li>间接力控制</li>
+      <li>混合位置/力控制</li>
     </ul>
-    <li><a href=force.html#section3>The general case (using the manipulator equations)</a></li>
+
+    <li><a href=force.html#section3>一般情况（使用机械臂方程）</a></li>
     <ul>
-      <li>Trajectory tracking</li>
-      <li>Joint stiffness control</li>
-      <li>Cartesian stiffness and operational space control</li>
-      <li>Some implementation details on the iiwa</li>
+      <li>轨迹跟踪</li>
+      <li>关节刚度控制</li>
+      <li>笛卡尔刚度与操作空间控制</li>
+      <li>iiwa 的一些实现细节</li>
     </ul>
-    <li><a href=force.html#section4>Putting it all together</a></li>
-    <li><a href=force.html#section5>Peg in hole</a></li>
-    <li><a href=force.html#section6>Exercises</a></li>
+
+    <li><a href=force.html#section4>整合所有组件</a></li>
+    <li><a href=force.html#section5>孔中插销</a></li>
+    <li><a href=force.html#section6>练习</a></li>
   </ul>
-  <li><a href="segmentation.html">Chapter 9: Object Detection and
-Segmentation</a></li>
+
+  <li><a href="segmentation.html">第 9 章：目标检测与分割</a></li>
   <ul>
-    <li><a href=segmentation.html#section1>Getting to big data</a></li>
+    <li><a href=segmentation.html#section1>迈向大数据</a></li>
     <ul>
-      <li>Crowd-sourced annotation datasets</li>
-      <li>Segmenting new classes via fine tuning</li>
-      <li>Annotation tools for manipulation</li>
-      <li>Synthetic datasets</li>
-      <li>Self-supervised learning</li>
-      <li>Even bigger datasets</li>
+      <li>众包标注数据集</li>
+      <li>通过微调分割新类别</li>
+      <li>用于操作任务的标注工具</li>
+      <li>合成数据集</li>
+      <li>自监督学习</li>
+      <li>更大的数据集</li>
     </ul>
-    <li><a href=segmentation.html#section2>Object detection and segmentation</a></li>
-    <li><a href=segmentation.html#section3>Putting it all together</a></li>
-    <li><a href=segmentation.html#section4>Variations and Extensions</a></li>
+
+    <li><a href=segmentation.html#section2>目标检测与分割</a></li>
+    <li><a href=segmentation.html#section3>整合所有组件</a></li>
+    <li><a href=segmentation.html#section4>变体与扩展</a></li>
     <ul>
-      <li>Pretraining wth self-supervised learning</li>
-      <li>Leveraging large-scale models</li>
+      <li>使用自监督学习进行预训练</li>
+      <li>利用大规模模型</li>
     </ul>
-    <li><a href=segmentation.html#section5>Exercises</a></li>
+
+    <li><a href=segmentation.html#section5>练习</a></li>
   </ul>
-  <li><a href="deep_perception.html">Chapter 10: Deep Perception for
-Manipulation</a></li>
+
+  <li><a href="deep_perception.html">第 10 章：用于操作的深度感知</a></li>
   <ul>
-    <li><a href=deep_perception.html#section1>Pose estimation</a></li>
+    <li><a href=deep_perception.html#section1>位姿估计</a></li>
     <ul>
-      <li>Pose representation</li>
-      <li>Loss functions</li>
-      <li>Pose estimation benchmarks</li>
-      <li>Limitations</li>
+      <li>位姿表示</li>
+      <li>损失函数</li>
+      <li>位姿估计基准</li>
+      <li>局限性</li>
     </ul>
-    <li><a href=deep_perception.html#section2>Grasp selection</a></li>
-    <li><a href=deep_perception.html#section3>(Semantic) Keypoints</a></li>
-    <li><a href=deep_perception.html#section4>Dense Correspondences</a></li>
-    <li><a href=deep_perception.html#section5>Scene Flow</a></li>
-    <li><a href=deep_perception.html#section6>Task-level state</a></li>
-    <li><a href=deep_perception.html#section7>Other perceptual tasks / representations</a></li>
-    <li><a href=deep_perception.html#exercises>Exercises</a></li>
+
+    <li><a href=deep_perception.html#section2>抓取选择</a></li>
+    <li><a href=deep_perception.html#section3>（语义）关键点</a></li>
+    <li><a href=deep_perception.html#section4>稠密对应关系</a></li>
+    <li><a href=deep_perception.html#section5>场景流</a></li>
+    <li><a href=deep_perception.html#section6>任务层状态</a></li>
+    <li><a href=deep_perception.html#section7>其他感知任务 / 表示方法</a></li>
+    <li><a href=deep_perception.html#exercises>练习</a></li>
   </ul>
-  <li><a href="rl.html">Chapter 11: Reinforcement Learning</a></li>
+
+  <li><a href="rl.html">第 11 章：强化学习</a></li>
   <ul>
-    <li><a href=rl.html#section1>RL Software</a></li>
-    <li><a href=rl.html#section2>Policy-gradient methods</a></li>
+    <li><a href=rl.html#section1>强化学习软件</a></li>
+
+    <li><a href=rl.html#section2>策略梯度方法</a></li>
     <ul>
-      <li>Black-box optimization</li>
-      <li>Stochastic optimal control</li>
-      <li>Using gradients of the policy, but not the environment</li>
-      <li>REINFORCE, PPO, TRPO</li>
-      <li>Control for manipulation should be easy</li>
+      <li>黑盒优化</li>
+      <li>随机最优控制</li>
+      <li>使用策略梯度，而不是环境梯度</li>
+      <li>REINFORCE、PPO、TRPO</li>
+      <li>用于操作的控制应该很简单</li>
     </ul>
-    <li><a href=rl.html#section3>Value-based methods</a></li>
-    <li><a href=rl.html#section4>Model-based RL</a></li>
-    <li><a href=rl.html#section5>Exercises</a></li>
+
+    <li><a href=rl.html#section3>基于价值的方法</a></li>
+    <li><a href=rl.html#section4>基于模型的强化学习</a></li>
+    <li><a href=rl.html#section5>练习</a></li>
   </ul>
-  <li><a href="tactile.html">Chapter 12: Soft Robots and Tactile Sensing</a></li>
+
+  <li><a href="tactile.html">第 12 章：软体机器人与触觉感知</a></li>
   <ul>
-    <li><a href=tactile.html#section1>Why soft?</a></li>
-    <li><a href=tactile.html#section2>Soft robot hardware</a></li>
-    <li><a href=tactile.html#section3>Soft-body simulation</a></li>
-    <li><a href=tactile.html#section4>Tactile sensing</a></li>
+    <li><a href=tactile.html#section1>为什么选择柔性？</a></li>
+    <li><a href=tactile.html#section2>软体机器人硬件</a></li>
+    <li><a href=tactile.html#section3>软体仿真</a></li>
+    <li><a href=tactile.html#section4>触觉感知</a></li>
     <ul>
-      <li>What information do we want/need?</li>
-      <li>Visuotactile sensing</li>
-      <li>Whole-body sensing</li>
-      <li>Simulating tactile sensors</li>
+      <li>我们想要/需要哪些信息？</li>
+      <li>视觉触觉感知</li>
+      <li>全身感知</li>
+      <li>触觉传感器仿真</li>
     </ul>
-    <li><a href=tactile.html#section5>Perception with tactile sensors</a></li>
-    <li><a href=tactile.html#section6>Control with tactile sensors</a></li>
+
+    <li><a href=tactile.html#section5>基于触觉传感器的感知</a></li>
+    <li><a href=tactile.html#section6>基于触觉传感器的控制</a></li>
   </ul>
-<p style="margin-bottom: 0; text-decoration: underline;font-variant: small-caps;"><b>Appendix</b></p>
-  <li><a href="spatial.html">Appendix A: Spatial Algebra</a></li>
+
+<p style="margin-bottom: 0; text-decoration: underline;font-variant: small-caps;"><b>附录</b></p>
+
+  <li><a href="spatial.html">附录 A：空间代数</a></li>
   <ul>
-    <li><a href=spatial.html#section1>Position, Rotation, and Pose</a></li>
-    <li><a href=spatial.html#section2>Spatial velocity</a></li>
-    <li><a href=spatial.html#section3>Spatial force</a></li>
+    <li><a href=spatial.html#section1>位置、旋转与位姿</a></li>
+    <li><a href=spatial.html#section2>空间速度</a></li>
+    <li><a href=spatial.html#section3>空间力</a></li>
   </ul>
-  <li><a href="drake.html">Appendix B: Drake</a></li>
+
+  <li><a href="drake.html">附录 B：Drake</a></li>
   <ul>
     <li><a href=drake.html#section1>Pydrake</a></li>
-    <li><a href=drake.html#notebooks>Online Jupyter Notebooks</a></li>
+    <li><a href=drake.html#notebooks>在线 Jupyter Notebook</a></li>
     <ul>
-      <li>Running on Deepnote</li>
-      <li>Enabling licensed solvers</li>
+      <li>在 Deepnote 上运行</li>
+      <li>启用授权求解器</li>
     </ul>
-    <li><a href=drake.html#section3>Running on your own machine</a></li>
-    <li><a href=drake.html#section4>Getting help</a></li>
+
+    <li><a href=drake.html#section3>在你自己的机器上运行</a></li>
+    <li><a href=drake.html#section4>获取帮助</a></li>
   </ul>
-  <li><a href="environments.html">Appendix C: DrakeGym Environments</a></li>
+
+  <li><a href="environments.html">附录 C：DrakeGym 环境</a></li>
   <ul>
-    <li><a href=environments.html#section1>Box Flipup</a></li>
+    <li><a href=environments.html#section1>盒子翻转</a></li>
   </ul>
-  <li><a href="station.html">Appendix D: Setting up your own "Manipulation Station"</a></li>
+
+  <li><a href="station.html">附录 D：搭建你自己的“操作工作站”</a></li>
   <ul>
-    <li><a href=station.html#section1>Message Passing</a></li>
-    <li><a href=station.html#section2>Kuka LBR iiwa + Schunk WSG Gripper</a></li>
+    <li><a href=station.html#section1>消息传递</a></li>
+    <li><a href=station.html#section2>Kuka LBR iiwa + Schunk WSG 夹爪</a></li>
     <li><a href=station.html#section3>Franka Panda</a></li>
-    <li><a href=station.html#section4>Intel Realsense D415 Depth Cameras</a></li>
+    <li><a href=station.html#section4>Intel Realsense D415 深度相机</a></li>
   </ul>
-  <li><a href="misc.html">Appendix E: Miscellaneous</a></li>
+
+  <li><a href="misc.html">附录 E：杂项</a></li>
   <ul>
-    <li><a href=misc.html#cite>How to cite these notes</a></li>
-    <li><a href=misc.html#annotation>Annotation tool etiquette</a></li>
-    <li><a href=misc.html#projects>Some great final projects</a></li>
-    <li><a href=misc.html#feedback>Please give me feedback!</a></li>
+    <li><a href=misc.html#cite>如何引用这些笔记</a></li>
+    <li><a href=misc.html#annotation>标注工具礼仪</a></li>
+    <li><a href=misc.html#projects>一些优秀的期末项目</a></li>
+    <li><a href=misc.html#feedback>请给我反馈！</a></li>
   </ul>
 </ul>
 </section>
@@ -416,111 +469,37 @@ Manipulation</a></li>
   <p>You can find documentation for the source code supporting these notes <a href="python/index.html">here</a>.</p>
 </section>
 
-<section id="preface"><h1>Preface</h1>
+<section id="preface"><h1>前言</h1>
 
-  <p>I've always loved robots, but it's only relatively recently that I've
-  turned my attention to robotic manipulation.  I particularly like the
-  challenge of building robots that can master physics to achieve
-  human/animal-like dexterity and agility.  It was <a
-  href="http://underactuated.mit.edu/intro.html">passive
-  dynamic walkers</a> and the beautiful analysis that accompanies them that
-  first helped cement this centrality of dynamics in my view of the world and my
-  approach to robotics.  From there I became fascinated with (experimental)
-  fluid dynamics, and the idea that birds with articulated wings actually
-  "manipulate" the air to achieve incredible efficiency and agility. Humanoid
-  robots and fast-flying aerial vehicles in clutter forced me to start thinking
-  more deeply about the role of perception in dynamics and control. Now I
-  believe that this interplay between perception and dynamics is truly
-  fundamental, and I am passionate about the observation that relatively
-  "simple" problems in manipulation (how do I button up my dress shirt?) expose
-  the problem beautifully.</p>
+  <p>我一直都很喜欢机器人，但直到相对最近，我才把注意力转向机器人操作。我特别喜欢这样一种挑战：构建能够掌握物理规律，从而实现类似人类/动物般灵巧性与敏捷性的机器人。最早帮助我在世界观以及机器人学研究方法中确立动力学核心地位的，是<a
+  href="http://underactuated.mit.edu/intro.html">被动动态行走器</a>以及与之相伴的优美分析。从那里开始，我又迷上了（实验）流体动力学，以及这样一个想法：拥有铰接翅膀的鸟实际上是在“操作”空气，从而实现惊人的效率和敏捷性。类人机器人以及在杂乱环境中高速飞行的飞行器，迫使我开始更深入地思考感知在动力学与控制中的作用。现在我相信，感知与动力学之间的这种相互作用是真正基础性的；而且我非常着迷于这样一个观察：操作中相对“简单”的问题（我该如何扣好我的正装衬衫纽扣？）能够非常漂亮地揭示这一问题。</p>
   
-  <p>My approach to programming robots has always been very
-  computational/algorithmic.  I started out using tools primarily from machine
-  learning (especially reinforcement learning) to develop the control systems
-  for simple walking machines; but as the robots and tasks got more complex I
-  turned to more sophisticated tools from model-based planning and
-  optimization-based control.  In my view, no other discipline has thought so
-  deeply about dynamics as has control theory, and the algorithmic efficiency
-  and guaranteed performance/robustness that can be obtained by the best
-  model-based control algorithms far surpasses what we can do today with
-  learning control.  Unfortunately, the mathematical maturity of
-  controls-related research has also led the field to be relatively conservative
-  in their assumptions and problem formulations; the requirements for robotic
-  manipulation break these assumptions.  For example, robust control typically
-  assumes dynamics that are (nearly) smooth and uncertainty that can be
-  represented by simple distributions or simple sets; but in robotic
-  manipulation, we must deal with the non-smooth mechanics of contact and
-  uncertainty that comes from varied lighting conditions, and different numbers
-  of objects with unknown geometry and dynamics.  In practice, no
-  state-of-the-art robotic manipulation system to date (that I know of) uses
-  rigorous control theory to design even the low-level feedback that determines
-  when a robot makes and breaks contact with the objects it is manipulating.  An
-  explicit goal of these notes is to try to change that.</p>
+  <p>我对机器人编程的方法一直都非常偏计算/算法化。我一开始主要使用机器学习中的工具（尤其是强化学习）来为简单的行走机器开发控制系统；但随着机器人和任务变得更加复杂，我转向了基于模型的规划和基于优化的控制中更复杂的工具。在我看来，没有任何其他学科像控制理论那样深入地思考动力学；而且，最优秀的基于模型的控制算法所能获得的算法效率以及有保证的性能/鲁棒性，远远超过我们今天用学习控制所能做到的。不幸的是，与控制相关的研究在数学上的成熟性，也使得该领域在其假设和问题表述方面相对保守；而机器人操作的需求打破了这些假设。例如，鲁棒控制通常假设动力学是（近似）光滑的，并且不确定性可以由简单分布或简单集合来表示；但在机器人操作中，我们必须处理接触的非光滑力学，以及来自多样光照条件、不同数量物体、未知几何形状和未知动力学的不确定性。在实践中，据我所知，到目前为止，还没有任何最先进的机器人操作系统使用严格的控制理论，甚至来设计决定机器人何时与其操作对象建立和断开接触的低层反馈。这些笔记的一个明确目标，就是试图改变这一点。</p>
   
-  <p>In the past few years, deep learning has had an unquestionable impact on
-  robotic perception, unblocking some of the most daunting challenges in
-  performing manipulation outside of a laboratory or factory environment.  We
-  will discuss relevant tools from deep learning for object recognition,
-  segmentation, pose/keypoint estimation, shape completion, etc.  Now relatively
-  old approaches to learning control are also enjoying an incredible surge in
-  popularity, fueled in part by massive computing power and increasingly
-  available robot hardware and simulators.  Unlike learning for perception,
-  learning control algorithms are still far from a technology, with some of the
-  most impressive looking results still being hard to understand and to
-  reproduce.  But the recent work in this area has unquestionably highlighted
-  the pitfalls of the conservatism taken by the controls community. Learning
-  researchers are boldly formulating much more aggressive and exciting problems
-  for robotic manipulation than we have seen before -- in many cases we are
-  realizing that some manipulation tasks are actually quite easy, but in other
-  cases we are finding problems that are still fundamentally hard.</p>
+  <p>在过去几年里，深度学习无疑对机器人感知产生了重大影响，解开了在实验室或工厂环境之外执行操作任务时一些最令人望而生畏的挑战。我们将讨论深度学习中与目标识别、分割、位姿/关键点估计、形状补全等相关的工具。如今，相对较旧的学习控制方法也正经历一股惊人的流行热潮，部分原因是大规模计算能力以及越来越容易获得的机器人硬件和仿真器。与用于感知的学习不同，学习控制算法仍远未成为一项成熟技术；其中一些看起来最令人印象深刻的结果，仍然难以理解也难以复现。但该领域近期的工作无疑凸显了控制领域所采取的保守主义的陷阱。学习研究者正在大胆地为机器人操作提出比以往更加激进、更令人兴奋的问题——在许多情况下，我们正在意识到某些操作任务实际上相当容易；而在另一些情况下，我们正在发现一些仍然从根本上很困难的问题。</p>
   
-  <p>Finally, it feels that the time is ripe for robotic manipulation to have a
-  real and dramatic impact in the world, in fields from logistics to home
-  robots.  Over the last few years, we've seen UAVs/drones transition from
-  academic curiosities into consumer products.  Even more recently, autonomous
-  driving has transitioned from academic research to industry, at least in
-  terms of dollars invested.  Manipulation feels like the next big thing that
-  will make the leap from robotic research to practice. It's still a bit risky
-  for a venture capitalist to invest in, but nobody doubts the size of the
-  market once we have the technology.  How lucky are we to potentially be able
-  to play a role in that transition?</p>
+  <p>最后，现在似乎正是机器人操作在世界上产生真实而巨大影响的成熟时机，其应用领域从物流到家庭机器人不一而足。在过去几年里，我们已经看到无人机从学术界的奇闻趣事转变为消费产品。甚至在更近一些时候，自动驾驶也已经从学术研究转向产业界，至少从投入的资金规模来看是如此。操作似乎会是下一个从机器人研究跃迁到实践中的重大事物。对于风险投资人来说，投资它仍然有一点风险，但一旦我们拥有了这项技术，没有人会怀疑其市场规模。我们有机会在这一转变中发挥作用，这是多么幸运啊？</p>
   
-  <p>So this is where the notes begin... we are at an incredible crossroads
-  between learning and control and robotics with an opportunity to have
-  immediate impact in industrial and consumer applications and potentially even
-  to forge entirely new eras for systems theory and controls.  I'm just trying
-  to hold on and to enjoy the ride.</p>
+  <p>所以，这些笔记就从这里开始……我们正处在学习、控制与机器人学交汇的一个令人难以置信的十字路口，有机会在工业和消费应用中产生即时影响，甚至有可能为系统理论与控制开辟全新的时代。我只是努力跟上这一切，并享受这段旅程。</p>
   
-  <section><h1>A manipulation toolbox</h1>
+  <section><h1>一个操作工具箱</h1>
   
-    <p>Another explicit goal of these lecture notes is to provide high-quality
-    implementations of the most useful tools in a manipulation scientist's
-    toolbox.  When I am forced to choose between mathematical clarity and
-    runtime performance, the clear formulation is always my first priority; I
-    will try to include a performant formulation, too, if possible or try to
-    give pointers to alternatives.  Manipulation research is moving quickly, and
-    I aim to evolve these notes to keep pace.  I hope that the software
-    components provided in
-    <drake></drake> and in these notes can be directly useful to you in your own
-    work.</p>
+    <p>这些讲义的另一个明确目标，是为操作科学家的工具箱中最有用的工具提供高质量实现。当我必须在数学清晰性和运行时性能之间做出选择时，清晰的表述永远是我的首要优先事项；如果可能的话，我也会尽量加入高性能的表述，或者尝试给出替代方案的指引。操作研究正在快速发展，而我的目标是不断更新这些笔记以跟上它的步伐。我希望
+    <drake></drake> 以及这些笔记中提供的软件组件，能够在你自己的工作中直接发挥作用。</p>
   
-    <p>If you would like to replicate any or all of the hardware that we use for
-    these notes, you can find information and instructions in the <a
-    href="station.html">appendix</a>.</p>
+    <p>如果你想复制我们在这些笔记中使用的部分或全部硬件，可以在<a
+    href="station.html">附录</a>中找到相关信息和说明。</p>
   
-    <p>As you use the code, please consider <a
-    href="https://drake.mit.edu/getting_help.html">contributing back</a>
-    (especially to the mature code in <drake></drake>).  Even questions/bug
-    reports can be important contributions.  If you have questions/find issues
-    with these notes, please submit them <a
-    href="https://github.com/RussTedrake/manipulation/issues">here</a>.</p>
+    <p>在使用这些代码时，请考虑<a
+    href="https://drake.mit.edu/getting_help.html">回馈贡献</a>
+    （尤其是为 <drake></drake> 中已经成熟的代码贡献）。即便是问题/错误报告，也可能是重要的贡献。如果你对这些笔记有疑问或发现问题，请在<a
+    href="https://github.com/RussTedrake/manipulation/issues">这里</a>提交。</p>
   
   </section>
 
-  <p style="text-align:right;"><a href="intro.html">First chapter</a></p>
+  <p style="text-align:right;"><a href="intro.html">第一章</a></p>
 
-</section> <!-- end preface -->
+</section> <!-- 前言结束 -->
 
 <div id="footer">
 <hr/>

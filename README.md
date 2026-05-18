@@ -17,3 +17,13 @@ To cite this software (or the corresponding textbook), please use:
 
 Russ Tedrake. _Robotic Manipulation: Perception, Planning, and Control (Course
 Notes for MIT 6.421)._ Downloaded on [date] from <https://manipulation.mit.edu/>.
+
+# Build the pdf version
+```
+cd /home/zhy/LatexProject/manipulation/book
+
+NODE_PATH=/tmp/manip-pdf-node/node_modules \
+PUPPETEER_EXECUTABLE_PATH=/usr/bin/google-chrome \
+PATH=/tmp/prince-install/bin:$PATH \
+../.venv/bin/python htmlbook/make_pdf.py
+```
